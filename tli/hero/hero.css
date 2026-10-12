@@ -22,6 +22,31 @@
     /* 단독 화면 위쪽 줄의 빌드 고르기 (page_common.js hpBuildPicker) */
     .hp-build { color: #7d8794; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
     .hp-build b { color: #c9d1d9; }
+    .hp-bp { display: inline-flex; align-items: center; gap: 8px; max-width: 300px; padding: 4px 10px 4px 4px; border-radius: 10px; cursor: pointer;
+      background: #0f141f; border: 1px solid #2f3a4d; color: #e6edf3; font: inherit; font-size: 13px; transition: .15s; }
+    .hp-bp:hover, .hp-bp.open { border-color: #e8c860; background: #151b28; }
+    .hp-bp-face { flex: none; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: #1b2230; display: grid; place-items: center; }
+    .hp-bp-face img { width: 100%; height: 100%; object-fit: cover; } .hp-bp-face i { font-style: normal; color: #59636e; font-size: 12px; }
+    .hp-bp-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .hp-bp-car { flex: none; color: #9aa6b4; transition: .15s; } .hp-bp.open .hp-bp-car { transform: rotate(180deg); }
+    .hp-bpm { position: fixed; z-index: 9000; width: 340px; max-width: calc(100vw - 16px); background: #121824; border: 1px solid #2f3a4d; border-radius: 12px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.55); padding: 6px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+    .hp-bp-q { background: #0b1019; border: 1px solid #2f3a4d; border-radius: 8px; color: #e6edf3; padding: 7px 10px; font: inherit; outline: none; }
+    .hp-bp-q:focus { border-color: #e8c860; }
+    .hp-bp-list { max-height: min(360px, 60vh); overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+    .hp-bpr { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: #c9d1d9; font: inherit; cursor: pointer; }
+    .hp-bpr .hp-bp-face { width: 32px; height: 32px; }
+    .hp-bpr:hover { background: #1b2333; } .hp-bpr.on { background: color-mix(in srgb, #e8c860 12%, #121824); }
+    .hp-bpr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+    .hp-bpr-t b { color: #e6edf3; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hp-bpr.on .hp-bpr-t b { color: #f3e3b5; }
+    .hp-bpr-t small { color: #7d8794; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hp-bpr-se { flex: none; font-size: 10.5px; color: #9aa6b4; border: 1px solid #2f3a4d; border-radius: 6px; padding: 1px 6px; }
+    .hp-bpr-ck { flex: none; color: #e8c860; font-weight: 700; }
+    .hp-bp-none { color: #7d8794; padding: 14px; text-align: center; }
+    .hp-bp-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
+    .hp-bp-acts button { background: #1b2230; border: 1px solid #2a3344; color: #c9d1d9; border-radius: 8px; padding: 7px 4px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .hp-bp-acts button:hover { border-color: #e8c860; color: #f3e3b5; }
     .hp-build select { background: #0f141f; color: #e6edf3; border: 1px solid #2f3a4d; border-radius: 6px; padding: 3px 6px; font: inherit; max-width: 220px; }
     /* 스크롤바 — 브라우저 기본(윈도우 회색 막대) 대신 화면 색에 맞춘 얇은 막대 (사용자 요청) */
     .gbm, .gbm * { scrollbar-width: thin; scrollbar-color: #2c3a58 transparent; }

@@ -2761,12 +2761,67 @@ document.addEventListener('keydown', e => {
 });
 function renderPreset() { pageRender(); }
 function guardShareView() { return false; }
-// 위쪽 줄의 빌드 고르기 — 저장된 빌드가 여럿이면 어느 빌드에 찍을지 고른다
-function hpBuildPicker() {
-  if (presets.list.length < 2) return `<span class="hp-build">빌드: <b>${escapeHtml(preset.name || '빌드')}</b></span>`;
-  return '<label class="hp-build">빌드 <select onchange="hpSwitch(+this.value)">' + presets.list.map(p =>
-    `<option value="${p.id}"${p.id === preset.id ? ' selected' : ''}>${escapeHtml(p.name || '빌드 ' + p.id)}${p.hero ? ' · ' + escapeHtml(p.hero.trait) : ''}</option>`).join('') + '</select></label>';
+// 위쪽 줄의 빌드 고르기 — 단추(히어로 얼굴 + 이름 ▾) → 빌드 목록 (2026-10-13, 기본 select 대체)
+// 목록: 얼굴 · 이름 · 특성·메인 스킬 · 지난 시즌 표시, 빌드가 7개 이상이면 검색칸. 화면이 hpBuildActs() 를 두면 아래에 동작 단추(빌더2)
+let hpBpQ = '';
+const hpBpName = p => p.name || '빌드 ' + p.id;
+function hpBpFace(p) {
+  const tr = p.hero && typeof traitInfo === 'function' && traitInfo(p.hero.trait);
+  return tr && tr.img ? `<img src="${tr.img}" alt="" loading="lazy">` : '<i>?</i>';
 }
+function hpBpSub(p) {
+  const main = ['a1', 'a2', 'a3', 'a4', 'a5'].map(k => p.skills && p.skills[k] && p.skills[k].main).find(Boolean);
+  return [p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음';
+}
+function hpBuildPicker() {
+  return `<button type="button" class="hp-build hp-bp" onclick="hpBpToggle(this)" title="빌드 바꾸기">` +
+    `<span class="hp-bp-face">${hpBpFace(preset)}</span><span class="hp-bp-nm">${escapeHtml(hpBpName(preset))}</span><svg class="hp-bp-car" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+}
+function hpBpClose() { const m = document.getElementById('hpBp'); if (m) m.remove(); document.querySelectorAll('.hp-bp.open').forEach(b => b.classList.remove('open')); }
+function hpBpToggle(btn) {
+  if (document.getElementById('hpBp')) { hpBpClose(); return; }
+  hpBpQ = '';
+  const m = document.createElement('div');
+  m.id = 'hpBp'; m.className = 'hp-bpm';
+  document.body.appendChild(m);
+  btn.classList.add('open');
+  hpBpDraw();
+  hpBpPlace();
+  const q = m.querySelector('.hp-bp-q'); if (q) q.focus();
+}
+function hpBpPlace() { // 단추 바로 아래 — 스크롤·창 크기가 바뀌면 따라간다(단추가 다시 그려졌으면 새 단추 기준)
+  const m = document.getElementById('hpBp'), btn = document.querySelector('.hp-bp.open') || document.querySelector('.hp-bp');
+  if (!m || !btn) return;
+  btn.classList.add('open');
+  const r = btn.getBoundingClientRect();
+  m.style.top = (r.bottom + 6) + 'px';
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+}
+function hpBpRows() {
+  const q = hpBpQ.trim().toLowerCase(), cur = typeof wbSeason === 'function' ? wbSeason() : '';
+  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
+    `<button type="button" class="hp-bpr${p.id === preset.id ? ' on' : ''}" onclick="hpBpPick(${p.id})">` +
+    `<span class="hp-bp-face">${hpBpFace(p)}</span><span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span>` +
+    (p.season && cur && p.season !== cur ? `<span class="hp-bpr-se">${escapeHtml(p.season)}</span>` : '') +
+    (p.id === preset.id ? '<span class="hp-bpr-ck">✓</span>' : '') + '</button>').join('');
+  return `<div class="hp-bp-list">${rows || '<div class="hp-bp-none">맞는 빌드가 없습니다</div>'}</div>`;
+}
+function hpBpDraw() {
+  const m = document.getElementById('hpBp'); if (!m) return;
+  if (m.dataset.init) { m.querySelector('.hp-bp-list').outerHTML = hpBpRows(); return; }
+  m.dataset.init = '1';
+  m.innerHTML = (presets.list.length > 6 ? '<input class="hp-bp-q" type="search" placeholder="빌드 이름·히어로·스킬 검색" oninput="hpBpQ=this.value;hpBpDraw()"' +
+    ' onkeydown="if(event.key===\'Enter\'){const b=document.querySelector(\'#hpBp .hp-bpr\');if(b)b.click();}">' : '') +
+    hpBpRows() + (typeof hpBuildActs === 'function' ? '<div class="hp-bp-acts">' + hpBuildActs() + '</div>' : '');
+}
+function hpBpPick(id) { hpBpClose(); if (id !== preset.id) hpSwitch(id); }
+document.addEventListener('mousedown', e => {
+  const m = document.getElementById('hpBp');
+  if (m && !m.contains(e.target) && !(e.target.closest && e.target.closest('.hp-bp'))) hpBpClose();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('hpBp')) hpBpClose(); });
+window.addEventListener('resize', hpBpPlace);
+window.addEventListener('scroll', hpBpPlace, true);
 function hpUse(p) {
   preset = p;
   if (!Array.isArray(preset.talents)) preset.talents = [];

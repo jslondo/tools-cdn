@@ -6151,9 +6151,7 @@ function pageRender() {
         (k < WZ_STEPS.length - 1 ? '<li class="wz-arrow" aria-hidden="true">›</li>' : '');
     }).join('') + '</ol>' +
     '<div class="wz-nav">' +
-    `<button class="wz-btn wz-undo" onclick="undoPreset(false)" title="되돌리기 (Ctrl+Z)"${undoStack.length ? '' : ' disabled'}>↶</button>` +
-    `<button class="wz-btn wz-undo" onclick="undoPreset(true)" title="다시 실행 (Ctrl+Y)"${redoStack.length ? '' : ' disabled'}>↷</button>` +
-    `<button class="wz-btn wz-prev" onclick="wzMove(-1)"${i > 0 ? '' : ' disabled style="visibility:hidden"'}>‹ 이전</button>` + // 첫 단계도 자리는 남겨 칸 폭이 안 바뀌게
+    // 되돌리기·다시 실행은 단축키만 (Ctrl+Z · Ctrl+Shift+Z/Ctrl+Y) — 버튼·[이전]은 2026-10-13 뺌 (단계는 위 칸을 눌러 이동)
     `<button class="wz-btn pri wz-next" onclick="wzMove(1)" title="${i === WZ_STEPS.length - 1 ? '보기 화면' : '다음: ' + WZ_STEPS[i + 1].name}">${i === WZ_STEPS.length - 1 ? '보기 화면 ›' : '다음: ' + WZ_STEPS[i + 1].name + ' ›'}</button></div></div>`;
   // 단계 몸통 — 히어로·재능은 단독 화면과 같은 그리기 함수가 그 id 의 칸에 그린다
   const body = wzStep === 'hero' ? '<div id="heroApp"></div>'

@@ -1,0 +1,257 @@
+    /* 큰 팝업·단독 화면 틀(.gbm-*) — 재능 보드·히어로 공용, 빌더와 /tli/hero·/tli/talent 가 함께 쓴다 (2026-10-08) */
+    /* ── 팝업 틀: 재능 보드·히어로 공용 ── */
+    .gbm-dim { position: fixed; inset: 0; z-index: 1100; background: radial-gradient(ellipse at 50% 30%, rgba(20,26,40,.82), rgba(3,5,10,.9)); display: none; align-items: center; justify-content: center; padding: 18px; backdrop-filter: blur(3px); }
+    .gbm { width: min(1320px, 100%); height: min(880px, 100%); background: linear-gradient(180deg, #121826, #0b0f17 40%); border: 1px solid #2a3344; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04); }
+    .gbm-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid #1e2533; }
+    .gbm-title { font-size: 16px; letter-spacing: .02em; color: #f3e3b5; }
+    .gbm-keys { color: #7d8794; font-size: 12px; }
+    .gbm-keys kbd { font: 600 11px/1 inherit; color: #c9d1d9; background: #1b2230; border: 1px solid #2f3a4d; border-bottom-width: 2px; border-radius: 5px; padding: 3px 6px; margin: 0 2px 0 6px; }
+    .gbm-sep { margin: 0 4px; color: #3a4558; }
+    .gbm-msg { color: #ffb37a; background: #3a1f10; border: 1px solid #6b3a1c; border-radius: 999px; padding: 3px 12px; font-size: 12px; }
+    .gbm-x { margin-left: auto; background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: .15s; }
+    .gbm-x:hover { border-color: #f0883e; color: #fff; background: #2a1a10; }
+    .gbm-body { flex: 1; display: grid; grid-template-columns: 250px 1fr; grid-template-rows: minmax(0, 1fr); min-height: 0; } /* 줄 높이를 남은 공간으로 묶어야 넘칠 때 옆·본문 안쪽 스크롤이 생긴다 (auto 면 내용만큼 늘어 아래가 잘림 — 크롬 히특 스크롤 제보 2026-10-10) */
+    .gbm-side { border-right: 1px solid #1e2533; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; overflow: auto; background: rgba(8,11,18,.45); }
+    .gbm-cap { color: #5d6878; font-size: 11px; letter-spacing: .12em; margin: 0 4px 2px; }
+    .gbm-main { padding: 16px 20px; overflow: auto; min-width: 0; display: flex; flex-direction: column; }
+    .gbm-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .gbm-head small { display: block; color: #7d8794; font-size: 11.5px; }
+    .gbm-head b { color: #f3e3b5; font-size: 19px; }
+    .gbm-hint { color: #7d8794; font-size: 12.5px; }
+    @media (max-width: 760px) { .gbm-body { grid-template-columns: 1fr; grid-template-rows: none; } .gbm-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #1e2533; } }
+    /* 단독 화면 위쪽 줄의 빌드 고르기 (page_common.js hpBuildPicker) */
+    .hp-build { color: #7d8794; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
+    .hp-build b { color: #c9d1d9; }
+    .hp-build select { background: #0f141f; color: #e6edf3; border: 1px solid #2f3a4d; border-radius: 6px; padding: 3px 6px; font: inherit; max-width: 220px; }
+    /* 스크롤바 — 브라우저 기본(윈도우 회색 막대) 대신 화면 색에 맞춘 얇은 막대 (사용자 요청) */
+    .gbm, .gbm * { scrollbar-width: thin; scrollbar-color: #2c3a58 transparent; }
+    .gbm ::-webkit-scrollbar, .gbm::-webkit-scrollbar { width: 8px; height: 8px; }
+    .gbm ::-webkit-scrollbar-track { background: transparent; }
+    .gbm ::-webkit-scrollbar-thumb { background: #2c3a58; border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+    .gbm ::-webkit-scrollbar-thumb:hover { background: #3d5078; background-clip: padding-box; }
+    .gbm ::-webkit-scrollbar-corner { background: transparent; }
+    .gbm-help { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 6px; border-radius: 50%; border: 1px solid #3a4a66; color: #9fb0c6; font-size: 11px; cursor: help; vertical-align: 2px; } .gbm-help:hover { color: #ffd98a; border-color: #ffd98a; } /* 단계 규칙 설명 */
+    /* 문구 속 용어(마우스·누르면 설명) — 빌더 1 의 .tip 과 같은 금색 점선 밑줄. tipWrapEffect 가 만드는 class="tip2" 단독 span 만 (판 칸·버튼 등 다른 .tip2 는 제외) */
+    span[class="tip2"] { text-decoration: underline dotted #ffd700; text-underline-offset: 3px; color: #ffe28a; cursor: help; }
+    /* 재능 보드 — 빌더(app.css·hero.css 뒤에 붙임)와 따로 떨어진 /tli/talent 가 함께 쓴다 (2026-10-08). 팝업 틀(.gbm-dim 등)은 hero.css */
+    /* 재능 보드 (로그에서 가져온 찍은 노드) */
+    .gb-boards { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 12px 12px; }
+    .gb-card { flex: 1 1 320px; min-width: 260px; background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 8px; }
+    .gb-name { font-size: 12.5px; color: #ffd166; margin-bottom: 4px; }
+    .gb-svg { width: 100%; height: auto; max-height: 220px; display: block; }
+    .gb-line { stroke: #30363d; stroke-width: 1.6; }
+    .gb-node { fill: #161b22; stroke: #30363d; stroke-width: 0.8; cursor: help; }
+    .gb-node.gb-mid { stroke: #7a5cb8; stroke-width: 1.4; }   /* 중위 재능 = 보라 (사용자 지정: 하위 파랑·중위 보라·레전드 노랑) */
+    .gb-node.gb-leg { stroke: #b8902e; stroke-width: 1.4; }     /* 레전드 중위 재능 = 노랑 */
+    .gb-node.gb-on { fill: #2f81f7; stroke: #79c0ff; }          /* 찍은 노드 */
+    .gb-node.gb-on.gb-mid { fill: #a371f7; stroke: #d2b8ff; }   /* 찍은 중위 재능 */
+    .gb-node.gb-on.gb-leg { fill: #d29922; stroke: #ffd166; }   /* 찍은 레전드 중위 재능 */
+    .gb-area { fill: #a371f714; stroke: #c9a7ff; stroke-width: 0.7; } /* 프리즘 영향 범위 (게임처럼 통짜 네모) */
+    .gb-node.gb-boost { stroke: #f778ba; stroke-width: 1.6; stroke-dasharray: 2 1.2; } /* 프리즘 옵션이 강화하는 등급 */
+    .gb-node.gb-prism { stroke: #ffd166; stroke-width: 1.4; }   /* 프리즘 장착 노드 */
+    .gb-pmark { fill: none; stroke: #ffd166; stroke-width: 1.3; pointer-events: none; filter: drop-shadow(0 0 1.2px #ffd16688); } /* ◆ 프리즘 마커 */
+    /* 보드 노드 툴팁 (석판 칸과 같은 data-h 스타일 툴팁) */
+    .gb-tpt { color: #79c0ff; font-weight: normal; font-size: 12px; }
+    .gb-tmain { color: #e6edf3; }
+    .gb-tsub { color: #8b949e; font-size: 12px; }
+    .gb-tarea { color: #c9a7ff; font-size: 12px; margin-top: 2px; }
+    .gb-tpname { color: #ffd166; margin-bottom: 2px; }
+    .gb-tgain { color: #f778ba; font-size: 12px; margin: 0 0 3px 8px; }
+    .gb-tmap { color: #39c5cf; font-size: 12px; }
+    .gb-tno { color: #f0883e; font-size: 12px; }
+    .gb-tfree { color: #7ee787; font-size: 12px; }
+    .gb-area.gb-inv { fill: #39c5cf14; stroke: #7ee7ef; }                    /* 역상 원본 범위 */
+    .gb-area.gb-mirror { fill: #39c5cf0a; stroke-dasharray: 3 2; }           /* 역상 반사 범위 */
+    .gb-node.gb-mapped { stroke: #39c5cf; stroke-width: 1.8; }               /* 반사돼 온 노드 */
+    .gb-ptag { color: #c9a7ff; font-size: 11.5px; }
+    .gb-core { color: #ffd166; font-size: 11.5px; margin-left: 7px; }
+    .gb-ptag.gb-itag { color: #7ee7ef; }  /* 역상 */
+    #boardWrap.gb-closed .gb-boards { display: none; }
+    .gb-tg { cursor: pointer; user-select: none; }
+    .gb-pt { fill: #0d1117; font-size: 4.6px; font-weight: bold; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+    /* 재능 보드 직접 찍기 */
+    .gb-ed .gb-node { cursor: pointer; }
+    .gb-node.gb-can { stroke: #7ee787; stroke-width: 1.2; }     /* 지금 찍을 수 있는 노드 */
+    .gb-node.gb-lock { opacity: .35; }                          /* 열·연결 조건 미충족 */
+    .gb-colreq { fill: #8b949e; font-size: 4px; text-anchor: middle; }
+    .gb-edbar { font-size: 12px; color: #8b949e; padding: 2px 12px 6px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+    .gb-edbar select { background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a80; border-radius: 4px; padding: 2px 6px; font-size: 12px; }
+    .gb-msg { color: #f0883e; }
+    .gb-over { color: #f0883e; }
+    .gb-clr { margin-left: 6px; background: none; border: 1px solid #30363d; color: #8b949e; border-radius: 4px; font-size: 11px; padding: 0 6px; cursor: pointer; }
+    .gb-clr:hover { color: #f0883e; border-color: #f0883e; }
+    /* 재능 보드 찍기 팝업 — 왼쪽 보드 칸 1~4, 가운데 고르기/큰 보드 (선택 팝업과 같은 1100층, 툴팁은 그 위) */
+    .gb-emb { display: inline-block; flex: none; background: var(--ec, color-mix(in srgb, var(--gc, #f1dfb0) 55%, #fff)); -webkit-mask: var(--em) center / contain no-repeat; mask: var(--em) center / contain no-repeat; }
+    .gb-nemb { width: 15px; height: 15px; margin-right: 5px; vertical-align: -3px; }
+    .gbm-slot { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 12px; cursor: pointer; transition: .15s; }
+    .gbm-slot.filled { background: linear-gradient(100deg, color-mix(in srgb, var(--gc) 22%, #121826), #121826 70%); border: 1px solid color-mix(in srgb, var(--gc) 35%, #232b3a); }
+    .gbm-slot.empty { border: 1.5px dashed #2f3a4d; background: rgba(255,255,255,.015); }
+    .gbm-slot:hover { transform: translateX(2px); border-color: #4a5568; }
+    .gbm-slot.on { box-shadow: 0 0 0 2px #f0883e, 0 6px 18px rgba(240,136,62,.15); border-color: transparent; }
+    .gbm-slot.off { opacity: .4; cursor: not-allowed; transform: none; }
+    .gbm-no { position: absolute; top: -6px; left: -6px; width: 20px; height: 20px; border-radius: 50%; background: #0b0f17; border: 1.5px solid var(--gc); color: #e6edf3; font-size: 11px; font-weight: 700; text-align: center; line-height: 17px; }
+    .gbm-semb { width: 38px; height: 38px; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--gc) 55%, transparent)); }
+    .gbm-plus { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1.5px dashed #3a4558; color: #8b949e; font-size: 18px; text-align: center; line-height: 35px; }
+    .gbm-st { flex: 1; min-width: 0; line-height: 1.3; }
+    .gbm-st small { display: block; color: #7d8794; font-size: 11px; }
+    .gbm-st b { display: block; color: #f0f3f6; font-size: 14px; }
+    .gbm-st em { font-style: normal; color: #9aa4b2; font-size: 11px; }
+    .gbm-st .gbm-empty { color: #8b949e; font-weight: 500; font-size: 13px; }
+    .gbm-bar { display: block; height: 4px; border-radius: 999px; background: #1e2533; overflow: hidden; margin: 5px 0 2px; }
+    .gbm-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--gc, #f0883e) 70%, #fff), var(--gc, #f0883e)); }
+    .gbm-del { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1px solid #2f3a4d; background: #0b0f17; color: #7d8794; font-size: 11px; cursor: pointer; opacity: 0; transition: .15s; }
+    .gbm-slot:hover .gbm-del, .gbm-slot.on .gbm-del { opacity: 1; }
+    .gbm-del:hover { color: #ff7b72; border-color: #ff7b72; }
+    .gbm-slot.dnd { cursor: grab; }
+    .gbm-slot.dnd:active { cursor: grabbing; }
+    .gbm-grip { position: absolute; left: 3px; top: 50%; transform: translateY(-50%); color: #4a5568; font-size: 12px; line-height: 1; pointer-events: none; }
+    .gbm-slot.dnd:hover .gbm-grip { color: #9aa4b2; }
+    .gbm-slot.drag { opacity: .45; }
+    .gbm-slot.drop { box-shadow: 0 0 0 2px #7ee787, 0 0 16px rgba(126,231,135,.25); }
+    .gbm-swap { display: none; }
+    @media (hover: none) { .gbm-swap { display: block; } }
+    .gbm-swap { align-self: center; margin: -3px 0; background: #121826; border: 1px solid #2f3a4d; color: #9aa4b2; border-radius: 999px; padding: 3px 12px; font-size: 11.5px; cursor: pointer; transition: .15s; }
+    .gbm-swap:hover { color: #fff; border-color: #f0883e; background: #2a1a10; }
+    .gbm-total { margin-top: auto; padding: 14px; border-radius: 12px; background: #0e131d; border: 1px solid #1e2533; --gc: #f0883e; }
+    .gbm-total small { color: #7d8794; font-size: 11px; letter-spacing: .08em; }
+    .gbm-total b { display: block; color: #ffb37a; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+    .gbm-total b span { color: #5d6878; font-size: 15px; font-weight: 600; }
+    .gbm-bar.big { height: 6px; }
+    .gbm-total.over b { color: #ff7b72; } .gbm-total.over { --gc: #ff7b72; }
+    .gbm-total em { display: block; margin-top: 4px; color: #ff7b72; font-style: normal; font-size: 11.5px; }
+    .gbm-hemb { width: 46px; height: 46px; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gc) 60%, transparent)); }
+    .gbm-pt { margin-left: 8px; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--gc) 18%, #121826); border: 1px solid color-mix(in srgb, var(--gc) 40%, transparent); color: #fff; font-weight: 700; }
+    .gbm-pt small { display: inline; color: #9aa4b2; font-weight: 500; }
+    .gbm-next { margin-left: auto; background: linear-gradient(180deg, #f59b52, #d9702a); color: #1a0d04; border: 0; border-radius: 9px; padding: 8px 16px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(240,136,62,.25); }
+    .gbm-next:hover { filter: brightness(1.08); }
+    /* 보드 고르기 — 신 배너 + 하위 카드 */
+    .gbm-pick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+    .gbm-col { display: flex; flex-direction: column; gap: 7px; }
+    .gbm-banner { position: relative; height: 190px; padding-bottom: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--gc) 70%, #000) 0%, color-mix(in srgb, var(--gc) 30%, #0b0f17) 55%, #0d121c 100%);
+      clip-path: polygon(0 0, 100% 0, 100% 88%, 50% 100%, 0 88%); cursor: pointer; transition: .18s; }
+    .gbm-banner::before { content: ''; position: absolute; inset: 1.5px; clip-path: inherit; background: linear-gradient(180deg, rgba(255,255,255,.08), transparent 40%); pointer-events: none; }
+    .gbm-bemb { width: 92px; height: 92px; --ec: #f6e6bb; filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition: .18s; }
+    .gbm-banner b { color: #fff; font-size: 14px; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+    .gbm-banner.can:hover { transform: translateY(-3px); filter: brightness(1.15); }
+    .gbm-banner.can:hover .gbm-bemb { transform: scale(1.06); }
+    .gbm-banner.have { filter: brightness(1.1); }
+    .gbm-sub { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--gc) 30%, #232b3a);
+      background: color-mix(in srgb, var(--gc) 9%, #0f141e); color: #dfe6ee; font-size: 12.5px; cursor: pointer; transition: .15s; }
+    .gbm-subemb { width: 24px; height: 24px; }
+    .gbm-sub span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gbm-sub.can:hover { border-color: var(--gc); background: color-mix(in srgb, var(--gc) 20%, #0f141e); transform: translateY(-1px); }
+    .gbm-sub.have { border-color: #f0883e; box-shadow: 0 0 0 1px #f0883e inset; }
+    .gbm-banner.off, .gbm-sub.off { filter: grayscale(.85) brightness(.45); cursor: not-allowed; }
+    .gbm-badge { position: absolute; top: 6px; right: 6px; z-index: 1; min-width: 18px; height: 18px; border-radius: 999px; background: #f0883e; color: #1a0d04; font-size: 11px; font-weight: 800; text-align: center; line-height: 18px; padding: 0 5px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+    .gbm-banner .gbm-badge { top: 10px; right: 10px; }
+    /* 큰 판 — 신 색 배경 + 문장 워터마크 */
+    .gbm-stage { position: relative; flex: 1; min-height: 0; border-radius: 14px; border: 1px solid #1e2533; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--gc) 26%, #0d121c), color-mix(in srgb, var(--gc) 6%, #0a0e16) 55%, #090c13 85%); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .gbm-stage::before { content: ''; position: absolute; left: 50%; top: 50%; width: min(78%, 640px); aspect-ratio: 1; transform: translate(-50%, -50%);
+      background: color-mix(in srgb, var(--gc) 55%, #f6e6bb); -webkit-mask: var(--em) center / contain no-repeat; mask: var(--em) center / contain no-repeat; opacity: .2; filter: drop-shadow(0 0 30px color-mix(in srgb, var(--gc) 60%, transparent)); pointer-events: none; }
+    #gbmBoard { position: relative; width: 100%; height: 100%; }
+    #gbmBoard .gb-boards, #gbmBoard .gb-card { height: 100%; } /* 판이 무대 높이에 맞춰 줄어든다 (페이지 스크롤 없게) */
+    #gbmBoard .gb-boards { padding: 0; }
+    #gbmBoard .gb-card { border: 0; background: none; padding: 0; }
+    #gbmBoard .gb-svg { max-height: none; max-width: 1000px; width: 100%; height: 100%; margin: 0 auto; overflow: visible; }
+    #gbmBoard .gb-name { display: none; }
+    #gbmBoard .gb-line { stroke: #3a4558; stroke-width: 1.4; stroke-linecap: round; }
+    #gbmBoard .gb-node { fill: #121826; stroke: #3a4558; stroke-width: .9; transition: fill .12s; }
+    #gbmBoard .gb-node.gb-on { fill: #2f81f7; stroke: #a5d6ff; filter: drop-shadow(0 0 2.4px currentColor); color: #79c0ff; }
+    #gbmBoard .gb-node.gb-on.gb-mid { fill: #a371f7; stroke: #e2d0ff; color: #c9a7ff; } #gbmBoard .gb-node.gb-on.gb-leg { fill: #e0a52b; stroke: #ffe08a; color: #ffd166; }
+    #gbmBoard .gb-node.gb-mid { stroke: #8a6cc7; stroke-width: 1.3; } #gbmBoard .gb-node.gb-leg { stroke: #b8902e; stroke-width: 1.3; }
+    #gbmBoard .gb-node.gb-can { stroke: #7ee787; stroke-width: 1.1; animation: gbPulse 1.6s ease-in-out infinite; }
+    #gbmBoard .gb-node.gb-can:hover, #gbmBoard .gb-node.gb-on:hover { stroke: #fff; }
+    #gbmBoard .gb-node.gb-lock { opacity: .3; }
+    #gbmBoard .gb-colreq { fill: #6f7b8c; font-size: 3.4px; font-weight: 700; letter-spacing: .02em; }
+    @keyframes gbPulse { 50% { stroke-opacity: .35; } }
+    @media (max-width: 760px) { .gbm-slot { flex: 1 1 150px; } .gbm-total { margin-top: 0; flex: 1 1 100%; } .gbm-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gbm-banner { height: 140px; } .gbm-bemb { width: 64px; height: 64px; } }
+    .gb-slot { display: inline-block; min-width: 16px; margin-right: 5px; padding: 0 4px; border-radius: 4px; background: #30363d; color: #e6edf3; font-size: 11px; text-align: center; }
+    /* ── /tli/talent 단독 화면: 틀을 팝업이 아니라 페이지로 + 빌더에 있던 작은 툴팁 스타일 ── */
+    .tp-body #talentApp { width: min(1400px, 100%); margin: 0 auto; padding: 12px 16px 24px; box-sizing: border-box; }
+    .tp-body #talentApp .gbm { width: 100%; height: calc(100vh - var(--hubnav-h, 44px) - 36px); min-height: 560px; }
+    .tp-loading { color: #7d8794; padding: 40px; text-align: center; }
+    .tp-body #floatTip2 { position: fixed; z-index: 10060; /* 히어로 노드 전체 보기(.hrm-pop 10050) 위 */ max-width: 360px; max-height: 80vh; overflow-y: auto; background: #10141f; border: 1px solid #3a4a6b; border-radius: 8px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.65); font-size: 12.5px; line-height: 1.55; display: none; pointer-events: none; }
+    .tp-body .ft-title { color: #ffd700; font-weight: bold; margin-bottom: 4px; }
+    .tp-body .ft-body { color: #ccc; white-space: pre-line; }
+    .tp-body .ft-sep { border-top: 1px solid #3a4a6b; margin: 6px 0; }
+    .tp-body .psum { color: #667; font-size: 11px; margin-left: 6px; white-space: nowrap; }
+    /* 프리즘 · 역상 (빌더 2 재능 단계 · /tli/talent) */
+    .gbm-pzcap { margin-top: auto; }
+    .gbm-side .gbm-total { margin-top: 10px; }
+    .gbm-pz { padding: 10px 12px; border-radius: 12px; border: 1px dashed #2a3446; background: #0e131d; margin-bottom: 8px; }
+    .gbm-pz.have { border-style: solid; border-color: #3a3256; background: linear-gradient(135deg, #16122a, #0e131d 70%); }
+    .gbm-pz.placing { border-color: #c79bff; box-shadow: 0 0 0 2px rgba(199,155,255,.25); }
+    .gbm-pzt { display: flex; align-items: center; gap: 6px; } .gbm-pzt b { color: #e6dcff; font-size: 13px; }
+    .gbm-pz > small { display: block; color: #7d8794; font-size: 11.5px; margin: 3px 0 6px; line-height: 1.4; }
+    .gbm-pzi { font-style: normal; color: #c79bff; } .gbm-pzi.i { color: #5eead4; }
+    .gbm-pza { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .gbm-pza button { padding: 3px 9px; border-radius: 7px; border: 1px solid #2f3a4d; background: #141b27; color: #c9d1d9; font-size: 11.5px; cursor: pointer; }
+    .gbm-pza button.pri { border-color: #7c5cc4; background: #2a1f4a; color: #e6dcff; } .gbm-pza button.x { margin-left: auto; color: #8b949e; }
+    .gbm-pza em { font-style: normal; font-size: 11px; color: #5d6878; }
+    .gbm-placing { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: #1a1430; border: 1px solid #5b4a8a; color: #e6dcff; font-size: 12.5px; }
+    .gbm-placing button { margin-left: auto; padding: 3px 10px; border-radius: 7px; border: 1px solid #5b4a8a; background: #241b3f; color: #e6dcff; cursor: pointer; }
+    .gb-svg .gb-placeable { stroke: #c79bff !important; stroke-width: 1.2 !important; }
+    .gbz-dim { position: fixed; inset: 0; z-index: 1150; background: rgba(5,7,12,.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .gbz { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: hidden; background: #0d121b; border: 1px solid #2a3446; border-radius: 14px; padding: 14px 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 10px; }
+    .gbz-h { display: flex; align-items: flex-start; gap: 10px; } .gbz-h b { color: #e6dcff; font-size: 16px; white-space: nowrap; } .gbz-h small { flex: 1; color: #7d8794; font-size: 12px; line-height: 1.45; padding-top: 2px; }
+    .gbz-x { width: 28px; height: 28px; border-radius: 8px; border: 1px solid #2f3a4d; background: #141b27; color: #c9d1d9; cursor: pointer; flex: none; }
+    .gbz-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .gbz-tab { padding: 5px 11px; border-radius: 999px; border: 1px solid #2a3446; color: #8b949e; font-size: 12px; cursor: pointer; }
+    .gbz-tab.on { border-color: #c79bff; color: #e6dcff; background: #221a3a; } .gbz-tab.done:not(.on) { color: #b9a6e8; }
+    .gbz-picked { padding: 8px 10px; border-radius: 10px; background: #120f1f; border: 1px solid #2c2446; font-size: 12px; color: #c9c2e6; line-height: 1.5; } .gbz-picked b { color: #e6dcff; }
+    .gbz-q { width: 100%; padding: 8px 10px; border-radius: 9px; border: 1px solid #2a3446; background: #0a0e15; color: #e6edf3; font-size: 13px; box-sizing: border-box; }
+    .gbz-list { display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto; min-height: 120px; overflow: auto; }
+    .gbz-row { display: flex; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 9px; border: 1px solid #1a2130; background: #0e131c; cursor: pointer; font-size: 12.5px; color: #c4ccd6; }
+    .gbz-row:hover { border-color: #3a4a66; } .gbz-row.on { border-color: #c79bff; background: #1c1630; }
+    .gbz-row img { width: 34px; height: 34px; flex: none; } .gbz-row b { color: #e6dcff; } .gbz-row small { display: block; color: #7d8794; font-size: 11.5px; margin-top: 2px; line-height: 1.4; }
+    .gbz-empty { color: #5d6878; font-size: 12.5px; padding: 10px; text-align: center; }
+    .gbz-iv { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #c9d1d9; } .gbz-iv span { flex: 1; }
+    .gbz-iv input { width: 80px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0e15; color: #e6edf3; text-align: right; } .gbz-iv em { font-style: normal; color: #5d6878; font-size: 11.5px; width: 110px; }
+    .gbz-note { color: #7d8794; font-size: 12px; }
+    .gbz-acts { display: flex; gap: 8px; justify-content: flex-end; }
+    .gbz-btn { padding: 7px 14px; border-radius: 9px; border: 1px solid #2f3a4d; background: #141b27; color: #c9d1d9; cursor: pointer; font-size: 13px; } .gbz-btn.pri { border-color: #7c5cc4; background: #3a2a6a; color: #fff; font-weight: 600; }
+    /* 핵심 재능 (보드 아래) */
+    .gbm-core { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .gbm-corecap { color: #e6c88a; font-weight: 700; font-size: 14px; } .gbm-corecap span { color: #7d8794; font-weight: 400; font-size: 12px; margin-left: 8px; }
+    .gbm-cgrp { display: flex; gap: 12px; align-items: stretch; }
+    .gbm-cneed { flex: none; width: 54px; border-radius: 12px; background: #141b27; border: 1px solid #2a3446; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gbm-cneed b { color: #ffd166; font-size: 20px; line-height: 1; } .gbm-cneed small { color: #7d8794; font-size: 11px; } .gbm-cneed em { font-style: normal; color: #ff8a7a; font-size: 10.5px; margin-top: 2px; }
+    .gbm-copts { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .gbm-copt { padding: 9px 11px; border-radius: 11px; border: 1px solid #222b3a; background: #0e131c; cursor: pointer; transition: .12s; }
+    .gbm-copt:hover { border-color: #3a4a66; }
+    .gbm-copt b { display: block; color: #e6edf3; font-size: 13px; margin-bottom: 3px; } .gbm-copt small { display: block; color: #8b949e; font-size: 11.5px; line-height: 1.45; }
+    .gbm-copt.on { border-color: #d4a84a; background: linear-gradient(135deg, #2a200c, #0f0e14 75%); box-shadow: 0 0 0 1px #d4a84a55; } .gbm-copt.on b { color: #ffd166; }
+    .gbm-copt em { display: block; font-style: normal; color: #ff8a7a; font-size: 11px; margin-top: 4px; }
+    .gbm-cgrp.lock .gbm-copt:not(.on) { opacity: .45; }
+    /* 보드 머리 — 핵심 재능 동그라미 · 프리즘/역상 버튼 · 포인트(오른쪽 끝) */
+    .gbm-cslots { display: flex; gap: 8px; margin-left: 14px; }
+    .gbm-cslot { width: 44px; height: 44px; border-radius: 50%; padding: 0; border: 2px dashed color-mix(in srgb, var(--gc) 55%, #3a4558); background: #0e131d; color: #c9d1d9; font-weight: 700; font-size: 13px; cursor: pointer; overflow: hidden; display: grid; place-items: center; flex: none; }
+    .gbm-cslot:hover { border-color: #ffd166; }
+    .gbm-cslot.have { border: 2px solid #ffd166; box-shadow: 0 0 10px rgba(255,209,102,.35); background: #1a1406; }
+    .gbm-cslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gbm-cslot.lock { opacity: .45; border-style: dotted; } /* 잠겨도 눌러서 선택지 미리 보기 */
+    .gbz-lock { margin: 0 0 8px; padding: 7px 10px; border-radius: 8px; background: #1a1508; border: 1px solid #5a4a1c; color: #e8c86a; font-size: 12.5px; }
+    .gbz-row.lock { cursor: not-allowed; } .gbz-row.lock:hover { border-color: #1a2130; }
+    .gbm-cslot.lock.have { opacity: .6; filter: grayscale(.6); }
+    .gbm-cslot.pz { border: 2px solid #b48cff; box-shadow: 0 0 10px rgba(180,140,255,.45); background: #170f2a; } /* 프리즘 핵심 재능 (교체·추가) */
+    .gbm-cslot.pz.add { cursor: help; } .gbm-cslot.pz.lock { opacity: .6; filter: grayscale(.5); }
+    .gbm-hright { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .gbm-hright .gbm-next { margin-left: 0; }
+    .gbm-hright .gbm-pt { margin-left: 4px; }
+    .gbm-pzadd { padding: 6px 12px; border-radius: 9px; border: 1px dashed #5b4a8a; background: #17122a; color: #d8ccff; font-size: 12.5px; cursor: pointer; }
+    .gbm-pzadd.i { border-color: #2f6b6b; background: #0f1f22; color: #a8f0e4; }
+    .gbm-pzadd:hover { filter: brightness(1.2); }
+    .gbm-pzchip { display: inline-flex; border-radius: 9px; overflow: hidden; border: 1px solid #7c5cc4; background: #241b3f; }
+    .gbm-pzchip.i { border-color: #2f8f86; background: #0f2a2a; }
+    .gbm-pzchip button { border: 0; background: none; color: #e6dcff; padding: 6px 10px; font-size: 12.5px; cursor: pointer; }
+    .gbm-pzchip.i button { color: #b7f5ea; }
+    .gbm-pzchip button.x { padding: 6px 8px; color: #8b949e; border-left: 1px solid rgba(255,255,255,.08); }
+    .gbm-pz[onclick] { cursor: pointer; } .gbm-pz[onclick]:hover { border-color: #5b4a8a; }
+    .gbz.gbz-narrow { width: min(560px, 100%); }
+    .gbz-core img { width: 48px; height: 48px; border-radius: 50%; border: 2px solid #3a4558; }
+    .gbz-core.on img { border-color: #ffd166; }
+
+    /* 티아 「계시의 예언」으로 축복 변형이 된 칸 (SS14) */
+    .gb-node.gb-var { stroke-dasharray: 3 2; stroke: #ffd98a; }

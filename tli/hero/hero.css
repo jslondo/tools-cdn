@@ -1,0 +1,156 @@
+    /* 큰 팝업·단독 화면 틀(.gbm-*) — 재능 보드·히어로 공용, 빌더와 /tli/hero·/tli/talent 가 함께 쓴다 (2026-10-08) */
+    /* ── 팝업 틀: 재능 보드·히어로 공용 ── */
+    .gbm-dim { position: fixed; inset: 0; z-index: 1100; background: radial-gradient(ellipse at 50% 30%, rgba(20,26,40,.82), rgba(3,5,10,.9)); display: none; align-items: center; justify-content: center; padding: 18px; backdrop-filter: blur(3px); }
+    .gbm { width: min(1320px, 100%); height: min(880px, 100%); background: linear-gradient(180deg, #121826, #0b0f17 40%); border: 1px solid #2a3344; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04); }
+    .gbm-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid #1e2533; }
+    .gbm-title { font-size: 16px; letter-spacing: .02em; color: #f3e3b5; }
+    .gbm-keys { color: #7d8794; font-size: 12px; }
+    .gbm-keys kbd { font: 600 11px/1 inherit; color: #c9d1d9; background: #1b2230; border: 1px solid #2f3a4d; border-bottom-width: 2px; border-radius: 5px; padding: 3px 6px; margin: 0 2px 0 6px; }
+    .gbm-sep { margin: 0 4px; color: #3a4558; }
+    .gbm-msg { color: #ffb37a; background: #3a1f10; border: 1px solid #6b3a1c; border-radius: 999px; padding: 3px 12px; font-size: 12px; }
+    .gbm-x { margin-left: auto; background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: .15s; }
+    .gbm-x:hover { border-color: #f0883e; color: #fff; background: #2a1a10; }
+    .gbm-body { flex: 1; display: grid; grid-template-columns: 250px 1fr; grid-template-rows: minmax(0, 1fr); min-height: 0; } /* 줄 높이를 남은 공간으로 묶어야 넘칠 때 옆·본문 안쪽 스크롤이 생긴다 (auto 면 내용만큼 늘어 아래가 잘림 — 크롬 히특 스크롤 제보 2026-10-10) */
+    .gbm-side { border-right: 1px solid #1e2533; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; overflow: auto; background: rgba(8,11,18,.45); }
+    .gbm-cap { color: #5d6878; font-size: 11px; letter-spacing: .12em; margin: 0 4px 2px; }
+    .gbm-main { padding: 16px 20px; overflow: auto; min-width: 0; display: flex; flex-direction: column; }
+    .gbm-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .gbm-head small { display: block; color: #7d8794; font-size: 11.5px; }
+    .gbm-head b { color: #f3e3b5; font-size: 19px; }
+    .gbm-hint { color: #7d8794; font-size: 12.5px; }
+    @media (max-width: 760px) { .gbm-body { grid-template-columns: 1fr; grid-template-rows: none; } .gbm-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #1e2533; } }
+    /* 단독 화면 위쪽 줄의 빌드 고르기 (page_common.js hpBuildPicker) */
+    .hp-build { color: #7d8794; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
+    .hp-build b { color: #c9d1d9; }
+    .hp-build select { background: #0f141f; color: #e6edf3; border: 1px solid #2f3a4d; border-radius: 6px; padding: 3px 6px; font: inherit; max-width: 220px; }
+    /* 스크롤바 — 브라우저 기본(윈도우 회색 막대) 대신 화면 색에 맞춘 얇은 막대 (사용자 요청) */
+    .gbm, .gbm * { scrollbar-width: thin; scrollbar-color: #2c3a58 transparent; }
+    .gbm ::-webkit-scrollbar, .gbm::-webkit-scrollbar { width: 8px; height: 8px; }
+    .gbm ::-webkit-scrollbar-track { background: transparent; }
+    .gbm ::-webkit-scrollbar-thumb { background: #2c3a58; border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+    .gbm ::-webkit-scrollbar-thumb:hover { background: #3d5078; background-clip: padding-box; }
+    .gbm ::-webkit-scrollbar-corner { background: transparent; }
+    .gbm-help { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 6px; border-radius: 50%; border: 1px solid #3a4a66; color: #9fb0c6; font-size: 11px; cursor: help; vertical-align: 2px; } .gbm-help:hover { color: #ffd98a; border-color: #ffd98a; } /* 단계 규칙 설명 */
+    /* 문구 속 용어(마우스·누르면 설명) — 빌더 1 의 .tip 과 같은 금색 점선 밑줄. tipWrapEffect 가 만드는 class="tip2" 단독 span 만 (판 칸·버튼 등 다른 .tip2 는 제외) */
+    span[class="tip2"] { text-decoration: underline dotted #ffd700; text-underline-offset: 3px; color: #ffe28a; cursor: help; }
+    /* 히어로 화면 — 빌더와 /tli/hero 가 함께 쓴다 (틀은 frame.css) */
+    /* ── 히어로 ── */
+    /* 히어로 팝업 (#hrModal) — 틀은 재능 보드 팝업(.gbm-*) 그대로, 안쪽만 hrm-* */
+    .hrm-heroes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .hrm-hero { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; border: 1px solid #1f2735; border-radius: 10px; background: #0f141f; cursor: pointer; transition: .15s; position: relative; }
+    .hrm-hero img { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; background: #0b0f17; border: 2px solid #263044; }
+    .hrm-hero b { color: #c9d1d9; font-size: 12.5px; }
+    .hrm-hero small { color: #5d6878; font-size: 10.5px; }
+    .hrm-hero:hover { border-color: #3a4a66; background: #131a28; }
+    .hrm-hero.on { border-color: #d4a84a; background: linear-gradient(180deg, #221b0e, #131018); box-shadow: 0 0 0 1px rgba(212,168,74,.25) inset; }
+    .hrm-hero.on img { border-color: #d4a84a; }
+    .hrm-hero.have small { color: #e3b860; }
+    .hrm-traits { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 18px; }
+    .hrm-trait { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #222b3b; border-radius: 12px; background: #0f141f; cursor: pointer; transition: .15s; position: relative; }
+    .hrm-trait img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: #0b0f17; }
+    .hrm-trait b { display: block; color: #e6edf3; font-size: 14.5px; }
+    .hrm-trait small { color: #7d8794; font-size: 11.5px; }
+    .hrm-trait:hover { border-color: #3a4a66; transform: translateY(-1px); }
+    .hrm-trait.on { border-color: #d4a84a; background: linear-gradient(135deg, #2a200c, #12101a 70%); }
+    .hrm-trait.on b { color: #f3e3b5; }
+    .hrm-tick { position: absolute; top: 8px; right: 10px; color: #e3b860; font-weight: bold; }
+    .hrm-boardh { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; padding-top: 14px; border-top: 1px solid #1e2533; }
+    .hrm-boardh > b { color: #f3e3b5; font-size: 17px; }
+    .hrm-cnt { color: #0b0f17; background: #e3b860; border-radius: 999px; padding: 1px 10px; font-weight: bold; font-size: 12.5px; }
+    .hrm-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: start; }
+    .hrm-colh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 0 2px 4px; border-bottom: 2px solid #263044; }
+    .hrm-colh b { color: #c9d1d9; font-size: 13.5px; }
+    .hrm-colh small { color: #5d6878; font-size: 11px; }
+    .hrm-lv { margin-left: auto; font-size: 11px; color: #9ec1ff; background: #10203a; border: 1px solid #23406b; border-radius: 4px; padding: 0 6px; }
+    .hrm-node { border: 1px solid #222b3b; border-radius: 10px; padding: 9px 11px; background: #0e131c; cursor: pointer; transition: .15s; position: relative; }
+    .hrm-node.base { cursor: default; border-color: #5a4a26; background: linear-gradient(180deg, #1d1810, #0e0d12); }
+    .hrm-nh { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .hrm-nh img { width: 38px; height: 38px; border-radius: 8px; background: #0b0f17; flex: none; filter: grayscale(.85) brightness(.75); transition: .15s; }
+    .hrm-nh b { color: #aab4c0; font-size: 13.5px; line-height: 1.25; }
+    .hrm-nst { display: none; font-size: 10.5px; color: #9ec1ff; flex: none; }
+    .hrm-nlv { margin-left: auto; font-size: 10.5px; color: #6e7681; flex: none; }
+    .hrm-node ul { margin: 0; padding-left: 16px; color: #6e7a88; font-size: 11.8px; line-height: 1.5; }
+    /* 긴 설명은 5줄까지 — 넘친 노드(.clip)는 끝을 흐리게, 마우스를 올리면 .hrm-pop 에 전체 (터치 기기는 줄이지 않음) */
+    @media (hover: hover) {
+      .hrm-node > ul { max-height: calc(11.8px * 1.5 * 5); overflow: hidden; }
+      .hrm-node.clip > ul { -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+      .hrm-node.clip::after { content: '… 마우스를 올리면 전체'; display: block; color: #5d6878; font-size: 10.5px; margin-top: 2px; }
+    }
+    .hrm-pop { position: fixed; z-index: 10050; display: none; width: 340px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto;
+      background: #0d121b; border: 1px solid #3a4558; border-radius: 10px; padding: 10px 12px; box-shadow: 0 14px 40px rgba(0,0,0,.6); color: #c4ccd6; font-size: 12px; line-height: 1.55; }
+    /* 전체 보기 창은 마우스를 옮겨 안의 밑줄 용어를 볼 수 있다 (사용자 2026-10-12) */
+    /* /tli/hero 단독 화면의 용어 툴팁 — 빌더는 app.css, /tli/talent 는 talent.css 에 같은 규칙 */
+    .hp-body #floatTip2 { position: fixed; z-index: 10060; /* 전체 보기(.hrm-pop 10050) 위 */ max-width: 360px; max-height: 80vh; overflow-y: auto; background: #10141f; border: 1px solid #3a4a6b; border-radius: 8px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.65); font-size: 12.5px; line-height: 1.55; display: none; pointer-events: none; }
+    .hp-body .ft-title { color: #ffd700; font-weight: bold; margin-bottom: 4px; }
+    .hp-body .ft-body { color: #ccc; white-space: pre-line; }
+    .hrm-pop b { display: block; color: #f3e3b5; font-size: 13px; margin-bottom: 4px; }
+    .hrm-pop ul { margin: 0; padding-left: 16px; }
+    .hrm-node.can:hover { border-color: #3d5a80; background: #111a2a; }
+    .hrm-node.on { border-color: #d4a84a; background: linear-gradient(180deg, #211a0d, #0f0e14); box-shadow: 0 0 18px rgba(212,168,74,.12); }
+    .hrm-node.on .hrm-nh img { filter: none; }
+    .hrm-node.on .hrm-nh b { color: #f3e3b5; }
+    .hrm-node.on ul { color: #c4ccd6; }
+    .hrm-node.alt { opacity: .62; }
+    .hrm-node.alt:hover { opacity: 1; border-color: #3d5a80; }
+    .hrm-node.lock { opacity: .38; cursor: not-allowed; }
+    /* 갈래형: 같은 행이 한 갈래 — 왼쪽 노드에서 이어지는 화살표 */
+    .hrm-board.tree .hrm-node.lnk::before { content: '▸'; position: absolute; left: -13px; top: 18px; color: #3a4558; font-size: 13px; }
+    .hrm-board.tree .hrm-node.lnk.on::before { color: #d4a84a; }
+    .hrm-par { color: #7d8794; font-size: 11px; margin: -2px 0 4px; }
+    .hrm-board.tree .hrm-nst { display: inline; } /* 갈래형은 열이 깊이라 노드마다 해금 단계(근원·자기 수호·진격)를 보여 준다 */ /* 갈래형: 다른 줄에서 이어질 때 앞 노드 */
+    .hrm-empty { color: #7d8794; padding: 24px; text-align: center; border: 1px dashed #263044; border-radius: 12px; }
+    .hrm-empty b { color: #e6edf3; }
+    .hn-msg { color: #ffb37a; font-size: 12px; margin-bottom: 6px; }
+    @media (max-width: 1000px) { .hrm-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hrm-colh { display: none; } .hrm-board > * { grid-column: auto !important; grid-row: auto !important; } .hrm-nst { display: inline-block; } .hrm-board.tree .hrm-node.lnk::before { display: none; } }
+    @media (max-width: 760px) { .hrm .gbm-side > * { flex: 1 1 100%; } .hrm-heroes { grid-template-columns: repeat(6, minmax(0, 1fr)); } .hrm-hero img { width: 40px; height: 40px; } .hrm-hero small { display: none; } }
+    @media (max-width: 520px) { .hrm-board { grid-template-columns: 1fr; } .hrm-heroes { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    .hn-herb { margin-top: 5px; border-top: 1px dashed #21262d; padding-top: 4px; }
+    .hn-hcat { font-size: 10.5px; color: #6e7681; }
+    .hn-hrow { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+    .hn-hitem { border: 1px solid #21262d; border-radius: 4px; padding: 2px 6px;
+      font-size: 11.5px; color: #8b949e; cursor: pointer; }
+    .hn-hitem.on { border-color: #3d5a80; background: #0d1b2e; color: #9ec1ff; }
+    /* ── /tli/hero 단독 화면: 틀을 팝업이 아니라 페이지로 ── */
+    .hp-body #heroApp { width: min(1400px, 100%); margin: 0 auto; padding: 12px 16px 24px; box-sizing: border-box; }
+    .hp-body #heroApp .gbm { width: 100%; height: auto; min-height: calc(100vh - var(--hubnav-h, 44px) - 36px); }
+    .hp-body #heroApp .gbm-body { flex: 1; }
+    .hp-body #heroApp .gbm-side, .hp-body #heroApp .gbm-main { overflow: visible; }
+    .hp-loading { color: #7d8794; padding: 40px; text-align: center; }
+
+    /* ── 갈래형 아이콘 트리 (2026-10-10) ── */
+    .hrt-wrap { margin: 4px 0 6px; overflow-x: auto; } /* 좁은 화면은 트리만 가로로 밀어 본다 */
+    .hrt-in { min-width: 600px; padding: 0 40px; } /* 양 끝 노드 이름(150px 가운데 정렬)이 잘리지 않게 */
+    .hrt-cols { position: relative; height: 18px; margin-bottom: 6px; }
+    .hrt-cols span { position: absolute; transform: translateX(-50%); white-space: nowrap; color: #ffd98a; font-size: 12px; font-weight: 600; }
+    .hrt { position: relative; }
+    .hrt-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .hrt-lines path { fill: none; stroke: #2a3446; stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .hrt-lines path.on { stroke: #d4a84a; stroke-width: 2.5; }
+    .hrt-n { position: absolute; width: 150px; margin-left: -75px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; }
+    .hrt-ic { width: 60px; height: 60px; border-radius: 50%; border: 2px solid #2f3a4d; background: #0b0f17; display: grid; place-items: center; overflow: hidden; transition: .15s; box-shadow: 0 0 0 3px #0b0f17; }
+    .hrt-ic img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.85) brightness(.75); transition: .15s; }
+    .hrt-nm { margin-top: 5px; color: #9aa5b4; font-size: 11.5px; line-height: 1.3; font-weight: 600; max-width: 140px; word-break: keep-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hrt-st { color: #5d6878; font-size: 10.5px; margin-top: 1px; }
+    .hrt-n.can:hover .hrt-ic { border-color: #5a7bb0; } .hrt-n.can:hover .hrt-ic img { filter: none; }
+    .hrt-n.on .hrt-ic { border-color: #e3b860; box-shadow: 0 0 0 3px #0b0f17, 0 0 14px rgba(227,184,96,.55); }
+    .hrt-n.on .hrt-ic img { filter: none; }
+    .hrt-n.on .hrt-nm { color: #f3e3b5; }
+    .hrt-n.base { cursor: default; }
+    .hrt-n.lock { cursor: not-allowed; } .hrt-n.lock .hrt-ic { opacity: .45; } .hrt-n.lock .hrt-nm { color: #5d6878; }
+    .hrt-n.focus .hrt-ic { border-color: #7db4ff; }
+    .hrm-pop small { display: block; color: #7d8794; font-size: 11px; margin: -2px 0 6px; }
+    .hrm-pop em { display: block; margin-top: 6px; color: #7d8794; font-style: normal; font-size: 11px; } .hrm-pop em.why { color: #ffb37a; }
+    .hrt-focus, .hrt-sum { margin-top: 12px; border: 1px solid #1f2735; border-radius: 12px; background: #0b0f17; padding: 10px 12px; }
+    .hrt-focus { border-color: #34507a; }
+    .hrt-fh { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; } .hrt-fh b { color: #e6edf3; font-size: 13px; } .hrt-fh small { color: #7d8794; font-size: 11px; } .hrt-fh button { margin-left: auto; }
+    .hrt-btn { margin-left: auto; background: linear-gradient(135deg, #3a2c10, #1a1408); color: #f3e3b5; border: 1px solid #8a6d2e; border-radius: 8px; padding: 5px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+    .hrt-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .hrt-why { color: #ffb37a; font-size: 11.5px; margin-top: 4px; }
+    .hrt-focus ul, .hrt-sum ul { margin: 0; padding-left: 16px; color: #c4ccd6; font-size: 12px; line-height: 1.55; }
+    .hrt-sum { padding: 0; }
+    .hrt-sum summary { cursor: pointer; list-style: none; padding: 9px 12px; color: #ffd98a; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; user-select: none; }
+    .hrt-sum summary::-webkit-details-marker { display: none; }
+    .hrt-sum summary::before { content: '▸'; color: #7d8794; transition: transform .15s; } .hrt-sum[open] summary::before { transform: rotate(90deg); }
+    .hrt-sum summary span { color: #7d8794; font-weight: 400; } .hrt-sum summary:hover { color: #f3e3b5; }
+    .hrt-sumg { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 14px; padding: 0 12px 10px; }
+    .hrt-sih { display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; } .hrt-sih b { color: #f3e3b5; font-size: 12.5px; } .hrt-sih small { color: #7d8794; font-size: 10.5px; }

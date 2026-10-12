@@ -631,6 +631,9 @@ function gbPickBoard(pre) {
 const gbColor = pre => (GB_GODS.find(g => g[0] === String(pre)[0]) || ['', '#8b949e'])[1];
 const gbEmb = (pre, cls) => BOARDS[pre] && BOARDS[pre].e
   ? `<i class="gb-emb ${cls || ''}" style="--gc:${gbColor(pre)};--em:url('${location.origin}/tli/builder/emblem/${BOARDS[pre].e}')"></i>` : '';
+// 보드 태그·소개 (tlidb 목록 카드 — 수집기 board_info: d=첫 줄, g=태그, s=한 줄 소개). 고르기 칸엔 태그만, 나머지는 툴팁
+const gbTags = (pre, cls) => (BOARDS[pre].g || []).length ? `<small class="${cls}">${escapeHtml(BOARDS[pre].g.join(' · '))}</small>` : '';
+const gbInfo = pre => { const b = BOARDS[pre]; return [b.n, b.d, (b.g || []).length ? '태그: ' + b.g.join(', ') : '', b.s].filter(Boolean).join('\n') + '\n\n'; };
 const gbMaxPts = pre => (BOARDS[pre].m || []).reduce((t, v) => t + v, 0) || 1;
 function gbRenderModal() {
   const page = document.getElementById('talentApp');
@@ -681,7 +684,7 @@ function gbRenderModal() {
   if (cur) {
     const pt = ptsOf(cur);
     main = `<div class="gbm-head" style="--gc:${gbColor(cur)}">${gbEmb(cur, 'gbm-hemb')}<div><small>${gbSlot + 1}번 · ${escapeHtml(label(gbSlot))}</small>` +
-      `<b>${escapeHtml(BOARDS[cur].n)}</b></div><div class="gbm-cslots">${gbCoreSlots(cur)}</div>` +
+      `<b>${escapeHtml(BOARDS[cur].n)}</b>${gbTags(cur, 'gbm-htag')}</div><div class="gbm-cslots">${gbCoreSlots(cur)}</div>` +
       `<div class="gbm-hright">` + (gbSlot < 3 && !s4[gbSlot + 1] ? `<button class="gbm-next" onclick="gbPickSlot(${gbSlot + 1})">다음 보드 고르기 →</button>` : '') +
       gbPzHead(cur, gbSlot) + `<span class="gbm-pt">${pt}<small>pt</small></span></div></div>` +
       (gbPlace ? `<div class="gbm-placing"><i class="gbm-pzi ${gbPlace}">◆</i> ${gbPlace === 'i' ? '역상' : '프리즘'}을 놓을 노드를 누르세요 — 신 보드 제외${gbPlace === 'i' ? ' · 가운데 3×3 제외' : ''} · 왼쪽에서 다른 보드로 바꿀 수 있습니다 <button onclick="gbPlaceMode('${gbPlace}')">취소</button></div>` : '') +
@@ -696,11 +699,11 @@ function gbRenderModal() {
         const gp = g + '0';
         const st = p => present.has(p) ? ' have' : can(p) ? ' can' : ' off';
         const badge = p => present.has(p) ? `<span class="gbm-badge">${slotOf(p)}</span>` : '';
-        const tip = p => escapeHtml(present.has(p) ? slotOf(p) + '번 칸에 고른 보드' : gbWhyNotAdd(p, present) || '눌러서 고르기');
+        const tip = p => escapeHtml(gbInfo(p) + (present.has(p) ? slotOf(p) + '번 칸에 고른 보드' : gbWhyNotAdd(p, present) || '눌러서 고르기'));
         const click = p => can(p) ? ` onclick="gbPickBoard('${p}')"` : '';
         return `<div class="gbm-col" style="--gc:${col}">` +
-          `<div class="gbm-banner${st(gp)}"${click(gp)} title="${tip(gp)}">${badge(gp)}${gbEmb(gp, 'gbm-bemb')}<b>${escapeHtml(BOARDS[gp].n)}</b></div>` +
-          [1, 2, 3, 4].map(k => { const p = g + k; return BOARDS[p] ? `<div class="gbm-sub${st(p)}"${click(p)} title="${tip(p)}">${gbEmb(p, 'gbm-subemb')}<span>${escapeHtml(BOARDS[p].n)}</span>${badge(p)}</div>` : ''; }).join('') +
+          `<div class="gbm-banner${st(gp)}"${click(gp)} title="${tip(gp)}">${badge(gp)}${gbEmb(gp, 'gbm-bemb')}<b>${escapeHtml(BOARDS[gp].n)}</b>${gbTags(gp, 'gbm-btag')}</div>` +
+          [1, 2, 3, 4].map(k => { const p = g + k; return BOARDS[p] ? `<div class="gbm-sub${st(p)}"${click(p)} title="${tip(p)}">${gbEmb(p, 'gbm-subemb')}<div class="gbm-sn"><span>${escapeHtml(BOARDS[p].n)}</span>${gbTags(p, 'gbm-stag')}</div>${badge(p)}</div>` : ''; }).join('') +
           '</div>';
       }).join('') + '</div>';
   }

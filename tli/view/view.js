@@ -1048,6 +1048,9 @@ function gbPickBoard(pre) {
 const gbColor = pre => (GB_GODS.find(g => g[0] === String(pre)[0]) || ['', '#8b949e'])[1];
 const gbEmb = (pre, cls) => BOARDS[pre] && BOARDS[pre].e
   ? `<i class="gb-emb ${cls || ''}" style="--gc:${gbColor(pre)};--em:url('${location.origin}/tli/builder/emblem/${BOARDS[pre].e}')"></i>` : '';
+// 보드 태그·소개 (tlidb 목록 카드 — 수집기 board_info: d=첫 줄, g=태그, s=한 줄 소개). 고르기 칸엔 태그만, 나머지는 툴팁
+const gbTags = (pre, cls) => (BOARDS[pre].g || []).length ? `<small class="${cls}">${escapeHtml(BOARDS[pre].g.join(' · '))}</small>` : '';
+const gbInfo = pre => { const b = BOARDS[pre]; return [b.n, b.d, (b.g || []).length ? '태그: ' + b.g.join(', ') : '', b.s].filter(Boolean).join('\n') + '\n\n'; };
 const gbMaxPts = pre => (BOARDS[pre].m || []).reduce((t, v) => t + v, 0) || 1;
 function gbRenderModal() {
   const page = document.getElementById('talentApp');
@@ -1098,7 +1101,7 @@ function gbRenderModal() {
   if (cur) {
     const pt = ptsOf(cur);
     main = `<div class="gbm-head" style="--gc:${gbColor(cur)}">${gbEmb(cur, 'gbm-hemb')}<div><small>${gbSlot + 1}번 · ${escapeHtml(label(gbSlot))}</small>` +
-      `<b>${escapeHtml(BOARDS[cur].n)}</b></div><div class="gbm-cslots">${gbCoreSlots(cur)}</div>` +
+      `<b>${escapeHtml(BOARDS[cur].n)}</b>${gbTags(cur, 'gbm-htag')}</div><div class="gbm-cslots">${gbCoreSlots(cur)}</div>` +
       `<div class="gbm-hright">` + (gbSlot < 3 && !s4[gbSlot + 1] ? `<button class="gbm-next" onclick="gbPickSlot(${gbSlot + 1})">다음 보드 고르기 →</button>` : '') +
       gbPzHead(cur, gbSlot) + `<span class="gbm-pt">${pt}<small>pt</small></span></div></div>` +
       (gbPlace ? `<div class="gbm-placing"><i class="gbm-pzi ${gbPlace}">◆</i> ${gbPlace === 'i' ? '역상' : '프리즘'}을 놓을 노드를 누르세요 — 신 보드 제외${gbPlace === 'i' ? ' · 가운데 3×3 제외' : ''} · 왼쪽에서 다른 보드로 바꿀 수 있습니다 <button onclick="gbPlaceMode('${gbPlace}')">취소</button></div>` : '') +
@@ -1113,11 +1116,11 @@ function gbRenderModal() {
         const gp = g + '0';
         const st = p => present.has(p) ? ' have' : can(p) ? ' can' : ' off';
         const badge = p => present.has(p) ? `<span class="gbm-badge">${slotOf(p)}</span>` : '';
-        const tip = p => escapeHtml(present.has(p) ? slotOf(p) + '번 칸에 고른 보드' : gbWhyNotAdd(p, present) || '눌러서 고르기');
+        const tip = p => escapeHtml(gbInfo(p) + (present.has(p) ? slotOf(p) + '번 칸에 고른 보드' : gbWhyNotAdd(p, present) || '눌러서 고르기'));
         const click = p => can(p) ? ` onclick="gbPickBoard('${p}')"` : '';
         return `<div class="gbm-col" style="--gc:${col}">` +
-          `<div class="gbm-banner${st(gp)}"${click(gp)} title="${tip(gp)}">${badge(gp)}${gbEmb(gp, 'gbm-bemb')}<b>${escapeHtml(BOARDS[gp].n)}</b></div>` +
-          [1, 2, 3, 4].map(k => { const p = g + k; return BOARDS[p] ? `<div class="gbm-sub${st(p)}"${click(p)} title="${tip(p)}">${gbEmb(p, 'gbm-subemb')}<span>${escapeHtml(BOARDS[p].n)}</span>${badge(p)}</div>` : ''; }).join('') +
+          `<div class="gbm-banner${st(gp)}"${click(gp)} title="${tip(gp)}">${badge(gp)}${gbEmb(gp, 'gbm-bemb')}<b>${escapeHtml(BOARDS[gp].n)}</b>${gbTags(gp, 'gbm-btag')}</div>` +
+          [1, 2, 3, 4].map(k => { const p = g + k; return BOARDS[p] ? `<div class="gbm-sub${st(p)}"${click(p)} title="${tip(p)}">${gbEmb(p, 'gbm-subemb')}<div class="gbm-sn"><span>${escapeHtml(BOARDS[p].n)}</span>${gbTags(p, 'gbm-stag')}</div>${badge(p)}</div>` : ''; }).join('') +
           '</div>';
       }).join('') + '</div>';
   }
@@ -1446,6 +1449,60 @@ function mainAllows(s, group) {
 }
 // 1번 칸=촉발체+일반, 3번 칸=부귀+일반, 5번 칸=숭고+일반, 나머지=일반 보조만
 function socketKinds(i) { return i === 0 ? ['보조', '촉발체'] : i === 2 ? ['보조', '부귀 보조'] : i === 4 ? ['보조', '숭고 보조'] : ['보조']; }
+// ── 보조 대상 제한 (2026-10-13) — 보조 스킬 첫 줄 "실드 스킬을 보조한다." 를 메인 스킬 태그와 맞춰 본다.
+// 확실히 읽히는 문구만 거른다: 태그 낱말(실드·주입·자극·회복·저주·함성·영약·오라·콤보…)의 조합, 'A 또는 B', 특정 스킬 이름,
+// 액티브/패시브, "X 및 Y 스킬은 보조할 수 없다". 모르는 낱말이 하나라도 있으면(대미지·적을 적중하는…) 거르지 않는다.
+const SUP_WORD = {'근접': ['근접전'], '포물선': ['포물선'], '수평': ['수평 사격'], '수직': ['수직'], '이동': ['위치 이동'], '소환체': ['소환'],
+  '위치 이동': ['위치 이동'], '스마트 웨폰': ['스마트 웨폰'], '수평 사격': ['수평 사격']};
+let SUP_RULES = null, SUP_TAGSET = null;
+function supTagsOf(phrase) { // '근접 베기' → ['근접전','베기'] · 모르는 낱말이면 null
+  const w = phrase.replace(/\s*스킬$/, '').trim().split(/\s+/), out = [];
+  for (let i = 0; i < w.length; i++) {
+    const two = w[i] + ' ' + (w[i + 1] || '');
+    if (SUP_WORD[two]) { out.push(...SUP_WORD[two]); i++; continue; }
+    if (SUP_WORD[w[i]]) out.push(...SUP_WORD[w[i]]);
+    else if (w[i] === '액티브' || w[i] === '패시브') out.push('#' + w[i]);
+    else if (SUP_TAGSET.has(w[i])) out.push(w[i]);
+    else return null;
+  }
+  return out.length ? out : null;
+}
+function supRule(s) { // → null(거르지 않음) | {name} | {alts: [[태그…]…], not: [태그…]}
+  if (!SUP_RULES) {
+    SUP_RULES = new Map(); SUP_TAGSET = new Set();
+    SKILLS.forEach(k => { if (k.kind === '액티브' || k.kind === '패시브') (k.tags || []).forEach(t => SUP_TAGSET.add(t)); });
+  }
+  const key = s.name + '\u001f' + s.kind;
+  if (SUP_RULES.has(key)) return SUP_RULES.get(key);
+  const txt = String((s.desc || [''])[0] || '').split('<br>')[0].replace(/<[^>]+>/g, '').trim();
+  let r = null, m;
+  const not = [];
+  const deny = txt.match(/([가-힣 ]+?) 스킬은 보조할 수 없다/) || txt.match(/, ([가-힣 ]+?) 보조 불가/);
+  if (deny) for (const p of deny[1].split(/\s*및\s*/)) { const t = supTagsOf(p); if (t) not.push(...t); }
+  if ((m = txt.match(/^(.+?) 스킬을 보조한다/) || txt.match(/^(.+?) 스킬 보조,/))) {
+    const tgt = m[1].trim();
+    if (SKILLS.some(k => k.name === tgt && (k.kind === '액티브' || k.kind === '패시브'))) r = {name: tgt};
+    else {
+      const alts = tgt.split(/\s*또는\s*/).map(supTagsOf);
+      if (alts.every(Boolean)) r = {alts, not};
+    }
+  }
+  if (!r && not.length) r = {alts: [[]], not};
+  SUP_RULES.set(key, r);
+  return r;
+}
+// 이 보조를 이 메인에 끼울 수 있나 — 메인이 없거나 태그가 없으면 true(못 거름)
+function supFits(sup, main) {
+  if (!main) return true;
+  const r = supRule(sup);
+  if (!r) return true;
+  if (r.name) return main.name === r.name;
+  const mi = SKILLS.find(k => k.name === main.name && k.kind === main.kind);
+  if (!mi || !(mi.tags || []).length) return true;
+  const has = t => t === '#액티브' ? (mi.kind === '액티브' || mi.kind === '모듈화') : t === '#패시브' ? mi.kind === '패시브' : mi.tags.includes(t);
+  if (r.not.some(has)) return false;
+  return r.alts.some(a => a.every(has));
+}
 // 보조칸 확장 에너지: 칸별 비용 (액티브/패시브), 필요치 = 1번부터 가장 높은 사용 칸까지 누적
 const SUP_ENERGY = {a: [0, 10, 15, 50, 100], p: [10, 10, 15, 50, 100]};
 const SK_ENERGY_MAX = 531; // 보유 가능한 최대 에너지 (초과 시 경고)
@@ -2859,6 +2916,8 @@ function wsPool() { // 지금 자리에 들어갈 수 있는 스킬 (빌더 skil
   SKILLS.forEach((s, i) => {
     if (socket === null ? !mainAllows(s, grp) : !socketKinds(socket).includes(s.kind)) return;
     if (special && s.kind === special && (!mainName || s.name.split(':')[0].trim() !== mainName)) return; // 부귀·숭고는 그 메인 전용
+    // "실드 스킬을 보조한다" 같은 대상 제한 — 메인 태그에 없으면 뺀다 (이미 끼운 건 뺄 수 있게 남김)
+    if (socket !== null && !(sk && sk.sup.some(sp => sp && sp.name === s.name && sp.kind === s.kind)) && !supFits(s, sk && sk.main)) return;
     out.push(i);
   });
   // 정렬: 짝 맞는 부귀·숭고 > 같은 묶음의 다른 칸에서 쓰는 보조(추천) > 나머지 — 빌더 1 skillPickPool 과 같은 규칙 (2026-10-10 이식)

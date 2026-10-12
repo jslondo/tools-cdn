@@ -261,6 +261,10 @@
       background: color-mix(in srgb, var(--gc) 9%, #0f141e); color: #dfe6ee; font-size: 12.5px; cursor: pointer; transition: .15s; }
     .gbm-subemb { width: 24px; height: 24px; }
     .gbm-sub span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gbm-sn { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .gbm-stag { font-size: 11px; color: color-mix(in srgb, var(--gc) 45%, #9aa6b4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gbm-btag { font-size: 11.5px; color: #f3e9d2; opacity: .85; text-shadow: 0 1px 4px rgba(0,0,0,.8); margin-top: -2px; }
+    .gbm-head .gbm-htag { display: inline; margin-left: 8px; font-size: 12px; color: color-mix(in srgb, var(--gc) 45%, #9aa6b4); font-weight: 400; }
     .gbm-sub.can:hover { border-color: var(--gc); background: color-mix(in srgb, var(--gc) 20%, #0f141e); transform: translateY(-1px); }
     .gbm-sub.have { border-color: #f0883e; box-shadow: 0 0 0 1px #f0883e inset; }
     .gbm-banner.off, .gbm-sub.off { filter: grayscale(.85) brightness(.45); cursor: not-allowed; }

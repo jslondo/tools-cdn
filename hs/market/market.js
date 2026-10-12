@@ -209,7 +209,8 @@
   }
   // 첫 화면이 다 뜬 뒤 한가할 때 미리 받아 둔다 — 툴팁을 띄울 때쯤이면 이미 준비돼 있다
   if (!window.CODEX) {
-    const warm = () => (window.requestIdleCallback || setTimeout)(() => loadFull(), 1200);
+    // requestIdleCallback 의 둘째 인자는 {timeout} 객체 — 숫자를 넘기면 TypeError 로 미리 받기가 통째로 빠졌었다 (2026-10-12)
+    const warm = () => window.requestIdleCallback ? requestIdleCallback(() => loadFull(), {timeout: 3000}) : setTimeout(loadFull, 1200);
     if (document.readyState === 'complete') warm(); else addEventListener('load', warm);
   }
   // 장터에서 의미 없는 분류는 자동완성에서 뺀다(열쇠·수집품·에센스 금고는 교환 대상이 아니거나 거래 불가)

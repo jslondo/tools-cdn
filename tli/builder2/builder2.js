@@ -5942,11 +5942,16 @@ function wzLoad(id) {
   const d = WZ_DATA[id];
   if (d.ready()) return Promise.resolve();
   if (!wzLoading[id] || wzLoading[id] === 'fail') wzLoading[id] = new Promise((ok, no) => {
-    const sc = document.createElement('script');
-    sc.src = d.src;
-    sc.onload = () => { ok(); pageRender(); };
-    sc.onerror = () => { sc.remove(); wzLoading[id] = 'fail'; pageRender(); no(new Error(id + ' 데이터')); };
-    document.body.appendChild(sc);
+    // jsDelivr 먼저, 안 되면 우리 서버 — WZ_CDN 은 배포 직전 _dev/cdn_sync.py 가 넣는다 (2026-10-12 워커 응답이 너무 느려서)
+    const urls = window.WZ_CDN ? [window.WZ_CDN + d.src.split('?')[0].slice(1), d.src] : [d.src];
+    const tryAt = i => {
+      const sc = document.createElement('script');
+      sc.src = urls[i];
+      sc.onload = () => { ok(); pageRender(); };
+      sc.onerror = () => { sc.remove(); if (i + 1 < urls.length) return tryAt(i + 1); wzLoading[id] = 'fail'; pageRender(); no(new Error(id + ' 데이터')); };
+      document.body.appendChild(sc);
+    };
+    tryAt(0);
   });
   return wzLoading[id];
 }

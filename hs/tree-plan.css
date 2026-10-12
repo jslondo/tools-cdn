@@ -1,0 +1,64 @@
+/* 인카네이션·에테르 트리 플래너 공용 스타일 (/hs/tree/, /hs/ether/) */
+:root{--line:#4a3038;--stage:#0d0709}   /* 팔레트는 /css/base.css + /hs/hs.css · 여기는 트리 전용만 */
+.page{max-width:1400px;margin:0 auto;padding:22px 16px 40px}
+h1{margin:0 0 4px;font-size:22px;color:var(--gold)}
+.sub{color:var(--dim);font-size:12px;margin-bottom:12px}
+.sub b{color:var(--text);font-weight:600}
+.sub a{color:var(--gold)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.search{flex:1;min-width:150px;max-width:280px;background:var(--panel);border:1px solid var(--edge);border-radius:8px;
+        color:var(--text);font:inherit;padding:6px 10px}
+.search:focus{outline:none;border-color:var(--gold)}
+.btn{background:var(--panel);border:1px solid var(--edge);border-radius:8px;color:var(--dim);font:inherit;font-size:12px;
+     padding:5px 10px;cursor:pointer}
+.btn:hover{color:var(--text);border-color:var(--gold)}
+.btn[disabled]{opacity:.4;cursor:default}
+.btn[aria-pressed="true"]{color:var(--text);border-color:var(--gold)}
+.hits{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;min-width:56px}
+/* 무대 + 옆의 합계 패널 */
+.wrap{display:flex;gap:12px;align-items:stretch}
+.stage{position:relative;flex:1;min-width:0;background:var(--stage);border:1px solid var(--edge);border-radius:10px;
+       overflow:hidden;height:min(74vh,760px);touch-action:none}
+canvas{display:block;width:100%;height:100%;cursor:grab}
+canvas.drag{cursor:grabbing}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px;max-width:min(62%,660px)}
+.legend button{display:flex;align-items:center;gap:5px;background:rgba(20,10,10,.82);border:1px solid var(--edge);
+               border-radius:999px;color:var(--dim);font:inherit;font-size:11px;padding:3px 9px;cursor:pointer}
+.legend button:hover{color:var(--text)}
+.legend button[aria-pressed="true"]{color:var(--text);border-color:currentColor}
+.legend i{width:8px;height:8px;border-radius:2px;background:currentColor;flex:none}
+.info{position:absolute;right:10px;top:10px;width:min(300px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;
+      background:rgba(27,16,19,.95);border:1px solid var(--edge);border-radius:10px;padding:12px 14px}
+.info .nm{color:var(--gold);font-size:15px;font-weight:700;line-height:1.35}
+.info .nm2{color:var(--dim);font-size:11px;margin-bottom:6px}
+.info .tag{display:inline-block;font-size:10.5px;color:var(--dim);border:1px solid var(--edge);border-radius:999px;
+           padding:1px 7px;margin:0 4px 4px 0}
+.info ul{margin:8px 0 0;padding-left:16px}
+.info li{font-size:13px;margin-bottom:3px}
+.info li .en{display:block;color:var(--dim);font-size:11px}
+.info .val{color:var(--gold);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.info .desc{font-size:12.5px;color:var(--text);margin-top:6px}
+.info .desc .en{display:block;color:var(--dim);font-size:11px;margin-top:2px}
+.info .id{color:var(--dim);font-size:10.5px;margin-top:8px}
+.info .x{position:absolute;right:8px;top:6px;background:none;border:0;color:var(--dim);font-size:16px;cursor:pointer;line-height:1}
+.info .x:hover{color:var(--text)}
+.hint{position:absolute;left:10px;top:10px;font-size:11px;color:var(--dim);background:rgba(20,10,10,.7);
+      border-radius:6px;padding:3px 8px;pointer-events:none}
+/* 합계 패널 */
+.side{width:296px;flex:none;display:flex;flex-direction:column;gap:8px}
+.box{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}
+.box h2{margin:0 0 6px;font-size:12px;color:var(--dim);font-weight:600;letter-spacing:.3px}
+.pts{display:flex;align-items:baseline;gap:6px}
+.pts b{color:var(--gold);font-size:22px;font-variant-numeric:tabular-nums}
+.pts span{color:var(--dim);font-size:12px}
+.acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.sum{flex:1;overflow:auto;min-height:120px}
+.sum ul{margin:0;padding:0;list-style:none}
+.sum li{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.sum li .v{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sum li .c{color:var(--dim);font-size:11px}
+.sum .none{color:var(--dim);font-size:12px;padding:6px 0}
+footer{color:var(--dim);font-size:11px;margin-top:14px;border-top:1px solid var(--edge);padding-top:12px}
+footer a{color:var(--dim)}
+@media(max-width:900px){ .wrap{flex-direction:column} .side{width:auto} .sum{max-height:260px} }
+@media(max-width:560px){ .stage{height:64vh} .legend{max-width:calc(100% - 20px)} .info{width:calc(100% - 20px)} }

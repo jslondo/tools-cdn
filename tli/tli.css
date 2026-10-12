@@ -1,0 +1,24 @@
+/* /tli/ 공용 — 토치라이트 인피니트 팔레트(푸른 계열). base.css 다음에 읽는다. */
+
+:root {
+  --bg:#0c1120;        /* 바탕 */
+  --panel:#141b30;     /* 카드 한 겹 위 */
+  --panel2:#1b2440;
+  --edge:#2a3a5c;      /* 테두리 */
+  --text:#dce7f6;      /* 본문 글자 */
+  --dim:#8ea6c8;       /* 흐린 글자 */
+  --gold:#7ab8ff;      /* 강조 — 이쪽은 금색이 아니라 하늘색이지만 이름은 통일해 둔다 */
+  --danger:#e07a8a;
+
+  /* 옛 이름 */
+  --line: var(--edge);
+  --bone: var(--text);
+  --bone-dim: var(--dim);
+  --bone-hi: var(--text);
+}
+
+/* 공용 헤더(nav.js)를 토치 색으로 — 헤더는 자기 색을 갖고 페이지 CSS 에 휘둘리지 않으므로,
+   바꾸려면 이렇게 헤더 변수(--wtn-*)를 대놓고 덮어써야 한다(실수로 물드는 일은 없다). */
+html .hubnav, html .hubnav-menu, html .hubnav-tip {   /* html 을 붙여 nav.js 기본값을 이긴다(주입 순서와 무관하게) */
+  --wtn-panel:#141b30; --wtn-edge:#2a3a5c; --wtn-text:#dce7f6; --wtn-dim:#8ea6c8; --wtn-gold:#7ab8ff;
+}

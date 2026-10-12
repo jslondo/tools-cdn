@@ -1,0 +1,45 @@
+/* /hs/ 공용 — 히어로시즈 팔레트와 자주 쓰는 조각. base.css 다음에 읽는다.
+   2026-09-23: 페이지마다 :root 를 따로 두다 보니 같은 화면인데 색이 갈렸다(도감만 노랗다 등). 여기 하나로 모은다. */
+
+:root {
+  --bg:#140a0a;        /* 바탕 */
+  --panel:#1b1013;     /* 카드·헤더 등 한 겹 위 */
+  --panel2:#221519;    /* 그보다 한 겹 더 위(선택된 칩 등) */
+  --edge:#3a2226;      /* 테두리 */
+  --text:#e8dcc8;      /* 본문 글자 */
+  --dim:#9a8b8b;       /* 흐린 글자 */
+  --gold:#e8c860;      /* 강조(제목·선택) */
+  --accent:#8d5f5f;
+  --danger:#e07a7a;
+
+  /* 옛 이름 — 도감·가이드가 쓰던 것. 새 코드에서는 위쪽 이름을 쓸 것 */
+  --line: var(--edge);
+  --bone: var(--text);
+  --bone-dim: var(--dim);
+  --bone-hi: var(--text);
+}
+
+/* 자주 쓰는 조각 — 페이지에서 더 손볼 일이 있으면 그 페이지에서 덮어쓴다 */
+.card { background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; padding: 12px 14px; }
+.grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+
+.search {
+  flex: 1; min-width: 160px; max-width: 300px; padding: 6px 10px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; color: var(--text);
+}
+.search:focus { outline: none; border-color: var(--gold); }
+
+/* 안내 상자 */
+.note {
+  background: var(--panel); border: 1px solid var(--edge); border-left: 3px solid var(--gold);
+  border-radius: 8px; padding: 10px 13px; font-size: 12px; color: var(--dim); margin-bottom: 14px;
+}
+.note b { color: var(--text); }
+
+/* 분류 탭 — 헤더(.hubnav .tabs)와 이름이 겹치므로 반드시 .page 안에서만 */
+.page .tabs { display: flex; gap: 4px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; padding: 3px; }
+.page .tabs button { background: none; border: 0; color: var(--dim); font-size: 13px; padding: 4px 11px; border-radius: 6px; cursor: pointer; }
+.page .tabs button:hover { color: var(--text); }
+.page .tabs button[aria-pressed="true"] { background: var(--edge); color: var(--text); }
+.page .tabs button .n { font-size: 11px; color: var(--dim); margin-left: 4px; }

@@ -1,0 +1,96 @@
+/* 교환 장터 공용 스타일 — 허브(/hs) 어두운 팔레트와 맞춘다 */
+:root{--panel2:#221419;--have:#7fd39a;--want:#7fb0d8;--danger:#ff6a6a}   /* 팔레트는 /css/base.css + /hs/hs.css · 여기는 장터 전용만 */
+[hidden]{display:none!important}
+h1{margin:0 0 4px;font-size:22px;color:var(--gold);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1 .pv{font-size:11px;font-weight:700;color:var(--gold);border:1px solid var(--gold);letter-spacing:.06em;border-radius:999px;padding:1px 8px}
+.page a{color:var(--want)}   /* 전역으로 두면 공용 헤더의 링크까지 물든다 */
+button,.btn{background:var(--panel);color:var(--text);border:1px solid var(--edge);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px;line-height:1.3}
+button:hover,.btn:hover{border-color:var(--gold);color:var(--gold)}
+button.pri,.btn.pri{background:var(--gold);color:#241a08;border-color:var(--gold);font-weight:700}
+button.pri:hover,.btn.pri:hover{background:#f3d878;color:#241a08}
+button.dng:hover{border-color:var(--danger);color:var(--danger)}
+button:disabled{opacity:.45;cursor:default}
+input,select,textarea{background:#0f0809;color:var(--text);border:1px solid var(--edge);border-radius:6px;padding:7px 10px;font-size:14px;font-family:inherit;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+input::placeholder{color:#6d5c5c}
+label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.row>div{flex:1;min-width:140px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:14px 16px}
+.notice{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:12.5px;line-height:1.6}
+.notice .i{flex:none;color:var(--gold);font-weight:700}
+.notice.warn{border-left-color:var(--danger)}
+.notice.warn .i{color:var(--danger)}
+.muted{color:var(--dim);font-size:12px}
+.err{color:var(--danger);font-size:13px;min-height:1.2em}
+/* 아이템 칩 */
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--edge);border-radius:6px;padding:3px 8px 3px 4px;font-size:13px;line-height:1.3;cursor:pointer;max-width:100%}
+.chip img{width:22px;height:22px;object-fit:contain;image-rendering:pixelated;flex:none}
+.chip .q{color:var(--gold);font-variant-numeric:tabular-nums;font-size:12px}
+.chip .x{color:var(--dim);margin-left:2px;font-size:14px;line-height:1}
+.chip .x:hover{color:var(--danger)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip.hit{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+/* 자동완성 */
+.ac{position:relative}
+.ac .list{position:absolute;left:0;right:0;top:100%;z-index:20;background:#0d0708;border:1px solid var(--edge);border-radius:8px;margin-top:4px;max-height:320px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.6);display:none}
+.ac .list.on{display:block}
+.ac .it{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+.ac .it:hover,.ac .it.sel{background:var(--panel2)}
+.ac .it img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated;flex:none}
+.ac .it .k{color:var(--dim);font-size:11px;margin-left:auto;white-space:nowrap}
+.ac .it .e{color:var(--dim);font-size:11px}
+/* 툴팁 (가이드 뷰어와 같은 모양) */
+#hstip{position:fixed;z-index:50;max-width:340px;background:#0d0708;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.6);display:none}
+#hstip .top{display:flex;align-items:flex-start;gap:8px}
+#hstip .ic{flex:none;width:44px;height:44px;object-fit:contain;image-rendering:pixelated;background:#0e0a0b;border:1px solid var(--line);border-radius:6px}
+#hstip .n{font-weight:700;font-size:14px}
+#hstip .e{color:var(--dim);font-size:12px}
+#hstip .m{color:var(--dim);font-size:12px;margin:2px 0 6px}
+#hstip .a{color:#7fb0d8}
+#hstip .p{color:var(--dim);font-size:12px;margin-top:6px}
+/* 큰 수정 번호 */
+.pinbox{font-size:34px;letter-spacing:.18em;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;background:#0f0809;border:1px dashed var(--gold);border-radius:10px;padding:12px 18px;text-align:center;margin:10px 0}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#0d0708;border:1px solid var(--gold);color:var(--text);padding:8px 16px;border-radius:8px;font-size:13px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.6);opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+
+/* 서버 선택 화면 — 첫 방문(기억한 서버 없음)에 목록 대신 띄운다 */
+.gate{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:34px 20px;text-align:center;margin:8px 0 20px}
+.gate h2{margin:0 0 8px;font-size:20px;color:var(--gold)}
+.gate p{margin:0 0 20px;color:var(--dim);font-size:13px;line-height:1.6}
+.gate .srvs{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.gate .srvs button{font-size:16px;padding:12px 26px;border-radius:10px;border-color:var(--gold);color:var(--gold);font-weight:700}
+.gate .srvs button:hover{background:var(--gold);color:#241a08}
+
+/* 비공개 서버 배지 — 초대 링크(?key=)로 들어온 블팩을 보고 있을 때 */
+.gbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--gold);border-radius:8px;padding:7px 12px;margin:0 0 12px;font-size:13px}
+.gbar .sp{flex:1}
+.gbar button{padding:3px 9px;font-size:12px}
+
+/* 내부 팝업(모달) — 블팩 서버 추가 요청 등 */
+.modal{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:20px 22px;width:100%;max-width:520px;max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.7);position:relative}
+.modal .box h2{margin:0 0 6px;font-size:18px;color:var(--gold)}
+.modal .box .sub{margin-bottom:14px}
+.modal .x{position:absolute;right:10px;top:8px;border:none;background:none;color:var(--dim);font-size:20px;padding:2px 8px}
+.modal .x:hover{color:var(--gold)}
+.modal .f{display:flex;flex-direction:column;gap:10px}
+.modal .f input,.modal .f textarea{width:100%}
+.modal .f textarea{min-height:64px;resize:vertical}
+.modal .f .hint{font-size:11.5px;color:var(--dim);margin-top:2px}
+.modal .f .ck{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--dim);cursor:pointer;line-height:1.45}
+.modal .f .ck input{width:auto;flex:none;margin-top:3px}
+.modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.modal .done{text-align:center;padding:14px 0 6px}
+.modal .done h3{margin:0 0 8px;font-size:18px;color:var(--have)}
+.modal .done p{color:var(--dim);font-size:13px;line-height:1.6;margin:0 0 14px}
+@media (prefers-reduced-motion:no-preference){.modal .box{animation:mk-pop .16s ease-out}}
+@keyframes mk-pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+/* 서버 추가 요청 결과 배너 */
+.reqbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--edge);border-left:3px solid var(--gold);border-radius:8px;padding:7px 12px;margin:0 0 12px;font-size:13px}
+.reqbar.ok{border-left-color:var(--have)} .reqbar.no{border-left-color:var(--danger)}
+.reqbar button{padding:2px 9px;font-size:12px}
+.reqbar .x{margin-left:auto;border:none;background:none;color:var(--dim);font-size:16px;padding:0 4px}
+.gate .req{margin:22px 0 0;font-size:13px;color:var(--dim)}
+.gate .req a{color:var(--gold);cursor:pointer;text-decoration:underline}
+h1 .req{margin-left:auto;font-size:12.5px;padding:5px 10px;font-weight:400}

@@ -1047,7 +1047,7 @@ function gbPickBoard(pre) {
 }
 const gbColor = pre => (GB_GODS.find(g => g[0] === String(pre)[0]) || ['', '#8b949e'])[1];
 const gbEmb = (pre, cls) => BOARDS[pre] && BOARDS[pre].e
-  ? `<i class="gb-emb ${cls || ''}" style="--gc:${gbColor(pre)};--em:url('/tli/builder/emblem/${BOARDS[pre].e}')"></i>` : '';
+  ? `<i class="gb-emb ${cls || ''}" style="--gc:${gbColor(pre)};--em:url('${location.origin}/tli/builder/emblem/${BOARDS[pre].e}')"></i>` : '';
 const gbMaxPts = pre => (BOARDS[pre].m || []).reduce((t, v) => t + v, 0) || 1;
 function gbRenderModal() {
   const page = document.getElementById('talentApp');
@@ -1102,7 +1102,7 @@ function gbRenderModal() {
       `<div class="gbm-hright">` + (gbSlot < 3 && !s4[gbSlot + 1] ? `<button class="gbm-next" onclick="gbPickSlot(${gbSlot + 1})">다음 보드 고르기 →</button>` : '') +
       gbPzHead(cur, gbSlot) + `<span class="gbm-pt">${pt}<small>pt</small></span></div></div>` +
       (gbPlace ? `<div class="gbm-placing"><i class="gbm-pzi ${gbPlace}">◆</i> ${gbPlace === 'i' ? '역상' : '프리즘'}을 놓을 노드를 누르세요 — 신 보드 제외${gbPlace === 'i' ? ' · 가운데 3×3 제외' : ''} · 왼쪽에서 다른 보드로 바꿀 수 있습니다 <button onclick="gbPlaceMode('${gbPlace}')">취소</button></div>` : '') +
-      `<div class="gbm-stage" style="--gc:${gbColor(cur)};--em:url('/tli/builder/emblem/${BOARDS[cur].e || ''}')"><div id="gbmBoard"></div></div>`;
+      `<div class="gbm-stage" style="--gc:${gbColor(cur)};--em:url('${location.origin}/tli/builder/emblem/${BOARDS[cur].e || ''}')"><div id="gbmBoard"></div></div>`;
   } else {
     const can = p => !gbWhyNotAdd(p, present);
     const slotOf = p => s4.indexOf(p) + 1;

@@ -690,6 +690,8 @@
     .wb-ms-t b { color: #e6edf3; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wb-ms-t small { color: #7d8794; font-size: 11.5px; }
     .wb-ms .wz-btn { flex: none; padding: 5px 10px; font-size: 12px; text-decoration: none; }
+    .wb-unlw { margin: -2px 0 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid #6b5a2a; background: #1d1a12; color: #f3e3b5; font-size: 12.5px; line-height: 1.5; } /* 링크 전용 14일 경고 */
+    .wb-unlw[hidden] { display: none; }
     /* /tli/slate 단독 화면 — 틀(frame.css)·석판 칸(builder2.css 의 wsb-·wg-) 위에 페이지 배치만 */
     .sp-body #slateApp { width: min(var(--page-w, 1320px), calc(100% - 32px)); margin: 16px auto 32px; }
     .sp-body #slateApp .gbm { width: 100%; height: auto; }

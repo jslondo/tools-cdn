@@ -6199,6 +6199,7 @@ function wbShareOpen() {
     `<div class="wb-field"><b>공개 범위</b><div class="wb-vis">` +
       `<button class="wb-tag${wbUnlisted ? '' : ' on'}" data-v="0" onclick="wbVis(false)" title="빌드 공유 목록·검색에 올라갑니다">🌐 목록에 공개</button>` +
       `<button class="wb-tag${wbUnlisted ? ' on' : ''}" data-v="1" onclick="wbVis(true)" title="목록·검색에는 나오지 않고, 링크를 받은 사람만 볼 수 있습니다 — ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다">🔒 링크로만 공유</button></div></div>` +
+      `<div class="wb-unlw" id="wbUnlW"${wbUnlisted ? '' : ' hidden'}>⚠ 링크로만 공유한 글은 <b>${UNLISTED_DAYS}일 동안 아무도 열지 않으면 자동으로 지워집니다.</b> 링크는 빌드 목록의 [🔗 내 공유]에 남습니다(이 브라우저에서만).</div>` +
     `<div class="wb-field"><b>제목</b><input id="wbTitle" maxlength="40" placeholder="2~40자 (비워 두면 메인 스킬 + 태그)" value="${escapeHtml(se && se.title || '')}" oninput="wbTitleEdited=true"></div>` +
     `<div class="wb-tgrp"><small>히어로</small><div><button class="wb-tag on lock" title="빌드에서 고른 히어로라 여기서는 못 바꿉니다">🔒 ${escapeHtml(preset.hero.trait)}</button></div></div>` +
     grp('성향·능력치', SHARE_EXTRA_TAGS) + grp('콘텐츠', SHARE_CONTENT_TAGS) + grp('스킬 태그', SHARE_SKILL_TAGS) +
@@ -6211,6 +6212,7 @@ function wbShareOpen() {
 function wbVis(on) { // 공개 범위 — 링크 전용은 목록·검색에서 빠진다 (2026-10-12)
   wbUnlisted = on;
   document.querySelectorAll('.wb-vis .wb-tag').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === on));
+  const w = document.getElementById('wbUnlW'); if (w) w.hidden = !on; // 고르는 순간 14일 삭제 경고 (2026-10-13 사용자)
 }
 function wbTag(el) {
   const t = el.dataset.t, i = wbShareTags.indexOf(t);

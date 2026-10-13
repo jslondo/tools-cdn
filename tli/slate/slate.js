@@ -703,7 +703,8 @@ function hpBpRows() {
   // 시즌 칩 (2026-10-13 사용자 요청) — 기본은 지금 시즌만, 지금 빌드는 시즌이 달라도 늘 보인다
   const ses = [...new Set(presets.list.map(hpSeOf))].sort((a, b) => hpSeNum(b) - hpSeNum(a));
   if (!hpBpSe || ![...hpBpSe].some(l => ses.includes(l))) hpBpSe = new Set([ses.includes(cur) ? cur : hpSeOf(preset)]);
-  const chips = ses.length > 1 ? '<div class="hp-bp-ses">' + ses.map(l => `<button type="button" class="share-se-chip${hpBpSe.has(l) ? ' on' : ''}" onclick="hpBpSeToggle('${l}')">${l} <small>${presets.list.filter(p => hpSeOf(p) === l && !p.shareEdit).length}</small></button>`).join('') + '</div>' : '';
+  const add = typeof wbNew === 'function' ? '<button type="button" class="hp-bp-add" onclick="wbNew()" title="새 빌드 만들기">＋ 빌드</button>' : ''; // 칩 줄 오른쪽 끝 (2026-10-13 사용자)
+  const chips = ses.length > 1 || add ? '<div class="hp-bp-ses">' + (ses.length > 1 ? ses.map(l => `<button type="button" class="share-se-chip${hpBpSe.has(l) ? ' on' : ''}" onclick="hpBpSeToggle('${l}')">${l} <small>${presets.list.filter(p => hpSeOf(p) === l && !p.shareEdit).length}</small></button>`).join('') : '') + add + '</div>' : '';
   const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id)
     .filter(p => p.id === preset.id || ses.length < 2 || hpBpSe.has(hpSeOf(p)))
     .filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p => {

@@ -47,7 +47,9 @@
     .hp-bpr { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: #c9d1d9; font: inherit; cursor: pointer; }
     .hp-bpr .hp-bp-face { width: 32px; height: 32px; }
     .hp-bp-body { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-    .hp-bp-ses { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
+    .hp-bp-ses { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 0 2px; }
+    .hp-bp-add { margin-left: auto; background: #1d1a12; border: 1px solid #6b5a2a; color: #f3e3b5; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .hp-bp-add:hover { border-color: #e8c860; color: #fff; }
     .hp-bpr-acts { flex: none; display: none; gap: 2px; }
     .hp-bpr:hover .hp-bpr-acts, .hp-bpr:focus-within .hp-bpr-acts { display: inline-flex; }
     .hp-bpr:hover .hp-bpr-ck { display: none; }
@@ -64,7 +66,7 @@
     .hp-bpr-se { flex: none; font-size: 10.5px; color: #9aa6b4; border: 1px solid #2f3a4d; border-radius: 6px; padding: 1px 6px; }
     .hp-bpr-ck { flex: none; color: #e8c860; font-weight: 700; }
     .hp-bp-none { color: #7d8794; padding: 14px; text-align: center; }
-    .hp-bp-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
+    .hp-bp-acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
     .hp-bp-acts button { background: #1b2230; border: 1px solid #2a3344; color: #c9d1d9; border-radius: 8px; padding: 7px 4px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
     .hp-bp-acts button:hover { border-color: #e8c860; color: #f3e3b5; }
     .hp-build select { background: #0f141f; color: #e6edf3; border: 1px solid #2f3a4d; border-radius: 6px; padding: 3px 6px; font: inherit; max-width: 220px; }

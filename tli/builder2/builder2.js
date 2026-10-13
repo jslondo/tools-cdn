@@ -2290,7 +2290,8 @@ function hpBpRows() {
   // 시즌 칩 (2026-10-13 사용자 요청) — 기본은 지금 시즌만, 지금 빌드는 시즌이 달라도 늘 보인다
   const ses = [...new Set(presets.list.map(hpSeOf))].sort((a, b) => hpSeNum(b) - hpSeNum(a));
   if (!hpBpSe || ![...hpBpSe].some(l => ses.includes(l))) hpBpSe = new Set([ses.includes(cur) ? cur : hpSeOf(preset)]);
-  const chips = ses.length > 1 ? '<div class="hp-bp-ses">' + ses.map(l => `<button type="button" class="share-se-chip${hpBpSe.has(l) ? ' on' : ''}" onclick="hpBpSeToggle('${l}')">${l} <small>${presets.list.filter(p => hpSeOf(p) === l && !p.shareEdit).length}</small></button>`).join('') + '</div>' : '';
+  const add = typeof wbNew === 'function' ? '<button type="button" class="hp-bp-add" onclick="wbNew()" title="새 빌드 만들기">＋ 빌드</button>' : ''; // 칩 줄 오른쪽 끝 (2026-10-13 사용자)
+  const chips = ses.length > 1 || add ? '<div class="hp-bp-ses">' + (ses.length > 1 ? ses.map(l => `<button type="button" class="share-se-chip${hpBpSe.has(l) ? ' on' : ''}" onclick="hpBpSeToggle('${l}')">${l} <small>${presets.list.filter(p => hpSeOf(p) === l && !p.shareEdit).length}</small></button>`).join('') : '') + add + '</div>' : '';
   const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id)
     .filter(p => p.id === preset.id || ses.length < 2 || hpBpSe.has(hpSeOf(p)))
     .filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p => {
@@ -5938,7 +5939,7 @@ function wbPop(html, cls) {
   document.body.appendChild(d);
   return d;
 }
-function wbClose() { if (document.getElementById('wbMemo')) wbMemoSave(); document.querySelectorAll('.wb-dim').forEach(x => x.remove()); }
+function wbClose() { document.querySelectorAll('.wb-dim').forEach(x => x.remove()); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.wb-dim')) wbClose(); });
 function alert(msg) {
   wbPop(`<div class="wb-msg">${escapeHtml(String(msg))}</div><div class="wb-btns"><button class="wz-btn pri" onclick="wbClose()">확인</button></div>`);
@@ -5984,72 +5985,18 @@ function hpUse(p) {
 }
 function renderPreset() { if (wbCur !== preset) hpUse(preset); pageRender(); }
 
-// ── 빌드 관리 창 ──
-const wbCnt = p => Object.values(p.slots || {}).filter(Boolean).length;
-const wbSkCnt = p => Object.values(p.skills || {}).filter(s => s && s.main).length;
-// 빌드 관리 창 (2026-10-13 개편 — 빌더 목록 화면과 같은 카드) : 위 = 지금 빌드(이름·코멘트·동작), 아래 = 내 빌드 카드(시즌 칩·최신순, 누르면 그 빌드로)
-let wbSeOn = null;
-function wbOpen() {
-  const prevTop = (document.querySelector('.wb-manage .wb-grid') || {}).scrollTop || 0;
-  const seOf = p => p.season || 'SS13', seNum = l => +String(l).replace(/\D/g, '') || 0;
-  const ses = [...new Set(presets.list.map(seOf))].sort((a, b) => seNum(b) - seNum(a));
-  if (!wbSeOn || ![...wbSeOn].some(l => ses.includes(l))) wbSeOn = new Set([seOf(preset)]);
-  const shown = presets.list.filter(p => (!p.shareEdit || p.id === preset.id) && (ses.length < 2 || wbSeOn.has(seOf(p)))).sort((a, b) => b.id - a.id);
-  const chips = ses.length > 1 ? '<div class="wl-ses">' + ses.map(l => `<button type="button" class="share-se-chip${wbSeOn.has(l) ? ' on' : ''}" onclick="wbSeToggle('${l}')">${l} <small>${presets.list.filter(p => seOf(p) === l).length}</small></button>`).join('') + '</div>' : '';
-  const cards = shown.map(p => `<div class="wl-card${p.id === preset.id ? ' on' : ''}" onclick="wbSwitch(${p.id})" title="${p.id === preset.id ? '지금 빌드' : '눌러서 이 빌드로 바꾸기'}">` +
-    wlCardBody(p) + (p.id === preset.id ? '<span class="wb-now">지금</span>' : '') + '</div>').join('');
-  const tr = preset.hero && traitInfo(preset.hero.trait);
-  const se = preset.shareEdit;
-  const d = wbPop('<div class="wb-head"><h3>빌드 관리</h3><span class="wb-hbtns"><button class="wz-btn" onclick="wbLogPick()">🎮 로그에서 가져오기</button>' +
-    '<button class="wz-btn pri" onclick="wbNew()">＋ 새 빌드</button></span></div>' +
-    (se ? `<div class="wb-se">✏ 공유 글 <b>${escapeHtml(se.title || se.id)}</b> 수정 중 — 고친 뒤 저장하면 링크·추천·조회수가 그대로입니다` +
-      '<div class="wb-btns left"><button class="wz-btn pri" onclick="wbShareOpen()">💾 공유 글 저장</button><button class="wz-btn" onclick="wbShareEditStop()">수정 그만두기</button></div></div>' : '') +
-    '<div class="wb-curbox">' +
-    `<div class="wb-curtop"><div class="wl-face">${tr ? `<img src="${tr.img}" alt="">` : '<span>?</span>'}</div>` +
-    `<div class="wb-cur"><small>지금 빌드${preset.hero ? ' · ' + escapeHtml(preset.hero.trait) : ''}</small><input id="wbName" maxlength="30" value="${escapeHtml(preset.name || '')}" onkeydown="if(event.key==='Enter')wbRename()">` +
-    '<button class="wz-btn" onclick="wbRename()">이름 저장</button></div></div>' +
-    '<div class="wb-acts">' +
-    `<button class="wz-btn" onclick="wbShareOpen()">${se ? '💾 공유 글 저장' : '🌐 공유 올리기'}</button>` +
-    `<a class="wz-btn" href="/tli/view/?my=${preset.id}">👁 보기 화면</a>` +
-    '<button class="wz-btn" onclick="wbDup()">📄 복제</button><button class="wz-btn wb-del" onclick="wbDel()">삭제</button></div></div>' +
-    `<div class="wb-lhead"><b>내 빌드</b><small>${presets.list.length}개 · 최신순 · 카드를 누르면 그 빌드로 바꿉니다</small></div>` + chips +
-    `<div class="wl-grid wb-grid">${cards || '<div class="wl-note">이 시즌 빌드가 없습니다</div>'}</div>`, 'wb-manage');
-  const g = d.querySelector('.wb-grid'); if (g) g.scrollTop = prevTop;
-}
-function wbSeToggle(l) { if (wbSeOn.has(l)) { if (wbSeOn.size > 1) wbSeOn.delete(l); } else wbSeOn.add(l); wbOpen(); }
-// 메모 — 빌더 1 과 같은 preset.memo (1500자, 공유 코드 m 에 실린다). 쓰는 동안은 잠깐 모았다가 저장
-let wbMemoT = 0;
-function wbMemoIn(el) {
-  const t = el.value.slice(0, 1500);
-  if (t.trim()) preset.memo = t; else delete preset.memo;
-  const n = document.getElementById('wbMemoN'); if (n) n.textContent = t.length + '/1500';
-  clearTimeout(wbMemoT); wbMemoT = setTimeout(wbMemoSave, 600);
-}
-function wbMemoSave() { clearTimeout(wbMemoT); persistPreset(); }
-function wbSwitch(id) { if (id !== preset.id) hpSwitch(id); wbOpen(); }
-function wbRename() {
-  const nm = (document.getElementById('wbName').value || '').trim();
-  if (!nm) { showToast('이름을 입력해 주세요'); return; }
-  preset.name = nm.slice(0, 30); persistPreset(); pageRender(); wbOpen(); showToast('이름을 바꿨습니다');
-}
+// ── 빌드 관리 — 관리 창은 2026-10-13 퇴역: 고르기·이름·삭제·시즌은 위쪽 빌드 고르기 목록(page_common hpBp*), 공유는 보기 화면 ──
 const wbNextId = () => Math.max(0, ...presets.list.map(x => x.id)) + 1;
-function wbNew() {
+function wbNew() { // 만들고 나면 빌드 고르기 목록을 열어 이름 칸에 바로 입력
   const p = {id: wbNextId(), name: '빌드 ' + (presets.list.length + 1), slots: {}, talents: [], skills: {}};
-  presets.list.push(p); presets.activeId = p.id; hpUse(p); persistPreset(); pageRender(); wbOpen();
-  const el = document.getElementById('wbName'); if (el) { el.focus(); el.select(); }
+  presets.list.push(p); presets.activeId = p.id; hpUse(p); persistPreset(); pageRender();
+  const btn = document.querySelector('.hp-bp');
+  if (btn) { hpBpClose(); hpBpToggle(btn); hpBpRen(p.id); } else showToast('새 빌드를 만들었습니다');
 }
 function wbDup() {
   const p = JSON.parse(JSON.stringify(preset));
-  p.id = wbNextId(); delete p.sid; p.name = (preset.name + ' 복사').slice(0, 30);
-  presets.list.push(p); presets.activeId = p.id; hpUse(p); persistPreset(); pageRender(); wbOpen(); showToast('복제했습니다');
-}
-function wbDel() {
-  const nm = preset.name;
-  uiConfirm(`[${nm}] 빌드를 삭제할까요? 되돌릴 수 없습니다.`, () => {
-    presets.list = presets.list.filter(p => p.id !== preset.id);
-    if (!presets.list.length) presets.list.push({id: 1, name: '빌드 1', slots: {}, talents: [], skills: {}});
-    presets.activeId = presets.list[0].id; hpUse(presets.list[0]); persistPreset(); pageRender(); wbOpen();
-  }, {title: '빌드 삭제', ok: '삭제'});
+  p.id = wbNextId(); delete p.sid; delete p.shareEdit; p.name = (preset.name + ' 복사').slice(0, 30);
+  presets.list.push(p); presets.activeId = p.id; hpUse(p); persistPreset(); pageRender(); showToast('복제했습니다');
 }
 
 // ── 로그에서 가져오기 — 안내 창 → [로그 파일 고르기] → 데이터 받기 → 빌더와 같은 해석(handleLogFile) ──
@@ -6406,10 +6353,10 @@ function wzScrollToSide() {
   if (m) m.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 const WZ_UP = '<button class="wz-up" onclick="wzScrollToSide()">↑ 칸 목록</button>'; // 좁은 화면 전용 (CSS)
-// 빌드 고르기 목록 아래 동작 (page_common hpBuildPicker) — [빌드 관리] 단추는 여기로 합쳤다 (2026-10-13)
+// 빌드 고르기 목록 아래 동작 (page_common hpBuildPicker) — [빌드 관리] 단추는 여기로 합쳤다가 관리 창째 뺐다 (2026-10-13)
 function hpBuildActs() {
-  return '<button type="button" onclick="hpBpClose();wbNew()">＋ 새 빌드</button><button type="button" onclick="hpBpClose();wbDup()">📄 복제</button>' +
-    '<button type="button" onclick="hpBpClose();wbLogPick()">🎮 로그에서</button><button type="button" onclick="hpBpClose();wbOpen()" title="이름·삭제·순서·코멘트·공유">⚙ 관리</button>';
+  return '<button type="button" onclick="hpBpClose();wbDup()">📄 복제</button>' + // ＋ 빌드는 목록 위 시즌 칩 줄로
+    '<button type="button" onclick="hpBpClose();wbLogPick()">🎮 로그에서</button>'; // 관리 창은 퇴역 — 이름·삭제는 목록 줄의 ✎·✕, 공유는 보기 화면
 }
 function pageOnSwitch() { heroMsg = ''; gbMsg = ''; gbExtra.clear(); gbSlot = 0; hrView = (preset.hero && preset.hero.hero) || hrView; }
 function pageRender() {

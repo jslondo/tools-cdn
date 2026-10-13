@@ -4761,6 +4761,12 @@ async function vwLoad() {
       preset = Object.assign({slots: {}, talents: [], skills: {}, mems: {}}, JSON.parse(JSON.stringify(p)));
       VW.mine = true; VW.state = 'ok'; pageRender(); return;
     }
+    const pl = q.get('plink'); // 옛 빌더 단축 링크(7일) — 서버에 맡긴 빌드 코드를 받아 온다
+    if (!code && pl) {
+      const res = await fetch('/api/plink?id=' + encodeURIComponent(pl));
+      if (!res.ok) throw new Error('공유된 빌드 링크를 찾지 못했습니다 — 링크는 7일간 유지됩니다. 보낸 사람에게 새 링크를 요청해 주세요');
+      code = (await res.json()).code || '';
+    }
     if (!code && id) {
       let j = null;
       try { const h = JSON.parse(sessionStorage.getItem('vwHand') || 'null'); if (h && h.item && h.item.id === id) j = h; sessionStorage.removeItem('vwHand'); } catch (e) {} // 현재 시즌 화면이 넘겨준 것 (조회수 두 번 안 세게)
@@ -4778,7 +4784,7 @@ async function vwLoad() {
     const cur = (window.TLI_SEASON || {}).label;
     if (!window.TLI_SNAPSHOT && cur && VW.season !== cur && (window.TLI_SNAPS || []).includes(VW.season)) {
       try { if (VW.share) sessionStorage.setItem('vwHand', JSON.stringify({item: VW.share, liked: VW.liked})); } catch (e) {}
-      return vwGo('/tli/' + VW.season.toLowerCase() + '/view/' + location.search + location.hash);
+      return vwGo('/tli/' + VW.season.toLowerCase() + '/view/' + (pl ? '?code=' + encodeURIComponent(code) : location.search) + location.hash); // 단축 링크는 보관본이 몰라서 코드로
     }
     preset = r.preset; VW.missing = r.missing; VW.code = code; VW.state = 'ok';
   } catch (e) {

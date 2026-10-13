@@ -3680,7 +3680,7 @@ async function exportPresetLink() { // 빌드를 URL로 공유·보관 (?pcode=)
   const shareText = `mToB 빌드 [${preset.name}] (${expire})\n${link}`;
   try {
     await navigator.clipboard.writeText(shareText);
-    alert(`[${preset.name}] 빌드 링크가 클립보드에 복사되었습니다.\n받는 사람은 링크만 열면 가져오기 창이 뜹니다. (${expire})`);
+    alert(`[${preset.name}] 빌드 링크가 클립보드에 복사되었습니다.\n받는 사람은 링크를 열면 빌드 보기 화면에서 [내 빌드로 가져오기]로 가져갈 수 있습니다. (${expire})`);
   } catch (e) {
     prompt('아래 내용을 직접 복사하세요 (Ctrl+C)', shareText); // 클립보드 권한 없을 때 폴백
   }

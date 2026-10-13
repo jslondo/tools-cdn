@@ -1401,6 +1401,28 @@ Object.keys(GOD_BASES).forEach(b => GOD_SHAPES.forEach((g, vi) => {
   SLATES[+b + vi + 1] = {n: GOD_BASES[b] + '의 신격', c: g[1].map(c => c.slice()), v: 0, god: 1, shp: g[0],
     sl: [[1,2,3],[1,2,3],[1,2,3],[1,2,3],[1,2,3]]};
 }));
+// 좌우 반전 (2026-10-14 문의 — L(S자) 모양을 거꾸로 놓고 싶다): 신격 모양의 거울상 = 열 부호 반전.
+// 거울상이 기존 변형과 (회전·평행이동까지) 같으면 그 변형으로(Z↔T), 없으면 반전 전용 변형(변형 번호 +10, 예: L 반전)을 만든다.
+// 반전 전용 변형은 빌더 안에서만 쓰는 번호 — 로그 ShapeId 로는 오지 않는다
+const slateShapeKey = c => { // 회전 4가지 중 가장 작은 정규화 문자열
+  let cs = c.map(p => p.slice()), best = null;
+  for (let k = 0; k < 4; k++) {
+    const r0 = Math.min(...cs.map(p => p[0])), c0 = Math.min(...cs.map(p => p[1]));
+    const s = cs.map(p => (p[0] - r0) + ',' + (p[1] - c0)).sort().join(';');
+    if (best == null || s < best) best = s;
+    cs = cs.map(p => [p[1], -p[0]]);
+  }
+  return best;
+};
+const GOD_MIRROR = {}; // 신격 u → 좌우 반전한 u (자기 자신이면 대칭 모양)
+Object.keys(GOD_BASES).forEach(b => GOD_SHAPES.forEach((g, vi) => {
+  const u = +b + vi + 1, mc = g[1].map(p => [p[0], -p[1]]), mk = slateShapeKey(mc);
+  if (slateShapeKey(g[1]) === mk) { GOD_MIRROR[u] = u; return; }
+  const hit = GOD_SHAPES.findIndex(h => slateShapeKey(h[1]) === mk);
+  const m = hit >= 0 ? +b + hit + 1 : +b + vi + 11;
+  if (hit < 0) SLATES[m] = Object.assign({}, SLATES[u], {c: mc, shp: g[0].replace(/\d$/, '') + ' 반전'});
+  GOD_MIRROR[u] = m; if (!(m in GOD_MIRROR)) GOD_MIRROR[m] = u;
+}));
 
 function slateRank(t) {
   const m = (t.effect || '').match(/^\[([^\]]+)\]/);

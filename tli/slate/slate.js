@@ -227,6 +227,28 @@ Object.keys(GOD_BASES).forEach(b => GOD_SHAPES.forEach((g, vi) => {
   SLATES[+b + vi + 1] = {n: GOD_BASES[b] + '의 신격', c: g[1].map(c => c.slice()), v: 0, god: 1, shp: g[0],
     sl: [[1,2,3],[1,2,3],[1,2,3],[1,2,3],[1,2,3]]};
 }));
+// 좌우 반전 (2026-10-14 문의 — L(S자) 모양을 거꾸로 놓고 싶다): 신격 모양의 거울상 = 열 부호 반전.
+// 거울상이 기존 변형과 (회전·평행이동까지) 같으면 그 변형으로(Z↔T), 없으면 반전 전용 변형(변형 번호 +10, 예: L 반전)을 만든다.
+// 반전 전용 변형은 빌더 안에서만 쓰는 번호 — 로그 ShapeId 로는 오지 않는다
+const slateShapeKey = c => { // 회전 4가지 중 가장 작은 정규화 문자열
+  let cs = c.map(p => p.slice()), best = null;
+  for (let k = 0; k < 4; k++) {
+    const r0 = Math.min(...cs.map(p => p[0])), c0 = Math.min(...cs.map(p => p[1]));
+    const s = cs.map(p => (p[0] - r0) + ',' + (p[1] - c0)).sort().join(';');
+    if (best == null || s < best) best = s;
+    cs = cs.map(p => [p[1], -p[0]]);
+  }
+  return best;
+};
+const GOD_MIRROR = {}; // 신격 u → 좌우 반전한 u (자기 자신이면 대칭 모양)
+Object.keys(GOD_BASES).forEach(b => GOD_SHAPES.forEach((g, vi) => {
+  const u = +b + vi + 1, mc = g[1].map(p => [p[0], -p[1]]), mk = slateShapeKey(mc);
+  if (slateShapeKey(g[1]) === mk) { GOD_MIRROR[u] = u; return; }
+  const hit = GOD_SHAPES.findIndex(h => slateShapeKey(h[1]) === mk);
+  const m = hit >= 0 ? +b + hit + 1 : +b + vi + 11;
+  if (hit < 0) SLATES[m] = Object.assign({}, SLATES[u], {c: mc, shp: g[0].replace(/\d$/, '') + ' 반전'});
+  GOD_MIRROR[u] = m; if (!(m in GOD_MIRROR)) GOD_MIRROR[m] = u;
+}));
 
 function slateRank(t) {
   const m = (t.effect || '').match(/^\[([^\]]+)\]/);
@@ -943,9 +965,11 @@ function wsbShape() { // 신격 모양 변형 순환 (소켓·위치·회전 유
   const base = Math.floor((sl.u - 1) / 100) * 100;
   if (!(base in GOD_BASES)) return;
   const order = GOD_PAL.map(gp => gp[0]);
-  sl.u = base + order[(order.indexOf(sl.u - base) + 1) % order.length];
+  const v = sl.u - base > 10 ? sl.u - base - 10 : sl.u - base; // 반전 전용 변형(+10)은 원래 변형 자리에서 다음으로
+  sl.u = base + order[(order.indexOf(v) + 1) % order.length];
   wsbApply();
 }
+function wsbFlip() { const sl = wsbBd()[wsbSel]; if (!sl || !GOD_MIRROR[sl.u] || GOD_MIRROR[sl.u] === sl.u) return; sl.u = GOD_MIRROR[sl.u]; wsbApply(); } // 좌우 반전 (00_slate GOD_MIRROR)
 function wsbDelete() { const bd = wsbBd(); if (!bd[wsbSel]) return; bd.splice(wsbSel, 1); wsbSel = null; wsbSock = null; wsbApply(); }
 function wsbSockPick(si) { wsbSock = wsbSock === si ? null : si; wsbQ = ''; pageRender(); }
 function wsbSockRows() { // 이 소켓 등급에 맞는 석판 옵션
@@ -1068,6 +1092,7 @@ function wsbRender() {
     const info = SLATES[sl.u] || {}, isGod = (Math.floor((sl.u - 1) / 100) * 100) in GOD_BASES;
     side = `<div class="wg-addbox"><div class="wg-addh"><b>${escapeHtml(info.n || '#' + sl.u)}</b><span>${(info.c || []).length}칸</span></div>` +
       '<div class="wsb-acts"><button class="wz-btn" onclick="wsbRotate()">↻ 회전</button>' + (isGod ? `<button class="wz-btn" onclick="wsbShape()">모양: ${escapeHtml((info.shp || '?').replace(/1$/, ''))}</button>` : '') +
+      (GOD_MIRROR[sl.u] && GOD_MIRROR[sl.u] !== sl.u ? '<button class="wz-btn" onclick="wsbFlip()" title="모양을 좌우로 뒤집습니다">⇋ 좌우 반전</button>' : '') +
       '<button class="wz-btn" onclick="wsbDelete()">삭제</button></div>' +
       (cf.has(wsbSel) ? '<div class="wsb-warn">⚠ 겹치거나 보드 밖입니다 — 빈 칸을 누르거나 끌어서 옮기세요</div>' : '<div class="wg-addd">빈 칸을 누르면 그 자리로 옮깁니다 (끌어도 됩니다)</div>') + '</div>';
     if (info.sl) {

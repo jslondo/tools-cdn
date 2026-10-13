@@ -2471,6 +2471,46 @@ function wsClear(slot) {
   persistPreset();
   pageRender();
 }
+// 왼쪽 칸 끌어서 순서 바꾸기 (사용자 요청) — 같은 묶음 안에서 끼워 넣기, 액티브 1 자리로 오면 메인 스킬이 된다
+let wsDrag = null;
+function wsDragOver(e, id) {
+  if (!wsDrag || wsSlot(wsDrag).group !== wsSlot(id).group) return;
+  e.preventDefault();
+  document.querySelectorAll('.ws-slot.drop').forEach(x => x.classList.remove('drop'));
+  if (id !== wsDrag) e.currentTarget.classList.add('drop');
+}
+function wsDrop(e, id) {
+  e.preventDefault();
+  const from = wsDrag; wsDrag = null;
+  if (!from || from === id || wsSlot(from).group !== wsSlot(id).group) return pageRender();
+  wsMove(from, id);
+}
+function wsMove(from, to) {
+  if (guardShareView()) return;
+  const ids = SKILL_SLOTS.filter(s => s.group === wsSlot(from).group).map(s => s.id);
+  const list = ids.map(id => wsSk(id));
+  const [it] = list.splice(ids.indexOf(from), 1);
+  list.splice(ids.indexOf(to), 0, it);
+  if (!preset.skills) preset.skills = {};
+  ids.forEach((id, k) => { preset.skills[id] = list[k] || null; });
+  wsTarget = {slot: to, socket: null};
+  persistPreset();
+  pageRender();
+}
+// 우클릭 = 그 자리 비우기 (사용자 요청) — 메인은 칸 통째로(✕와 같음), 보조는 그 소켓만
+function wsUnequip(slot, k) {
+  if (guardShareView()) return false;
+  const sk = wsSk(slot);
+  if (!sk) return false;
+  if (k === null) return wsClear(slot), false;
+  if (!sk.sup[k]) return false;
+  sk.sup[k] = null;
+  if (!sk.main && !sk.sup.some(Boolean)) preset.skills[slot] = null;
+  wsTarget = {slot, socket: sk.main ? k : null};
+  persistPreset();
+  pageRender();
+  return false;
+}
 function wsCard(s) { // 오른쪽 아래 스킬 카드 — tlidb 문구(HTML)는 빌더 카드와 같은 방식으로 그대로 싣는다
   if (!s) return '<div class="ws-card empty">스킬에 마우스를 올리거나 고르면 설명이 여기에 나옵니다</div>';
   const lvd = SKILL_LV[s.name];
@@ -2501,14 +2541,15 @@ function wsRender() {
     SKILL_SLOTS.filter(s => s.group === g).forEach(sl => {
       const sk = wsSk(sl.id), on = wsTarget.slot === sl.id;
       const mi = sk && sk.main ? wsIcon(sk.main) : '';
-      side += `<div class="ws-slot${on ? ' on' : ''}" onclick="wsSetTarget('${sl.id}', null)">` + // 칸 카드 어디를 눌러도 (사용자 요청)
+      side += `<div class="ws-slot${on ? ' on' : ''}"${sk ? ` draggable="true" ondragstart="wsDrag='${sl.id}';this.classList.add('drag')"` : ''} ` +
+        `ondragover="wsDragOver(event,'${sl.id}')" ondrop="wsDrop(event,'${sl.id}')" ondragend="wsDrag=null;pageRender()" onclick="wsSetTarget('${sl.id}', null)" oncontextmenu="return wsUnequip('${sl.id}', null)">` + // 칸 카드 어디를 눌러도 (사용자 요청)
         `<div class="ws-main${on && wsTarget.socket === null ? ' tgt' : ''}" title="${sk && sk.main ? escapeHtml(sk.main.name) : '스킬 고르기'}">` +
         (mi ? `<img src="${mi}" alt="">` : '<span class="ws-plus">+</span>') + '</div>' +
         `<div class="ws-info"><small>${sl.label}</small><b>${sk && sk.main ? escapeHtml(sk.main.name) : '<span class="ws-none">비어 있음</span>'}</b>` +
         '<div class="ws-socks">' + [0, 1, 2, 3, 4].map(k => {
           const sp = sk && sk.sup[k], ic = sp ? wsIcon(sp) : '';
           const tgt = on && wsTarget.socket === k;
-          return `<span class="ws-sock${sp ? ' have' : ''}${tgt ? ' tgt' : ''}${k === 0 || k === 2 || k === 4 ? ' sp' : ''}" onclick="event.stopPropagation();wsSetTarget('${sl.id}', ${k})" ` +
+          return `<span class="ws-sock${sp ? ' have' : ''}${tgt ? ' tgt' : ''}${k === 0 || k === 2 || k === 4 ? ' sp' : ''}" onclick="event.stopPropagation();wsSetTarget('${sl.id}', ${k})" oncontextmenu="event.stopPropagation();return wsUnequip('${sl.id}', ${k})" ` +
             `title="보조 ${k + 1} (${WS_SOCK_NAME[k]})${sp ? ' — ' + escapeHtml(sp.name) : ''}">${ic ? `<img src="${ic}" alt="">` : k + 1}</span>`;
         }).join('') + '</div></div>' +
         (sk ? `<button class="gbm-del" onclick="event.stopPropagation();wsClear('${sl.id}')" title="이 칸 비우기">✕</button>` : '') + '</div>';
@@ -2535,7 +2576,7 @@ function wsRender() {
   const cellOf = (ref, k) => {
     const tgt = wsTarget.socket === k, ic = ref ? wsIcon(ref) : '';
     const lab = k === null ? (sl.id === 'a1' ? '메인 스킬' : sl.label) : '보조 ' + (k + 1);
-    return `<div class="ws-strip-c${tgt ? ' tgt' : ''}${ref ? ' have' : ''}${k === null ? ' main' : ''}" onclick="wsSetTarget('${sl.id}', ${k})" title="${escapeHtml(ref ? ref.name : lab)}">` +
+    return `<div class="ws-strip-c${tgt ? ' tgt' : ''}${ref ? ' have' : ''}${k === null ? ' main' : ''}" onclick="wsSetTarget('${sl.id}', ${k})" oncontextmenu="return wsUnequip('${sl.id}', ${k})" title="${escapeHtml(ref ? ref.name : lab)}">` +
       `<span class="ws-strip-i">${ic ? `<img src="${ic}" alt="">` : (k === null ? '+' : k + 1)}</span>` +
       `<span class="ws-strip-t"><small>${escapeHtml(lab)}${k !== null && k % 2 === 0 ? ' · ' + WS_SOCK_NAME[k].split('·')[0] : ''}</small><b>${ref ? escapeHtml(ref.name) : '<i>비어 있음</i>'}</b></span></div>`;
   };
@@ -2547,8 +2588,8 @@ function wsRender() {
     tags.map(t => `<span class="ws-tag${wsTag === t ? ' on' : ''}" onclick="wsTag=${JSON.stringify(t).replace(/"/g, '&quot;')};pageRender()">${escapeHtml(t)}</span>`).join('') + '</div>' +
     `<div class="ws-split"><div class="ws-grid" id="wsGrid">${wsGridHtml(shown, onSet)}</div>` +
     `<div class="ws-cardbox" id="wsCard">${wsCard(SKILLS[wsFocus >= 0 ? wsFocus : (sk && (wsTarget.socket === null ? sk.main : sk.sup[wsTarget.socket]) ? findSkill(wsTarget.socket === null ? sk.main : sk.sup[wsTarget.socket]) : -1)])}</div></div>`;
-  return '<div class="gbm wsm"><div class="gbm-top"><b class="gbm-title">스킬</b>' + (typeof gbmHelp === 'function' ? gbmHelp('skill') : '') + 
-    '<span class="gbm-keys">왼쪽에서 칸·소켓을 고르고 오른쪽 스킬을 누르면 끼웁니다 (다시 누르면 빼기) <span class="gbm-sep">·</span> 보조 1 촉발체 · 보조 3 부귀 · 보조 5 숭고</span></div>' +
+  return '<div class="gbm wsm" oncontextmenu="return event.target.tagName===\'INPUT\'"><div class="gbm-top"><b class="gbm-title">스킬</b>' + (typeof gbmHelp === 'function' ? gbmHelp('skill') : '') + 
+    '<span class="gbm-keys">왼쪽에서 칸·소켓을 고르고 오른쪽 스킬을 누르면 끼웁니다 (다시 누르거나 우클릭하면 빼기) <span class="gbm-sep">·</span> 왼쪽 칸은 끌어서 순서 바꾸기 <span class="gbm-sep">·</span> 보조 1 촉발체 · 보조 3 부귀 · 보조 5 숭고</span></div>' +
     `<div class="gbm-body"><div class="gbm-side">${side}</div><div class="gbm-main">${main}</div></div></div>`;
 }
 function wsGridHtml(shown, onSet) {
@@ -2556,7 +2597,7 @@ function wsGridHtml(shown, onSet) {
   const used = wsUsed();
   return shown.map(i => {
     const s = SKILLS[i], on = onSet.has(s.name + '\u001f' + s.kind), rec = !on && used.has(s.name + '\u001f' + s.kind);
-    return `<div class="ws-cell${on ? ' on' : ''}${rec ? ' rec' : ''}" onclick="wsPick(${i})" onmouseenter="wsFocusOn(${i})" title="${escapeHtml(s.name)}">` +
+    return `<div class="ws-cell${on ? ' on' : ''}${rec ? ' rec' : ''}" onclick="wsPick(${i})"${on ? ` oncontextmenu="wsPick(${i});return false"` : ''} onmouseenter="wsFocusOn(${i})" title="${escapeHtml(s.name)}">` +
       `<img src="${s.icon || ''}" loading="lazy" alt="" onerror="this.style.visibility='hidden'"><span>${escapeHtml(s.name)}</span>` +
       (on ? '<i class="ws-tick">✓</i>' : rec ? '<i class="ws-rec" title="같은 성격(자극·영약 / 일반)의 다른 칸에서 쓰는 보조">다른 칸 사용 중</i>' : '') + '</div>';
   }).join('');

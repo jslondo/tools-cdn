@@ -586,6 +586,9 @@
     /* 스킬: 고른 칸 한 줄 (메인 + 보조 1~5) */
     .ws-slot { cursor: pointer; }
     .ws-slot:hover { border-color: #3a4a66; }
+    .ws-slot[draggable=true] { cursor: grab; }
+    .ws-slot.drag { opacity: .45; }
+    .ws-slot.drop { border-color: #d4a84a; border-style: dashed; }
     .ws-strip { display: grid; grid-template-columns: 1.3fr repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
     .ws-strip-c { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid #1f2735; border-radius: 10px; background: #0f141f; cursor: pointer; min-width: 0; transition: .12s; }
     .ws-strip-c:hover { border-color: #3a4a66; }

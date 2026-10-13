@@ -724,6 +724,16 @@ if (!window._noDblSel) {
   });
 }
 
+// 내가 올린 공유 — 올린 브라우저에만 남기는 목록 (링크 전용 글은 링크를 잊으면 본인도 못 찾아서, 2026-10-13 사용자)
+// 링크 전용 글은 서버가 마지막 조회 뒤 UNLISTED_DAYS 일이 지나면 지운다 (tli_api.js purgeUnlisted 와 같은 값)
+const MY_SHARES_KEY = 'tli_my_shares_v1', UNLISTED_DAYS = 14;
+function mySharesGet() { try { const a = JSON.parse(localStorage.getItem(MY_SHARES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function mySharesPut(e) { // {id, title, unl} — 같은 글은 맨 앞으로 옮겨 갱신 (올린 날 at 은 처음 것을 둔다)
+  try { const a = mySharesGet(), old = a.find(x => x.id === e.id);
+    localStorage.setItem(MY_SHARES_KEY, JSON.stringify([Object.assign({at: (old && old.at) || new Date().toISOString()}, e)].concat(a.filter(x => x.id !== e.id)).slice(0, 50))); } catch (err) {}
+}
+function mySharesDrop(id) { try { localStorage.setItem(MY_SHARES_KEY, JSON.stringify(mySharesGet().filter(x => x.id !== id))); } catch (e) {} }
+
 // ── 단독 화면에서 히어로 고르기 (빌더의 pickHero 대신) — /tli/hero · /tli/builder2 공용 ──
 function pickHero(hero, trait) {
   // 빌더와 같은 규칙: 아이리스에서 벗어날 때 액티브 칸에 마령(패시브) 스킬이 있으면 막는다

@@ -3014,6 +3014,16 @@ if (!window._noDblSel) {
   });
 }
 
+// 내가 올린 공유 — 올린 브라우저에만 남기는 목록 (링크 전용 글은 링크를 잊으면 본인도 못 찾아서, 2026-10-13 사용자)
+// 링크 전용 글은 서버가 마지막 조회 뒤 UNLISTED_DAYS 일이 지나면 지운다 (tli_api.js purgeUnlisted 와 같은 값)
+const MY_SHARES_KEY = 'tli_my_shares_v1', UNLISTED_DAYS = 14;
+function mySharesGet() { try { const a = JSON.parse(localStorage.getItem(MY_SHARES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function mySharesPut(e) { // {id, title, unl} — 같은 글은 맨 앞으로 옮겨 갱신 (올린 날 at 은 처음 것을 둔다)
+  try { const a = mySharesGet(), old = a.find(x => x.id === e.id);
+    localStorage.setItem(MY_SHARES_KEY, JSON.stringify([Object.assign({at: (old && old.at) || new Date().toISOString()}, e)].concat(a.filter(x => x.id !== e.id)).slice(0, 50))); } catch (err) {}
+}
+function mySharesDrop(id) { try { localStorage.setItem(MY_SHARES_KEY, JSON.stringify(mySharesGet().filter(x => x.id !== id))); } catch (e) {} }
+
 // ── 단독 화면에서 히어로 고르기 (빌더의 pickHero 대신) — /tli/hero · /tli/builder2 공용 ──
 function pickHero(hero, trait) {
   // 빌더와 같은 규칙: 아이리스에서 벗어날 때 액티브 칸에 마령(패시브) 스킬이 있으면 막는다
@@ -4815,7 +4825,7 @@ function vwHead() {
   return `<div class="vw-head"><div class="vw-ht"><small>${VW.mine ? '내 빌드 보기' : '빌드 보기'}</small><h1>${vwEsc(title)}</h1>` +
     `<div class="vw-meta">${meta.join(' <span class="gbm-sep">·</span> ')}</div>` +
     (window.TLI_SNAPSHOT ? `<div class="vw-warn">📦 지난 시즌 <b>${vwEsc((window.TLI_SEASON || {}).label || '')}</b> 데이터로 보여 주는 빌드입니다 — 만들 때 그대로의 옵션·아이템입니다</div>` : '') +
-    (s && s.unlisted ? '<div class="vw-unl" title="공유 목록·검색에는 나오지 않습니다">🔒 링크로만 공유된 빌드</div>' : '') +
+    (s && s.unlisted ? `<div class="vw-unl" title="공유 목록·검색에는 나오지 않습니다">🔒 링크로만 공유된 빌드 — ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다</div>` : '') +
     (VW.missing ? `<div class="vw-warn">⚠ 이 사이트 데이터에 없는 항목 ${VW.missing}개는 빠졌습니다 (시즌이 바뀌었거나 새 아이템)</div>` : '') + '</div>' +
     // 내 빌드: [수정][공유 올리기] + 아랫줄 작은 [삭제] (잘못 누르기 쉬운 자리에서 떼어 둠 — 2026-10-10 사용자)
     // 공유 글 수정 중이면 [💾 공유 글에 저장] 을 주 단추로 + 위에 띠 (보조 단추라 못 찾던 것, 2026-10-13 사용자)
@@ -5146,7 +5156,7 @@ function vwSeGo(info) {
 }
 function vwShareDel() {
   vwPwd('🗑 공유 글 삭제', '올릴 때 등록한 비밀번호를 넣으면 이 공유 글을 지웁니다. 되돌릴 수 없습니다.', async pw => {
-    try { await vwApi('/share/delete', {id: VW.share.id, pwd: pw}); vwClose(); vwToast('🗑 지웠습니다'); setTimeout(() => { location.href = '/tli/share/'; }, 900); }
+    try { await vwApi('/share/delete', {id: VW.share.id, pwd: pw}); mySharesDrop(VW.share.id); vwClose(); vwToast('🗑 지웠습니다'); setTimeout(() => { location.href = '/tli/share/'; }, 900); }
     catch (e) { vwToast('지우지 못했습니다: ' + e.message); }
   });
 }

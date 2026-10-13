@@ -862,6 +862,16 @@ if (!window._noDblSel) {
   });
 }
 
+// 내가 올린 공유 — 올린 브라우저에만 남기는 목록 (링크 전용 글은 링크를 잊으면 본인도 못 찾아서, 2026-10-13 사용자)
+// 링크 전용 글은 서버가 마지막 조회 뒤 UNLISTED_DAYS 일이 지나면 지운다 (tli_api.js purgeUnlisted 와 같은 값)
+const MY_SHARES_KEY = 'tli_my_shares_v1', UNLISTED_DAYS = 14;
+function mySharesGet() { try { const a = JSON.parse(localStorage.getItem(MY_SHARES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function mySharesPut(e) { // {id, title, unl} — 같은 글은 맨 앞으로 옮겨 갱신 (올린 날 at 은 처음 것을 둔다)
+  try { const a = mySharesGet(), old = a.find(x => x.id === e.id);
+    localStorage.setItem(MY_SHARES_KEY, JSON.stringify([Object.assign({at: (old && old.at) || new Date().toISOString()}, e)].concat(a.filter(x => x.id !== e.id)).slice(0, 50))); } catch (err) {}
+}
+function mySharesDrop(id) { try { localStorage.setItem(MY_SHARES_KEY, JSON.stringify(mySharesGet().filter(x => x.id !== id))); } catch (e) {} }
+
 // ── 빌더 2 「추억·석판·정령」 화면의 석판 배치 — 기존 빌더 석판 보드 디자인을 바탕으로 크게 (사용자 2026-10-08) ──
 // 규칙은 공용 조각(00_slate.js): 모양·회전·겹침/개수 한도·파생 효과·재능 목록 재생성. 저장은 빌더와 같은 preset.slateBd
 // [{u: 석판 id, i: 원점 칸(열×10+행), d: 회전 0~3, t: [소켓 노드 id…]}] — 바꿀 때마다 보드 파생 재능 행을 다시 만든다.

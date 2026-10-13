@@ -1305,6 +1305,16 @@ if (!window._noDblSel) {
   });
 }
 
+// 내가 올린 공유 — 올린 브라우저에만 남기는 목록 (링크 전용 글은 링크를 잊으면 본인도 못 찾아서, 2026-10-13 사용자)
+// 링크 전용 글은 서버가 마지막 조회 뒤 UNLISTED_DAYS 일이 지나면 지운다 (tli_api.js purgeUnlisted 와 같은 값)
+const MY_SHARES_KEY = 'tli_my_shares_v1', UNLISTED_DAYS = 14;
+function mySharesGet() { try { const a = JSON.parse(localStorage.getItem(MY_SHARES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function mySharesPut(e) { // {id, title, unl} — 같은 글은 맨 앞으로 옮겨 갱신 (올린 날 at 은 처음 것을 둔다)
+  try { const a = mySharesGet(), old = a.find(x => x.id === e.id);
+    localStorage.setItem(MY_SHARES_KEY, JSON.stringify([Object.assign({at: (old && old.at) || new Date().toISOString()}, e)].concat(a.filter(x => x.id !== e.id)).slice(0, 50))); } catch (err) {}
+}
+function mySharesDrop(id) { try { localStorage.setItem(MY_SHARES_KEY, JSON.stringify(mySharesGet().filter(x => x.id !== id))); } catch (e) {} }
+
 // ── 단독 화면의 재능 보드 데이터·툴팁 — /tli/talent · /tli/builder2 공용 ──
 // 노드 ID·효과 문구는 생성기가 미리 뽑아 둔 TALENT_NODES(계열 → [[노드ID, 효과]…], 노드 ID 오름차순)에서 읽는다.
 // 빌더는 같은 값을 장비·옵션 데이터(SLATEIDX)에서 바로 구한다 — 둘이 같아야 한다(test_talent_page.js 가 대조).

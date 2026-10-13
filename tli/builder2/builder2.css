@@ -66,7 +66,7 @@
     .hp-bpr-se { flex: none; font-size: 10.5px; color: #9aa6b4; border: 1px solid #2f3a4d; border-radius: 6px; padding: 1px 6px; }
     .hp-bpr-ck { flex: none; color: #e8c860; font-weight: 700; }
     .hp-bp-none { color: #7d8794; padding: 14px; text-align: center; }
-    .hp-bp-acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
+    .hp-bp-acts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
     .hp-bp-acts button { background: #1b2230; border: 1px solid #2a3344; color: #c9d1d9; border-radius: 8px; padding: 7px 4px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
     .hp-bp-acts button:hover { border-color: #e8c860; color: #f3e3b5; }
     .hp-build select { background: #0f141f; color: #e6edf3; border: 1px solid #2f3a4d; border-radius: 6px; padding: 3px 6px; font: inherit; max-width: 220px; }
@@ -1030,3 +1030,10 @@
     .wc-memo { width: 100%; box-sizing: border-box; min-height: 320px; resize: vertical; padding: 12px 14px; border-radius: 10px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 14px; line-height: 1.7; }
     .wc-memo:focus { outline: none; border-color: #d4a84a; }
     .wc-foot { margin-top: 6px; color: #7d8794; font-size: 12px; text-align: right; } #wcS { color: #7ee2a8; }
+    /* 내 공유 목록 (wbMyShares, 2026-10-13) */
+    .wb-mss { display: flex; flex-direction: column; gap: 6px; max-height: min(420px, 60vh); overflow-y: auto; margin: 4px 0 10px; }
+    .wb-ms { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #232b3a; border-radius: 10px; background: #0f141f; }
+    .wb-ms-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+    .wb-ms-t b { color: #e6edf3; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wb-ms-t small { color: #7d8794; font-size: 11.5px; }
+    .wb-ms .wz-btn { flex: none; padding: 5px 10px; font-size: 12px; text-decoration: none; }

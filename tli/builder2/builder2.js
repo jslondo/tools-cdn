@@ -2449,6 +2449,16 @@ if (!window._noDblSel) {
   });
 }
 
+// 내가 올린 공유 — 올린 브라우저에만 남기는 목록 (링크 전용 글은 링크를 잊으면 본인도 못 찾아서, 2026-10-13 사용자)
+// 링크 전용 글은 서버가 마지막 조회 뒤 UNLISTED_DAYS 일이 지나면 지운다 (tli_api.js purgeUnlisted 와 같은 값)
+const MY_SHARES_KEY = 'tli_my_shares_v1', UNLISTED_DAYS = 14;
+function mySharesGet() { try { const a = JSON.parse(localStorage.getItem(MY_SHARES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function mySharesPut(e) { // {id, title, unl} — 같은 글은 맨 앞으로 옮겨 갱신 (올린 날 at 은 처음 것을 둔다)
+  try { const a = mySharesGet(), old = a.find(x => x.id === e.id);
+    localStorage.setItem(MY_SHARES_KEY, JSON.stringify([Object.assign({at: (old && old.at) || new Date().toISOString()}, e)].concat(a.filter(x => x.id !== e.id)).slice(0, 50))); } catch (err) {}
+}
+function mySharesDrop(id) { try { localStorage.setItem(MY_SHARES_KEY, JSON.stringify(mySharesGet().filter(x => x.id !== id))); } catch (e) {} }
+
 // ── 단독 화면에서 히어로 고르기 (빌더의 pickHero 대신) — /tli/hero · /tli/builder2 공용 ──
 function pickHero(hero, trait) {
   // 빌더와 같은 규칙: 아이리스에서 벗어날 때 액티브 칸에 마령(패시브) 스킬이 있으면 막는다
@@ -6188,7 +6198,7 @@ function wbShareOpen() {
   wbPop(`<h3>${se ? '공유 글 수정 저장' : '빌드 공유 올리기'}</h3>` +
     `<div class="wb-field"><b>공개 범위</b><div class="wb-vis">` +
       `<button class="wb-tag${wbUnlisted ? '' : ' on'}" data-v="0" onclick="wbVis(false)" title="빌드 공유 목록·검색에 올라갑니다">🌐 목록에 공개</button>` +
-      `<button class="wb-tag${wbUnlisted ? ' on' : ''}" data-v="1" onclick="wbVis(true)" title="목록·검색에는 나오지 않고, 링크를 받은 사람만 볼 수 있습니다">🔒 링크로만 공유</button></div></div>` +
+      `<button class="wb-tag${wbUnlisted ? ' on' : ''}" data-v="1" onclick="wbVis(true)" title="목록·검색에는 나오지 않고, 링크를 받은 사람만 볼 수 있습니다 — ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다">🔒 링크로만 공유</button></div></div>` +
     `<div class="wb-field"><b>제목</b><input id="wbTitle" maxlength="40" placeholder="2~40자 (비워 두면 메인 스킬 + 태그)" value="${escapeHtml(se && se.title || '')}" oninput="wbTitleEdited=true"></div>` +
     `<div class="wb-tgrp"><small>히어로</small><div><button class="wb-tag on lock" title="빌드에서 고른 히어로라 여기서는 못 바꿉니다">🔒 ${escapeHtml(preset.hero.trait)}</button></div></div>` +
     grp('성향·능력치', SHARE_EXTRA_TAGS) + grp('콘텐츠', SHARE_CONTENT_TAGS) + grp('스킬 태그', SHARE_SKILL_TAGS) +
@@ -6236,8 +6246,9 @@ async function wbShareSubmit() {
     try { localStorage.setItem('tlidb_author_v1', author); if (!se) localStorage.setItem('tlidb_share_pwd_v1', pwd); } catch (e) {}
     const link = location.origin + '/tli/view/?preset=' + (se ? se.id : d.id);
     // 수정 저장이 끝나면 수정용 사본은 내 빌드에서 지운다 (사본은 [수정]이 만든 것 — 2026-10-13 사용자). 실패하면 아래 catch 라 사본이 남는다
+    mySharesPut({id: se ? se.id : d.id, title: title || [wbShareMain, ...wbShareTags].join(' ').slice(0, 40), unl: wbUnlisted ? 1 : 0}); // [🔗 내 공유] 에서 다시 찾게
     if (se) wbDropCopy(preset.id, true);
-    wbPop(`<h3>${se ? '공유 글을 고쳤습니다' : '공유했습니다'}</h3><div class="wb-msg">${wbUnlisted ? '🔒 링크로만 공유됩니다 — 공유 목록·검색에는 나오지 않고, 이 링크를 받은 사람만 볼 수 있습니다.' : '이 링크로 누구나 빌드를 볼 수 있습니다.'}${se ? ' 추천·조회수는 그대로입니다. 수정하려고 불러온 사본은 내 빌드에서 지웠습니다.' : ''}</div>` +
+    wbPop(`<h3>${se ? '공유 글을 고쳤습니다' : '공유했습니다'}</h3><div class="wb-msg">${wbUnlisted ? `🔒 링크로만 공유됩니다 — 공유 목록·검색에는 나오지 않고, 이 링크를 받은 사람만 볼 수 있습니다. <b>${UNLISTED_DAYS}일 동안 아무도 열지 않으면 자동으로 지워집니다.</b>` : '이 링크로 누구나 빌드를 볼 수 있습니다.'} 링크는 빌드 목록의 [🔗 내 공유]에서 다시 찾을 수 있습니다.${se ? ' 추천·조회수는 그대로입니다. 수정하려고 불러온 사본은 내 빌드에서 지웠습니다.' : ''}</div>` +
       `<input class="wb-link" readonly value="${escapeHtml(link)}" onclick="this.select()">` +
       `<div class="wb-btns"><button class="wz-btn pri" onclick="wbCopy('${escapeHtml(link)}')">링크 복사</button><a class="wz-btn" href="${escapeHtml(link)}" target="_blank">열어 보기</a>` +
       '<button class="wz-btn" onclick="wbClose()">닫기</button></div>');
@@ -6252,6 +6263,27 @@ function wbDropCopy(id) { // 공유 글 수정용 사본 지우기 — 다른 �
   if (!next) { next = {id: wbNextId(), name: '빌드 1', slots: {}, talents: [], skills: {}}; presets.list.push(next); }
   presets.activeId = next.id; hpUse(next); persistPreset();
   if (typeof wzList === 'function' && presets.list.some(wzFilled)) wzList(); else if (typeof wzGo === 'function') wzGo('hero'); else pageRender();
+}
+// 내 공유 — 이 브라우저에서 올린 공유 글 (서버에 아직 있는지 확인하고, 지워진 글은 목록에서 뺀다)
+async function wbMyShares() {
+  const a = mySharesGet(), close = '<div class="wb-btns"><button class="wz-btn" onclick="wbClose()">닫기</button></div>';
+  const pop = body => wbPop('<h3>🔗 내 공유</h3>' + body + close, 'wb-manage');
+  if (!a.length) { pop('<div class="wb-msg">이 브라우저에서 올린 공유 글이 없습니다. 빌드를 공유하면 여기에 링크가 남습니다.</div>'); return; }
+  pop('<div class="wb-msg">불러오는 중…</div>');
+  let alive = null;
+  try { const j = await (await fetch('/api/share/alive?ids=' + a.map(x => x.id).join(','))).json(); if (j.ok) alive = new Map(j.items.map(x => [x.id, x])); } catch (e) {}
+  const gone = alive ? a.filter(x => !alive.has(x.id)) : [];
+  gone.forEach(x => mySharesDrop(x.id));
+  const rows = a.filter(x => !gone.includes(x)).map(x => {
+    const s = alive && alive.get(x.id), unl = s ? !!s.unlisted : !!x.unl, link = location.origin + '/tli/view/?preset=' + x.id;
+    const left = unl && s ? Math.max(0, Math.ceil(UNLISTED_DAYS - (Date.now() - Date.parse(s.seen)) / 86400000)) : null;
+    const st = unl ? (left !== null ? `${left}일 뒤 지워짐 · 누가 열면 다시 ${UNLISTED_DAYS}일` : '링크 전용') : '목록에 공개';
+    return `<div class="wb-ms"><div class="wb-ms-t"><b>${unl ? '🔒' : '🌐'} ${escapeHtml((s && s.title) || x.title || x.id)}</b><small>${st} · 올린 날 ${escapeHtml(String(x.at || '').slice(0, 10))}</small></div>` +
+      `<button class="wz-btn" onclick="wbCopy('${escapeHtml(link)}')">링크 복사</button><a class="wz-btn" href="${escapeHtml(link)}" target="_blank">열기</a></div>`;
+  });
+  pop((rows.length ? `<div class="wb-mss">${rows.join('')}</div>` : '<div class="wb-msg">남아 있는 공유 글이 없습니다.</div>') +
+    (gone.length ? `<div class="wb-note">지워진 글 ${gone.length}개는 목록에서 뺐습니다.</div>` : '') +
+    `<div class="wb-note">이 브라우저에서 올린 글만 보입니다. 🔒 링크 전용 글은 ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다. 고치기·지우기는 [열기] 뒤 보기 화면에서.</div>`);
 }
 async function wbCopy(t) { try { await navigator.clipboard.writeText(t); showToast('복사했습니다'); } catch (e) { showToast('복사하지 못했습니다 — 칸을 눌러 직접 복사해 주세요'); } }
 function wbShareEditStop() { wbClose(); wzEditStop(preset.id); } // 수정용 사본을 지운다 (내 빌드가 아니라서, 2026-10-13)
@@ -6492,7 +6524,8 @@ const WZ_UP = '<button class="wz-up" onclick="wzScrollToSide()">↑ 칸 목록</
 // 빌드 고르기 목록 아래 동작 (page_common hpBuildPicker) — [빌드 관리] 단추는 여기로 합쳤다가 관리 창째 뺐다 (2026-10-13)
 function hpBuildActs() {
   return '<button type="button" onclick="hpBpClose();wbDup()">📄 복제</button>' + // ＋ 빌드는 목록 위 시즌 칩 줄로
-    '<button type="button" onclick="hpBpClose();wbLogPick()">🎮 로그에서</button>'; // 관리 창은 퇴역 — 이름·삭제는 목록 줄의 ✎·✕, 공유는 보기 화면
+    '<button type="button" onclick="hpBpClose();wbLogPick()">🎮 로그에서</button>' +
+    '<button type="button" onclick="hpBpClose();wbMyShares()" title="이 브라우저에서 올린 공유 글 링크">🔗 내 공유</button>'; // 관리 창은 퇴역 — 이름·삭제는 목록 줄의 ✎·✕, 공유는 보기 화면
 }
 function pageOnSwitch() { heroMsg = ''; gbMsg = ''; gbExtra.clear(); gbSlot = 0; hrView = (preset.hero && preset.hero.hero) || hrView; }
 function pageRender() {

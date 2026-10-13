@@ -66,7 +66,7 @@
     .hp-bpr-se { flex: none; font-size: 10.5px; color: #9aa6b4; border: 1px solid #2f3a4d; border-radius: 6px; padding: 1px 6px; }
     .hp-bpr-ck { flex: none; color: #e8c860; font-weight: 700; }
     .hp-bp-none { color: #7d8794; padding: 14px; text-align: center; }
-    .hp-bp-acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
+    .hp-bp-acts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; border-top: 1px solid #232b3a; padding-top: 6px; }
     .hp-bp-acts button { background: #1b2230; border: 1px solid #2a3344; color: #c9d1d9; border-radius: 8px; padding: 7px 4px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
     .hp-bp-acts button:hover { border-color: #e8c860; color: #f3e3b5; }
     .hp-build select { background: #0f141f; color: #e6edf3; border: 1px solid #2f3a4d; border-radius: 6px; padding: 3px 6px; font: inherit; max-width: 220px; }

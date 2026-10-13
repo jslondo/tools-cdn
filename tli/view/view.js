@@ -3999,7 +3999,7 @@ function wmSave(p, o) { // 고른 게 없으면 비운다
   persistPreset();
 }
 function wmTips(e) { const r = MEM_ROWS.find(x => rowKey(x) === e.k); return r ? r.tips : null; } // 장비 데이터 없이 추억 행에서
-function wmPick(p) { wcbSel = null; wcbPop = null; wpPick = false; wpQ = ''; wmPart = p; wmStage = 0; wmQuery = ''; wmMsg = ''; pageRender(); wzScrollToMain(); }
+function wmPick(p) { if (!wmIsOther(p)) wmLastMem = p; wcbSel = null; wcbPop = null; wpPick = false; wpQ = ''; wmPart = p; wmStage = 0; wmQuery = ''; wmMsg = ''; pageRender(); wzScrollToMain(); }
 function wmPoolSafe() { return wmIsOther(wmPart) ? [] : wmPool(); }
 function wmPool() { const st = MEM_STAGES[wmStage], part = wmReal(wmPart); return MEM_ROWS.filter(r => r.source === part && r.type === st.type); }
 function wmToggle(i) {
@@ -4079,13 +4079,24 @@ function wmListHtml() {
   return h || '<div class="hrm-empty">조건에 맞는 옵션이 없습니다</div>';
 }
 function wmSearch(v) { wmQuery = v; const b = document.getElementById('wmList'); if (b) b.innerHTML = wmListHtml(); }
-function wmCard(p) {
+const wmShort = p => wmIsX(p) ? '부활 추가 · ' + wmXPart().replace('의 추억', '') : p.replace('의 추억', '');
+let wmLastMem = MEM_PARTS[0]; // 왼쪽 「추억」 칸을 누르면 마지막으로 보던 추억으로
+function wmMemSum(parts) { // 왼쪽 「추억」 칸 하나 (2026-10-13 사용자: 셋으로 나뉜 칸을 합치고 본문 위 탭으로) — 추억마다 등급·Lv 한 줄
+  const on = !wmIsOther(wmPart), n = parts.filter(p => wmMem(p)).length;
+  const go = on ? wmPart : (parts.includes(wmLastMem) ? wmLastMem : MEM_PARTS[0]);
+  return `<div class="wm-card wm-sum${on ? ' on' : ''}${n ? ' have' : ''}" onclick="wmPick('${go}')" title="눌러서 추억 고르기 — 본문 위 탭으로 추억을 바꿉니다">` +
+    parts.map(p => {
+      const m = wmMem(p), key = wmKey(p), g = HERO_GRADES.find(x => x[0] === memGrade(key)) || HERO_GRADES[HERO_GRADES.length - 1];
+      return `<div class="wm-sl"><span>${escapeHtml(wmShort(p))}</span>${m ? `<i class="tier-chip tier-${g[3]}">${escapeHtml(g[1])}</i><b>Lv ${memGradeLv(key, m)}</b>` : '<em class="ws-none">비어 있음</em>'}</div>`;
+    }).join('') + '</div>';
+}
+function wmCard(p) { // 본문 위 탭 (근원 | 자기 수호 | 진격)
   const m = wmMem(p), key = wmKey(p), g = HERO_GRADES.find(x => x[0] === memGrade(key)) || HERO_GRADES[HERO_GRADES.length - 1];
   const n = m ? m.basic.length + m.unique.length + m.random.length : 0;
   const rv = preset.revival && preset.revival.part === p;
   const lv = memGradeLv(key, m);
-  const label = wmIsX(p) ? '부활 추가 · ' + wmXPart() : p;
-  return `<div class="wm-card${wmIsX(p) ? ' x' : ''}${wmPart === p ? ' on' : ''}${m ? ' have' : ''}" onclick="wmPick('${p}')">` +
+  const label = wmShort(p);
+  return `<div class="wm-card wm-tab${wmIsX(p) ? ' x' : ''}${wmPart === p ? ' on' : ''}${m ? ' have' : ''}" onclick="wmPick('${p}')">` +
     `<div class="wm-ch"><b>${escapeHtml(label)}</b><i class="tier-chip tier-${g[3]}" title="추억 등급: ${escapeHtml(g[1])}">${escapeHtml(g[1])}</i></div>` +
     `<div class="wm-cs">${m ? '옵션 ' + n + '개' : '<span class="ws-none">비어 있음</span>'} <span class="gbm-sep">·</span> ${WM_NODE[wmIsX(p) ? 'x' : p]} <b>Lv ${m ? lv : 1}</b>${rv ? ' <span class="wm-rv">부활</span>' : ''}</div>` +
     (m ? `<button class="gbm-del" onclick="event.stopPropagation();wmClear('${p}')" title="이 추억 비우기">✕</button>` : '') + '</div>';
@@ -4113,15 +4124,14 @@ function wmRender() {
   if (!preset.mems) preset.mems = {};
   if (wmIsX(wmPart) && !wmXPart()) wmPart = MEM_PARTS[0]; // 추가 슬롯이 사라지면 첫 추억으로
   const parts = [...(wmXPart() ? ['x'] : []), ...MEM_PARTS]; // 부활로 더 낀 추억은 맨 위 (기본 노드 레벨을 정한다 — 사용자 요청)
-  const side = '<div class="gbm-cap">추억 <span class="ws-en">히어로 특성 레벨의 기준</span></div>' + parts.map(wmCard).join('') +
-    '<div class="wm-note">추억 등급이 기본 레벨(절대 3 · 엘리트/레어 2 · 매직/일반 1)이고, 옵션의 "히어로 특성 레벨 +N"이 더해집니다 (최대 5). 근원 = 45 · 자기 수호 = 60 · 진격 = 75 노드.</div>' +
+  const side = `<div class="gbm-cap">추억 ${parts.filter(p => wmMem(p)).length} / ${parts.length} <span class="ws-en">히어로 특성 레벨의 기준</span></div>` + wmMemSum(parts) +
     '<div class="gbm-cap">석판</div>' + wmOtherCard('slate') + '<div class="gbm-cap">정령 · 운명</div>' + wmDstCard();
   if (wmPart === 'slate') return wmFrame(side, `<div class="gbm-head plain">${WZ_UP}<div><small>지금 고르는 칸</small><b class="ws-head"><b>신격 석판</b> <span class="ws-mn">${(preset.slateBd || []).length}개 · 보드 24칸</span></b></div></div>` + wsbRender());
   if (wmPart === 'dst') return wmFrame(side, `<div class="gbm-head plain">${WZ_UP}<div><small>게임 계약 화면처럼</small><b class="ws-head"><b>계약 보드</b> <span class="ws-mn">초상화 = 정령 고르기 · 노드 = 운명 자리</span></b></div></div>` + wcbBody());
   if (wmIsX(wmPart) && wmStage > 2) wmStage = 0; // 추가 추억엔 부활 옵션 칸이 없다
   const o = wmOpts(wmPart), key = wmKey(wmPart), isRv = wmStage === 3, st = MEM_STAGES[isRv ? 0 : wmStage];
   const grades = '<div class="wg-parts"><div><small>추억 등급</small>' + HERO_GRADES.map(g =>
-    `<span class="ws-tag${memGrade(key) === g[0] ? ' on' : ''}${wmGradeOk(wmPart, g[0]) ? '' : ' off'}" onclick="wmSetGrade('${g[0]}')">${escapeHtml(g[1])}</span>`).join('') +
+    `<span class="ws-tag wm-g wm-g${g[3]}${memGrade(key) === g[0] ? ' on' : ''}${wmGradeOk(wmPart, g[0]) ? '' : ' off'}" onclick="wmSetGrade('${g[0]}')">${escapeHtml(g[1])}</span>`).join('') +
     (wmIsX(wmPart) ? `<em class="wm-xnote">${wmCap() ? (HERO_GRADES.find(x => x[0] === wmCap()) || [])[1] + ' 등급 이하 · ' : ''}기본 노드 레벨을 정합니다</em>` : '') + '</div></div>';
   const rv = preset.revival, rvHere = rv && rv.part === wmPart, rvElse = rv && !rvHere;
   const rvTips = rv ? (REVIVALS.find(x => x.effect === rv.effect) || {}).tips : null;
@@ -4139,8 +4149,8 @@ function wmRender() {
       ? `<div class="hrm-empty"><b>${escapeHtml(rv.part)}</b>에 부활 옵션이 있습니다: ${wgOptHtml(rv.effect, rvTips)}<br>부활 옵션은 추억 하나에만 넣을 수 있습니다.` +
         `<div class="wsb-acts" style="justify-content:center;margin-top:10px"><button class="wz-btn" onclick="wmPick('${rv.part}')">그 추억으로 가기</button><button class="wz-btn" onclick="wmRvMove()">이 추억으로 옮기기</button></div></div>`
       : `<div class="ws-filter"><input type="search" placeholder="부활 옵션 검색" value="${escapeHtml(wmRvQ)}" oninput="wmRvSearch(this.value)"></div><div class="wg-list" id="wmRvList">${wmRvRows()}</div>`;
-  const label = wmIsX(wmPart) ? '부활 추가 · ' + wmXPart() : wmPart;
-  const main = `<div class="gbm-head plain">${WZ_UP}<div><small>지금 고르는 추억</small><b class="ws-head"><b>${escapeHtml(label)}</b> <span class="ws-mn">히어로 특성 Lv ${wmMem(wmPart) ? memGradeLv(key, wmMem(wmPart)) : 1}</span></b></div></div>` +
+  const main = `<div class="wm-tabs">${WZ_UP}${parts.map(wmCard).join('')}</div>` +
+    '<div class="wm-note">추억 등급이 기본 레벨(절대 3 · 엘리트/레어 2 · 매직/일반 1)이고, 옵션의 "히어로 특성 레벨 +N"이 더해집니다 (최대 5). 근원 = 45 · 자기 수호 = 60 · 진격 = 75 노드.</div>' +
     `<div class="wm-left">${grades}<div class="wg-picked">${picked}</div><div class="wm-pick">${list}</div></div>`;
   return wmFrame(side, main);
 }

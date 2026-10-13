@@ -690,6 +690,17 @@
     .wm-rv { color: #fcd34d; font-size: 11px; border: 1px solid #6b5a1c; border-radius: 999px; padding: 0 6px; }
     .wm-card .gbm-del { position: absolute; top: 8px; right: 8px; }
     .wm-note { color: #5d6878; font-size: 11.5px; line-height: 1.55; padding: 4px 2px; }
+    /* 추억 등급 단추 — 등급 색 (tier-chip 과 같은 색: 절대 빨강 · 엘리트 주황 · 레어 보라 · 매직 파랑 · 일반 회색) (2026-10-13 사용자) */
+    .wm-g0 { --gc: #ff6b7f; } .wm-g1 { --gc: #f0a04b; } .wm-g2 { --gc: #b79bff; } .wm-g3 { --gc: #7db4ff; } .wm-g4 { --gc: #c9d1d9; }
+    .ws-tag.wm-g { color: var(--gc); font-weight: 600; }
+    .ws-tag.wm-g:hover { border-color: var(--gc); }
+    .ws-tag.wm-g.on { color: #0d1117; background: var(--gc); border-color: var(--gc); }
+    .wm-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 6px; }
+    .wm-tabs > .wz-up { grid-column: 1 / -1; }
+    .wmm .gbm-main > .wm-note { margin-bottom: 8px; }
+    .wm-sum .wm-sl:first-child { margin-top: 0; }
+    .wm-sl { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: #c9d1d9; }
+    .wm-sl > span { min-width: 64px; } .wm-sl b { color: #9ec1ff; font-size: 12px; margin-left: auto; } .wm-sl em { font-style: normal; font-size: 12px; margin-left: auto; }
     .wz-page .tier-chip.tier-3 { background: #3b82f626; color: #7db4ff; } .wz-page .tier-chip.tier-4 { background: #e6edf326; color: #c9d1d9; }
     .wm-split { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
     .wm-left { display: flex; flex-direction: column; min-height: 0; }

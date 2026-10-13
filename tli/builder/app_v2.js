@@ -4894,6 +4894,132 @@ function buildPresetFromLog(r, liSrc) {
   } else finish(null);
 }
 
+// 외부 앱 원시 로그 릴레이(?logdump=토큰): 서버에서 받아 브라우저 안에서만 파싱
+// (5회 수령·30분 만료 후 삭제 — 내용 열람·집계 없음. 앱은 GetPlayerData 세그먼트를 deflate로 POST만 하면 끝)
+async function extLogDump(tok) { // 빌더·빌더 2 공용 (2026-10-13 06_share 에서 옮김)
+  try {
+    if (!tok || !/^\w{8,40}$/.test(tok)) return;
+    const res = await fetch('/api/logrelay?tok=' + tok);
+    if (!res.ok) { alert('외부 앱이 보낸 로그를 찾지 못했습니다.\n(링크는 5회까지 열 수 있고 30분 뒤 만료됩니다 — 앱에서 다시 보내주세요)'); return; }
+    const src = (res.headers.get('x-relay-src') || '').slice(0, 16);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let text = null;
+    if (typeof DecompressionStream === 'function') {
+      try {
+        const rd = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+        const parts = [];
+        let total = 0;
+        for (;;) {
+          const c = await rd.read();
+          if (c.done) break;
+          total += c.value.length;
+          if (total > 64 * 1024 * 1024) throw new Error('too big'); // 압축 폭탄 방어
+          parts.push(c.value);
+        }
+        const buf = new Uint8Array(total);
+        let off = 0;
+        parts.forEach(x => { buf.set(x, off); off += x.length; });
+        text = new TextDecoder().decode(buf);
+      } catch (e) { text = null; }
+    }
+    if (text === null) text = new TextDecoder().decode(bytes); // 무압축 폴백
+    const lp = createLogParser();
+    lp.feed(text);
+    const r = lp.finish();
+    if (!(r.chars || []).length) { alert('외부 앱이 보낸 로그에서 착용 정보를 찾지 못했습니다.'); return; }
+    r.chars.forEach(c => { c.extSrc = src || 'relay'; });
+    r.extSrc = src || 'relay';
+    uiConfirm('외부 앱에서 보낸 게임 로그가 있습니다.\n새 빌드로 가져올까요?', () => {
+      if (typeof switchTab === 'function') switchTab('preset');
+      pendingLogSrc = 'ext';
+      if (r.chars.length > 1) showLogCharModal(r.chars);
+      else buildPresetFromLog(r, 'ext');
+    });
+  } catch (e) {}
+}
+// 외부 앱 로그 연동(?logimport=MLI1.xxx): 추출된 게임 ID 페이로드 → 새 빌드
+// 스펙: 미니토치DB_로그연동_스펙_v1.md — 로그 파일이 아니라 ID 요약만 받는다
+async function extLogImport(code) { // 빌더·빌더 2 공용 (2026-10-13 06_share 에서 옮김)
+  try {
+    if (!code) return;
+    if (!code.startsWith('MLI1.') || code.length > 12000) { alert('지원하지 않는 연동 코드 형식입니다.'); return; }
+    let pl;
+    try {
+      let b64 = code.slice(5).replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      // 압축 폭탄 방어: 해제 결과가 64KB를 넘으면 즉시 중단 (정상 빌드는 3KB 미만)
+      const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+      const parts = [];
+      let total = 0;
+      for (;;) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        total += value.length;
+        if (total > 65536) { reader.cancel(); throw new Error('too large'); }
+        parts.push(value);
+      }
+      const buf = new Uint8Array(total);
+      let off = 0;
+      parts.forEach(p => { buf.set(p, off); off += p.length; });
+      pl = JSON.parse(new TextDecoder().decode(buf));
+    } catch (e) { sendLiStat({lf: 1}); alert('연동 코드를 해석하지 못했습니다.'); return; }
+    if (!pl || pl.v !== 1) { alert('지원하지 않는 연동 코드 버전입니다.'); return; }
+    // 페이로드 → 로그 파서 스냅샷과 같은 형태로 정규화 (buildPresetFromLog 재사용)
+    // 빌드에 들어가는 외부 텍스트는 캐릭터명뿐 — 태그·제어문자 제거로 무해화
+    const safeName = typeof pl.char === 'string'
+      ? pl.char.replace(/[<>&"'\u0000-\u001f]/g, '').slice(0, 40).trim() : null;
+    const numKey = k => { const n = parseInt(k, 10); return Number.isFinite(n) && n >= 0 && n < 100000 ? n : null; };
+    const r = {
+      charName: safeName || null,
+      heroId: pl.hero != null ? String(pl.hero).slice(0, 10) : null,
+      heroPur: pl.heroPur != null ? String(pl.heroPur).slice(0, 10) : null,
+      skills: {}, gear: {}, mems: {},
+      slateTal: Array.isArray(pl.slate) ? pl.slate.slice(0, 300).map(x => String(x).slice(0, 12)) : [],
+      // v1 확장 필드(선택): sb = 석판 인스턴스별 [uniq(또는 base), Index, Direction, [노드ID...]]
+      slates: Array.isArray(pl.sb) ? pl.sb.slice(0, 12).filter(e => Array.isArray(e) && e[0]).map(e => ({
+        uniq: parseInt(e[0], 10) || 0, base: parseInt(e[0], 10) || 0, idx: parseInt(e[1], 10) || 0,
+        dir: parseInt(e[2], 10) || 0, inf: parseInt(e[4], 10) || 0,
+        nodes: (Array.isArray(e[3]) ? e[3] : []).slice(0, 8).map(x => String(x).slice(0, 12))
+      })) : null,
+      // v1 확장 필드(선택): genius.core = 배치한 핵심 재능 geniusId, dst = 소켓한 천명·숙명 게임 id,
+      // prism = {gid: 꽂힌 노드 geniusId, base: 프리즘 게임 id, slots: 옵션 어픽스 ID [1칸,2칸,3칸]}
+      genius: {core: Array.isArray(pl.genius && pl.genius.core) ? pl.genius.core.slice(0, 10).map(x => String(x).slice(0, 12)) : [], picked: []},
+      dst: Array.isArray(pl.dst) ? pl.dst.slice(0, 60).map(x => String(x).slice(0, 12)) : [],
+      prism: pl.prism && pl.prism.base ? {
+        board: String(pl.prism.gid || '').slice(0, 2),
+        base: String(pl.prism.base).slice(0, 12),
+        slots: (Array.isArray(pl.prism.slots) ? pl.prism.slots : []).slice(0, 3).map(x => x ? String(x).slice(0, 12) : null),
+      } : null,
+    };
+    if (pl.skills && typeof pl.skills === 'object') {
+      Object.keys(pl.skills).slice(0, 100).forEach(k => {
+        const slot = numKey(k), v = parseInt(pl.skills[k], 10);
+        if (slot !== null && Number.isFinite(v) && v > 0) r.skills[slot] = v;
+      });
+    }
+    (Array.isArray(pl.gear) ? pl.gear.slice(0, 12) : []).forEach(g => {
+      if (!g) return;
+      const slot = numKey(g.slot);
+      if (slot === null || slot < 1 || slot > 10) return;
+      const has = a => Array.isArray(a) && a.length;
+      const ids = a => (a || []).slice(0, 8).map(x => String(x).slice(0, 12));
+      const aff = (has(g.baseAffix) || has(g.prefix) || has(g.suffix) || has(g.chip) || has(g.enchant))
+        ? {basic: ids(g.baseAffix), main: ids(g.prefix), sub: ids(g.suffix), chip: ids(g.chip), ench: ids(g.enchant)} : null;
+      r.gear[slot] = {baseId: parseInt(g.base, 10) || 0, uniqId: parseInt(g.uniq, 10) || 0, affix: aff};
+    });
+    (Array.isArray(pl.mems) ? pl.mems.slice(0, 8) : []).forEach(m => { // 상한 여유 — 게임이 추억 칸을 늘려도 수신은 무수정
+      if (!m || !m.base) return;
+      r.mems[parseInt(m.base, 10)] = {basic: (m.baseAffix || []).slice(0, 4).map(String), main: [],
+                                       sub: (m.suffix || []).slice(0, 4).map(String),
+                                       awk: (m.awaken || []).slice(0, 2).map(String)}; // 부활 옵션 (선택)
+    });
+    uiConfirm('외부 앱에서 보낸 빌드 정보가 있습니다.\n새 빌드로 가져올까요?', () => {
+      if (typeof switchTab === 'function') switchTab('preset');
+      buildPresetFromLog(r, 'ext');
+    });
+  } catch (e) {}
+}
 // ── 드래그로 순서 변경 (빌드 버튼 / 재능·석판 목록) ──
 let dragPid = null, dragTal = null;
 function clearDropMarks() {
@@ -13327,51 +13453,9 @@ if (bootHash.includes('tab=')) { try { history.replaceState(null, '', '?' + boot
     }
   } catch (e) {}
 })();
-// 외부 앱 원시 로그 릴레이(?logdump=토큰): 서버에서 받아 브라우저 안에서만 파싱
-// (5회 수령·30분 만료 후 삭제 — 내용 열람·집계 없음. 앱은 GetPlayerData 세그먼트를 deflate로 POST만 하면 끝)
-(async () => {
-  try {
-    const tok = new URLSearchParams(bootHash).get('logdump');
-    if (!tok || !/^\w{8,40}$/.test(tok)) return;
-    try { history.replaceState(null, '', location.pathname) } catch (e) {}
-    const res = await fetch('/api/logrelay?tok=' + tok);
-    if (!res.ok) { alert('외부 앱이 보낸 로그를 찾지 못했습니다.\n(링크는 5회까지 열 수 있고 30분 뒤 만료됩니다 — 앱에서 다시 보내주세요)'); return; }
-    const src = (res.headers.get('x-relay-src') || '').slice(0, 16);
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    let text = null;
-    if (typeof DecompressionStream === 'function') {
-      try {
-        const rd = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
-        const parts = [];
-        let total = 0;
-        for (;;) {
-          const c = await rd.read();
-          if (c.done) break;
-          total += c.value.length;
-          if (total > 64 * 1024 * 1024) throw new Error('too big'); // 압축 폭탄 방어
-          parts.push(c.value);
-        }
-        const buf = new Uint8Array(total);
-        let off = 0;
-        parts.forEach(x => { buf.set(x, off); off += x.length; });
-        text = new TextDecoder().decode(buf);
-      } catch (e) { text = null; }
-    }
-    if (text === null) text = new TextDecoder().decode(bytes); // 무압축 폴백
-    const lp = createLogParser();
-    lp.feed(text);
-    const r = lp.finish();
-    if (!(r.chars || []).length) { alert('외부 앱이 보낸 로그에서 착용 정보를 찾지 못했습니다.'); return; }
-    r.chars.forEach(c => { c.extSrc = src || 'relay'; });
-    r.extSrc = src || 'relay';
-    uiConfirm('외부 앱에서 보낸 게임 로그가 있습니다.\n새 빌드로 가져올까요?', () => {
-      switchTab('preset');
-      pendingLogSrc = 'ext';
-      if (r.chars.length > 1) showLogCharModal(r.chars);
-      else buildPresetFromLog(r, 'ext');
-    });
-  } catch (e) {}
-})();
+// 외부 앱 원시 로그 릴레이(?logdump=) · 로그 연동(?logimport=) — 처리는 02_logimport 의 extLogDump · extLogImport (빌더 2 와 공용)
+{ const q = new URLSearchParams(bootHash), tok = q.get('logdump'), lc = q.get('logimport');
+  if (tok || lc) { try { history.replaceState(null, '', location.pathname) } catch (e) {} if (tok) extLogDump(tok); else extLogImport(lc); } }
 // 빌드 단축 링크(?plink=id): 서버에서 코드를 받아 확인 후 새 빌드로 (7일 유지·다회 조회)
 (async () => {
   try {
@@ -13406,88 +13490,4 @@ if (bootHash.includes('tab=')) { try { history.replaceState(null, '', '?' + boot
     });
   } catch (e) {}
 })();
-// 외부 앱 로그 연동(?logimport=MLI1.xxx): 추출된 게임 ID 페이로드 → 새 빌드
-// 스펙: 미니토치DB_로그연동_스펙_v1.md — 로그 파일이 아니라 ID 요약만 받는다
-(async () => {
-  try {
-    const code = new URLSearchParams(bootHash).get('logimport');
-    if (!code) return;
-    try { history.replaceState(null, '', location.pathname) } catch (e) {} // 새로고침 중복 방지
-    if (!code.startsWith('MLI1.') || code.length > 12000) { alert('지원하지 않는 연동 코드 형식입니다.'); return; }
-    let pl;
-    try {
-      let b64 = code.slice(5).replace(/-/g, '+').replace(/_/g, '/');
-      while (b64.length % 4) b64 += '=';
-      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-      // 압축 폭탄 방어: 해제 결과가 64KB를 넘으면 즉시 중단 (정상 빌드는 3KB 미만)
-      const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
-      const parts = [];
-      let total = 0;
-      for (;;) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        total += value.length;
-        if (total > 65536) { reader.cancel(); throw new Error('too large'); }
-        parts.push(value);
-      }
-      const buf = new Uint8Array(total);
-      let off = 0;
-      parts.forEach(p => { buf.set(p, off); off += p.length; });
-      pl = JSON.parse(new TextDecoder().decode(buf));
-    } catch (e) { sendLiStat({lf: 1}); alert('연동 코드를 해석하지 못했습니다.'); return; }
-    if (!pl || pl.v !== 1) { alert('지원하지 않는 연동 코드 버전입니다.'); return; }
-    // 페이로드 → 로그 파서 스냅샷과 같은 형태로 정규화 (buildPresetFromLog 재사용)
-    // 빌드에 들어가는 외부 텍스트는 캐릭터명뿐 — 태그·제어문자 제거로 무해화
-    const safeName = typeof pl.char === 'string'
-      ? pl.char.replace(/[<>&"'\u0000-\u001f]/g, '').slice(0, 40).trim() : null;
-    const numKey = k => { const n = parseInt(k, 10); return Number.isFinite(n) && n >= 0 && n < 100000 ? n : null; };
-    const r = {
-      charName: safeName || null,
-      heroId: pl.hero != null ? String(pl.hero).slice(0, 10) : null,
-      heroPur: pl.heroPur != null ? String(pl.heroPur).slice(0, 10) : null,
-      skills: {}, gear: {}, mems: {},
-      slateTal: Array.isArray(pl.slate) ? pl.slate.slice(0, 300).map(x => String(x).slice(0, 12)) : [],
-      // v1 확장 필드(선택): sb = 석판 인스턴스별 [uniq(또는 base), Index, Direction, [노드ID...]]
-      slates: Array.isArray(pl.sb) ? pl.sb.slice(0, 12).filter(e => Array.isArray(e) && e[0]).map(e => ({
-        uniq: parseInt(e[0], 10) || 0, base: parseInt(e[0], 10) || 0, idx: parseInt(e[1], 10) || 0,
-        dir: parseInt(e[2], 10) || 0, inf: parseInt(e[4], 10) || 0,
-        nodes: (Array.isArray(e[3]) ? e[3] : []).slice(0, 8).map(x => String(x).slice(0, 12))
-      })) : null,
-      // v1 확장 필드(선택): genius.core = 배치한 핵심 재능 geniusId, dst = 소켓한 천명·숙명 게임 id,
-      // prism = {gid: 꽂힌 노드 geniusId, base: 프리즘 게임 id, slots: 옵션 어픽스 ID [1칸,2칸,3칸]}
-      genius: {core: Array.isArray(pl.genius && pl.genius.core) ? pl.genius.core.slice(0, 10).map(x => String(x).slice(0, 12)) : [], picked: []},
-      dst: Array.isArray(pl.dst) ? pl.dst.slice(0, 60).map(x => String(x).slice(0, 12)) : [],
-      prism: pl.prism && pl.prism.base ? {
-        board: String(pl.prism.gid || '').slice(0, 2),
-        base: String(pl.prism.base).slice(0, 12),
-        slots: (Array.isArray(pl.prism.slots) ? pl.prism.slots : []).slice(0, 3).map(x => x ? String(x).slice(0, 12) : null),
-      } : null,
-    };
-    if (pl.skills && typeof pl.skills === 'object') {
-      Object.keys(pl.skills).slice(0, 100).forEach(k => {
-        const slot = numKey(k), v = parseInt(pl.skills[k], 10);
-        if (slot !== null && Number.isFinite(v) && v > 0) r.skills[slot] = v;
-      });
-    }
-    (Array.isArray(pl.gear) ? pl.gear.slice(0, 12) : []).forEach(g => {
-      if (!g) return;
-      const slot = numKey(g.slot);
-      if (slot === null || slot < 1 || slot > 10) return;
-      const has = a => Array.isArray(a) && a.length;
-      const ids = a => (a || []).slice(0, 8).map(x => String(x).slice(0, 12));
-      const aff = (has(g.baseAffix) || has(g.prefix) || has(g.suffix) || has(g.chip) || has(g.enchant))
-        ? {basic: ids(g.baseAffix), main: ids(g.prefix), sub: ids(g.suffix), chip: ids(g.chip), ench: ids(g.enchant)} : null;
-      r.gear[slot] = {baseId: parseInt(g.base, 10) || 0, uniqId: parseInt(g.uniq, 10) || 0, affix: aff};
-    });
-    (Array.isArray(pl.mems) ? pl.mems.slice(0, 8) : []).forEach(m => { // 상한 여유 — 게임이 추억 칸을 늘려도 수신은 무수정
-      if (!m || !m.base) return;
-      r.mems[parseInt(m.base, 10)] = {basic: (m.baseAffix || []).slice(0, 4).map(String), main: [],
-                                       sub: (m.suffix || []).slice(0, 4).map(String),
-                                       awk: (m.awaken || []).slice(0, 2).map(String)}; // 부활 옵션 (선택)
-    });
-    uiConfirm('외부 앱에서 보낸 빌드 정보가 있습니다.\n새 빌드로 가져올까요?', () => {
-      switchTab('preset');
-      buildPresetFromLog(r, 'ext');
-    });
-  } catch (e) {}
-})();
+

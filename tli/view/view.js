@@ -2771,7 +2771,7 @@ function hpBpFace(p) {
 }
 function hpBpSub(p) {
   const main = ['a1', 'a2', 'a3', 'a4', 'a5'].map(k => p.skills && p.skills[k] && p.skills[k].main).find(Boolean);
-  return [p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음';
+  return (p.shareEdit ? '✏ 공유 글 수정 중 · ' : '') + ([p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음');
 }
 function hpBuildPicker() {
   return `<button type="button" class="hp-build hp-bp" onclick="hpBpToggle(this)" title="빌드 바꾸기">` +
@@ -4961,12 +4961,17 @@ async function vwShareEdit(admin) {
       const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};
       const p = JSON.parse(JSON.stringify(preset)), it = VW.share;
       let tags = []; try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
-      p.id = Math.max(0, ...ps.list.map(x => x.id)) + 1;
-      p.name = ('✏ ' + (it.title || p.name || '공유 글')).slice(0, 30);
+      // 이름은 코드에 실린 원래 빌드 이름 그대로 — '✏ 제목' 을 붙였더니 수정 저장 때 그 이름이 코드에 실려
+      // 담아간 사람에게 '✏ …' 로 보였다 (2026-10-13). 수정 중 표시는 shareEdit 로만(목록 카드·빌더 위쪽 [💾 공유 글 저장])
+      p.name = (p.name || it.title || '공유 글').slice(0, 30);
       p.shareEdit = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se);
-      ps.list.push(p); ps.activeId = p.id;
+      // 같은 글을 또 [수정]하면 사본을 새로 쌓지 않고 이전 수정 중 사본을 바꾼다
+      const old = ps.list.findIndex(x => x.shareEdit && x.shareEdit.id === it.id);
+      if (old >= 0) { p.id = ps.list[old].id; ps.list[old] = p; }
+      else { p.id = Math.max(0, ...ps.list.map(x => x.id)) + 1; ps.list.push(p); }
+      ps.activeId = p.id;
       localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
-      location.href = '/tli/builder/';
+      location.href = '/tli/builder/#hero'; // 빌더2 첫 화면(내 빌드 목록)이 아니라 바로 고치는 단계로
     } catch (e) { vwToast('불러오지 못했습니다: ' + e.message); }
   };
   if (admin) { // 관리 화면의 [수정] (?edit=1) — 관리 로그인 쿠키로 확인, 아니면 비밀번호로

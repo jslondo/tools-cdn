@@ -481,7 +481,7 @@ function hpBpFace(p) {
 }
 function hpBpSub(p) {
   const main = ['a1', 'a2', 'a3', 'a4', 'a5'].map(k => p.skills && p.skills[k] && p.skills[k].main).find(Boolean);
-  return [p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음';
+  return (p.shareEdit ? '✏ 공유 글 수정 중 · ' : '') + ([p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음');
 }
 function hpBuildPicker() {
   return `<button type="button" class="hp-build hp-bp" onclick="hpBpToggle(this)" title="빌드 바꾸기">` +

@@ -2206,7 +2206,7 @@ function hpBpFace(p) {
 }
 function hpBpSub(p) {
   const main = ['a1', 'a2', 'a3', 'a4', 'a5'].map(k => p.skills && p.skills[k] && p.skills[k].main).find(Boolean);
-  return [p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음';
+  return (p.shareEdit ? '✏ 공유 글 수정 중 · ' : '') + ([p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음');
 }
 function hpBuildPicker() {
   return `<button type="button" class="hp-build hp-bp" onclick="hpBpToggle(this)" title="빌드 바꾸기">` +
@@ -6008,7 +6008,8 @@ async function wbShareSubmit() {
   btn.disabled = true; btn.textContent = '올리는 중…';
   try {
     await wbLoad();
-    const code = await presetToCode(preset);
+    // 예전 수정 사본 이름의 '✏ ' 는 코드에 싣지 않는다 (2026-10-13 이전에 [수정]으로 불러둔 빌드)
+    const code = await presetToCode(Object.assign({}, preset, {name: String(preset.name || '').replace(/^✏\s*/, '') || preset.name}));
     const body = {code, main: wbShareMain, title, tags: wbShareTags, author, unlisted: wbUnlisted};
     const res = await fetch(se ? '/api/share/edit' : '/api/share', {method: 'POST', headers: {'content-type': 'application/json'},
       body: JSON.stringify(se ? Object.assign({id: se.id}, se.admin ? {} : {pwd}, body) : Object.assign({pwd}, body))}); // 관리 수정은 로그인 쿠키로
@@ -6017,14 +6018,23 @@ async function wbShareSubmit() {
     try { localStorage.setItem('tli_share_dirty', String(Date.now())); } catch (e) {} // 공유 목록 캐시 건너뛰기
     try { localStorage.setItem('tlidb_author_v1', author); if (!se) localStorage.setItem('tlidb_share_pwd_v1', pwd); } catch (e) {}
     const link = location.origin + '/tli/view/?preset=' + (se ? se.id : d.id);
-    if (se) { delete preset.shareEdit; persistPreset(); pageRender(); }
+    if (se) { delete preset.shareEdit; preset.name = String(preset.name || '').replace(/^✏\s*/, '') || preset.name; persistPreset(); pageRender(); }
     wbPop(`<h3>${se ? '공유 글을 고쳤습니다' : '공유했습니다'}</h3><div class="wb-msg">${wbUnlisted ? '🔒 링크로만 공유됩니다 — 공유 목록·검색에는 나오지 않고, 이 링크를 받은 사람만 볼 수 있습니다.' : '이 링크로 누구나 빌드를 볼 수 있습니다.'}${se ? ' 추천·조회수는 그대로입니다.' : ''}</div>` +
       `<input class="wb-link" readonly value="${escapeHtml(link)}" onclick="this.select()">` +
-      `<div class="wb-btns"><button class="wz-btn pri" onclick="wbCopy('${escapeHtml(link)}')">링크 복사</button><a class="wz-btn" href="${escapeHtml(link)}" target="_blank">열어 보기</a><button class="wz-btn" onclick="wbClose()">닫기</button></div>`);
+      `<div class="wb-btns"><button class="wz-btn pri" onclick="wbCopy('${escapeHtml(link)}')">링크 복사</button><a class="wz-btn" href="${escapeHtml(link)}" target="_blank">열어 보기</a>` +
+      (se && se.admin ? `<button class="wz-btn" onclick="wbDropCopy(${preset.id})" title="관리 화면에서 남의 글을 고치려고 불러온 사본 — 내 빌드 목록에서 뺍니다">내 빌드에서 빼기</button>` : '') +
+      '<button class="wz-btn" onclick="wbClose()">닫기</button></div>');
   } catch (e) {
     btn.disabled = false; btn.textContent = se ? '수정 저장' : '올리기';
     showToast('공유하지 못했습니다: ' + e.message);
   }
+}
+function wbDropCopy(id) { // 관리 수정용 사본 지우기 — 다른 빌드로 옮겨 가고, 빌드가 없으면 빈 빌드 하나
+  presets.list = presets.list.filter(p => p.id !== id);
+  if (!presets.list.length) presets.list.push({id: 1, name: '빌드 1', slots: {}, talents: [], skills: {}});
+  presets.activeId = presets.list[0].id; hpUse(presets.list[0]); persistPreset(); wbClose();
+  if (typeof wzList === 'function' && presets.list.some(wzFilled)) wzList(); else pageRender();
+  showToast('내 빌드에서 뺐습니다');
 }
 async function wbCopy(t) { try { await navigator.clipboard.writeText(t); showToast('복사했습니다'); } catch (e) { showToast('복사하지 못했습니다 — 칸을 눌러 직접 복사해 주세요'); } }
 function wbShareEditStop() { // 고친 빌드는 내 빌드로 남기고, 공유 글과의 연결만 끊는다

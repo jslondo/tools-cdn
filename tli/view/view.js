@@ -4643,7 +4643,7 @@ async function vwLoad() {
 const vwEsc = s => escapeHtml(s == null ? '' : String(s));
 const vwEmpty = t => `<div class="vw-empty">${vwEsc(t)}</div>`;
 // 섹션 → 빌더 2 의 그 단계(·칸). 내 빌드 보기에서만 오른쪽 위에 [수정]
-const VW_EDIT = {vh: 'hero', vt: 'talent', vs: 'skill', vg: 'gear', vm: 'mem', vb: 'mem-slate', vp: 'mem-dst'};
+const VW_EDIT = {vh: 'hero', vt: 'talent', vs: 'skill', vg: 'gear', vm: 'mem', vb: 'mem-slate', vp: 'mem-dst', vc: 'cmt'};
 const vwSec = (id, title, sub, body) => `<section class="vw-sec" id="${id}"><div class="vw-sech"><h2>${title}</h2>${sub ? `<span>${sub}</span>` : ''}` +
   (VW.mine && VW_EDIT[id] ? `<button type="button" class="wz-btn vw-edit" onclick="vwEdit('${VW_EDIT[id]}')">수정</button>` : '') + `</div>${body}</section>`;
 function vwEdit(to) { // 이 빌드를 활성으로 두고 빌더 2 의 그 단계로
@@ -4683,28 +4683,8 @@ function vwHead() {
 
 // 작성자 코멘트 (preset.memo, 1500자 — 공유 코드 m 에 실린다). 맨 아래 칸: 내 빌드는 바로 써서 저장, 공유 글은 있을 때만 읽기 (2026-10-10 사용자 — '메모' → '작성자 코멘트')
 const vwHasCmt = () => VW.mine || !!(preset.memo || '').trim();
-function vwCmt() {
-  if (!VW.mine) return `<div class="vw-memo">${vwEsc(preset.memo)}</div>`;
-  return `<textarea id="vwCmt" class="vw-cmt" maxlength="1500" rows="5" placeholder="빌드 설명·운영법·주의할 점 등 — 공유하면 보기 화면 맨 아래에 함께 보입니다" oninput="vwCmtIn(this)" onblur="vwCmtSave()">${vwEsc(preset.memo || '')}</textarea>` +
-    `<div class="vw-cmtn"><span id="vwCmtN">${(preset.memo || '').length}/1500</span><span id="vwCmtS"></span></div>`;
-}
-function vwCmtIn(el) {
-  document.getElementById('vwCmtN').textContent = el.value.length + '/1500';
-  document.getElementById('vwCmtS').textContent = '';
-  clearTimeout(vwCmtIn.t); vwCmtIn.t = setTimeout(vwCmtSave, 600);
-}
-function vwCmtSave() { // 보기 화면은 저장소를 읽기만 하지만, 코멘트는 여기서 바로 쓰게 이 빌드의 memo 만 고쳐 넣는다
-  clearTimeout(vwCmtIn.t);
-  const el = document.getElementById('vwCmt'); if (!el) return;
-  const t = el.value.slice(0, 1500);
-  if ((preset.memo || '') === (t.trim() ? t : '')) return;
-  try {
-    const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null'), p = ps && ps.list.find(x => x.id === preset.id);
-    if (!p) throw new Error('이 브라우저에 빌드가 없습니다');
-    if (t.trim()) p.memo = preset.memo = t; else { delete p.memo; delete preset.memo; }
-    localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
-    document.getElementById('vwCmtS').textContent = ' · 저장했습니다';
-  } catch (e) { vwToast('저장하지 못했습니다: ' + e.message); }
+function vwCmt() { // 코멘트는 빌더 6단계에서 쓴다 (2026-10-13 사용자) — 보기 화면은 읽기만, 내 빌드는 섹션 [수정] 으로 그 단계
+  return (preset.memo || '').trim() ? `<div class="vw-memo">${vwEsc(preset.memo)}</div>` : '<div class="vw-memo empty">아직 없습니다 — 오른쪽 [수정]으로 빌더 6단계에서 씁니다</div>';
 }
 function vwMyDel() {
   vwPop(`<h3>🗑 빌드 삭제</h3><div class="wb-msg">[${vwEsc(preset.name || '빌드')}] 빌드를 이 브라우저에서 지웁니다. 되돌릴 수 없습니다.` +
@@ -4909,7 +4889,7 @@ function pageRender() {
     vwSec('vm', '추억', '히어로 특성 레벨의 기준', vwMems()) +
     vwSec('vb', '신격 석판', '', vwSlate()) +
     vwSec('vp', '전투 정령 · 운명', '', vwPact()) +
-    (vwHasCmt() ? vwSec('vc', '작성자 코멘트', VW.mine ? (preset.shareEdit ? '쓰는 대로 이 브라우저에 저장됩니다 · 공유 글에는 위 [💾 공유 글에 저장]을 눌러야 반영' : '쓰는 대로 이 브라우저에 저장됩니다') : '', vwCmt()) : '');
+    (vwHasCmt() ? vwSec('vc', '작성자 코멘트', '', vwCmt()) : '');
   if (preset.hero) { hrView = preset.hero.hero; hrRenderModal(); }
   gbSlots4().forEach(p => { if (p) gbExtra.add(p); }); // 포인트 없는 보드(채워 넣은 신 보드 등)도 판을 그린다
   vwSlateFit();

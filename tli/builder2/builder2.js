@@ -5872,8 +5872,6 @@ function wbOpen() {
     `<div class="wb-curtop"><div class="wl-face">${tr ? `<img src="${tr.img}" alt="">` : '<span>?</span>'}</div>` +
     `<div class="wb-cur"><small>지금 빌드${preset.hero ? ' · ' + escapeHtml(preset.hero.trait) : ''}</small><input id="wbName" maxlength="30" value="${escapeHtml(preset.name || '')}" onkeydown="if(event.key==='Enter')wbRename()">` +
     '<button class="wz-btn" onclick="wbRename()">이름 저장</button></div></div>' +
-    `<div class="wb-memo"><small>작성자 코멘트 <span id="wbMemoN">${(preset.memo || '').length}/1500</span> · 공유하면 보기 화면에 함께 보입니다</small>` +
-    `<textarea id="wbMemo" maxlength="1500" rows="3" placeholder="빌드 설명·운영법·주의할 점 등" oninput="wbMemoIn(this)" onblur="wbMemoSave()">${escapeHtml(preset.memo || '')}</textarea></div>` +
     '<div class="wb-acts">' +
     `<button class="wz-btn" onclick="wbShareOpen()">${se ? '💾 공유 글 저장' : '🌐 공유 올리기'}</button>` +
     `<a class="wz-btn" href="/tli/view/?my=${preset.id}">👁 보기 화면</a>` +
@@ -6071,6 +6069,7 @@ const WZ_STEPS = [
   {id: 'skill',  no: 3, name: '스킬',    desc: '액티브 5 · 패시브 4'}, // 순서 히어로 → 재능 → 스킬 → 장비 → 추억·석판·정령 (사용자 2026-10-08)
   {id: 'gear',   no: 4, name: '장비',    desc: '장비 10칸'},
   {id: 'mem',    no: 5, name: '추억·석판·정령', desc: '한 화면 — 추억 3 + 부활 · 신격 석판 · 전투 정령·운명'},
+  {id: 'cmt',    no: 6, name: '코멘트',  desc: '작성자 코멘트 — 공유하면 보기 화면 맨 아래'}, // 보기 화면에서 쓰던 것을 단계로 (2026-10-13 사용자)
 ];
 // 단계별로 처음 들어갈 때만 받는 데이터 (큰 데이터를 히어로·재능만 쓰는 사람에게 미리 받게 하지 않는다)
 const WZ_DATA = {
@@ -6133,6 +6132,10 @@ function wzSummary(id) { // 단계 카드 아래 한 줄 — 지금 빌드에 �
     const t = [n ? '추억 ' + n + '/3' : '', sl ? '석판 ' + sl : '', pc ? '정령 ' + pc : ''].filter(Boolean).join(' · ');
     return t ? {txt: t, done: true} : {txt: '아직 없음', done: false};
   }
+  if (id === 'cmt') {
+    const n = (preset.memo || '').trim().length;
+    return n ? {txt: n + '자', done: true} : {txt: '아직 없음', done: false};
+  }
   if (id === 'gear') {
     const n = Object.keys(preset.slots || {}).filter(k => preset.slots[k]).length;
     return n ? {txt: '장비 ' + n + ' / 10칸', done: true} : {txt: '아직 없음', done: false};
@@ -6194,6 +6197,26 @@ function wlPickGo(id) {
   c.id = wbNextId(); presets.list.push(c); presets.activeId = c.id; hpUse(c); persistPreset();
   wlPick = null; try { localStorage.removeItem('tli_share_over'); } catch (e) {}
   wzGo('hero'); wzListShare(c.id);
+}
+// ── 6단계 코멘트 (preset.memo, 1500자 — 공유 코드 m 에 실린다). 쓰는 대로 잠깐 모았다 저장 ──
+function wcRender() {
+  const m = preset.memo || '';
+  return '<div class="wc-wrap"><div class="gbm-head plain"><div><small>6번 단계</small><b>작성자 코멘트</b></div>' +
+    '<span class="gbm-hint">빌드 설명·운영법·주의할 점 — 공유하면 보기 화면 맨 아래에 함께 보입니다 (안 써도 됩니다)</span></div>' +
+    `<textarea id="wcMemo" class="wc-memo" maxlength="1500" placeholder="예) 장비는 구하기 쉬운 레전드 위주, 무기는 양손 무기…" oninput="wcIn(this)" onblur="wcSave()">${escapeHtml(m)}</textarea>` +
+    `<div class="wc-foot"><span id="wcN">${m.length}/1500</span><span id="wcS"></span></div></div>`;
+}
+let wcT = 0;
+function wcIn(el) {
+  const t = el.value.slice(0, 1500);
+  if (t.trim()) preset.memo = t; else delete preset.memo;
+  document.getElementById('wcN').textContent = t.length + '/1500'; document.getElementById('wcS').textContent = '';
+  clearTimeout(wcT); wcT = setTimeout(wcSave, 600);
+}
+function wcSave() {
+  clearTimeout(wcT); persistPreset();
+  const s = document.getElementById('wcS'); if (s) s.textContent = ' · 저장됨';
+  const st = document.querySelector('.wz-step.on small'); if (st) st.textContent = wzSummary('cmt').txt;
 }
 function wzEditResume(id) { hpSwitch(id); wzGo('hero'); }
 function wzEditStop(id) {
@@ -6285,6 +6308,7 @@ function pageRender() {
     : wzStep === 'skill' ? wsRender()
     : wzStep === 'gear' ? wgRender()
     : wzStep === 'mem' ? wmRender()
+    : wzStep === 'cmt' ? wcRender()
     : `<div class="wz-todo"><b>${WZ_STEPS[i].name} 단계</b><p>${escapeHtml(WZ_STEPS[i].desc)} — 큰 화면 구성을 정하는 중입니다.<br>` +
       '지금은 <a href="/tli/builder/">빌더</a>에서 채워 주세요. 같은 빌드라 여기서 고른 히어로·재능이 그대로 보입니다.</p></div>';
   app.innerHTML = bar + seBar + '<div class="wz-body">' + body + '</div>';

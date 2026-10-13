@@ -555,6 +555,13 @@
       .wz-step small { max-width: 100%; }
       .wz-next { width: 148px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 다음 버튼 폭 고정 — 단계마다 글자 길이가 달라도 단계 칸 폭 그대로 */
     }
+    /* 중간 폭(901~1100): 첫 줄 = 빌더·빌드 고르기 ··· 다음 단추, 둘째 줄 = 여섯 단계 한 줄 (6단계 코멘트 추가로 넘치던 것, 2026-10-13) */
+    @media (min-width: 901px) and (max-width: 1100px) {
+      .wz-nav { margin-left: auto; }
+      .wz-steps { order: 3; flex: 1 1 100%; flex-wrap: nowrap; margin: 0; }
+      .wz-step { width: auto; min-width: 0; flex: 1 1 0; }
+      .wz-step small { max-width: 100%; }
+    }
     /* ── 빌드 관리·로그 가져오기·공유 올리기 창 (wz_build.js, 2026-10-09) ── */
     .wz-manage { margin-left: 6px; padding: 4px 10px; font-size: 12px; }
     .wz-oldse { margin-left: 6px; padding: 2px 8px; border-radius: 999px; border: 1px solid #5a4a1c; color: #e8c86a; font-size: 11px; white-space: nowrap; }
@@ -643,6 +650,10 @@
     .wz-sebar { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: #1a1508; border: 1px solid #5a4a1c; color: #e8c86a; font-size: 13px; }
     .wz-sebar b { color: #ffd98a; } .wz-sebtn { margin-left: auto; display: flex; gap: 6px; } .wz-sebtn .wz-btn { padding: 4px 10px; font-size: 12px; }
     .wl-wrap > .wz-sebar { margin: 0 0 10px; }
+    .wc-wrap { max-width: 900px; margin: 0 auto; padding: 16px 18px; border: 1px solid #1f2735; border-radius: 14px; background: #0d121b; }
+    .wc-memo { width: 100%; box-sizing: border-box; min-height: 320px; resize: vertical; padding: 12px 14px; border-radius: 10px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 14px; line-height: 1.7; }
+    .wc-memo:focus { outline: none; border-color: #d4a84a; }
+    .wc-foot { margin-top: 6px; color: #7d8794; font-size: 12px; text-align: right; } #wcS { color: #7ee2a8; }
     /* /tli/slate 단독 화면 — 틀(frame.css)·석판 칸(builder2.css 의 wsb-·wg-) 위에 페이지 배치만 */
     .sp-body #slateApp { width: min(var(--page-w, 1320px), calc(100% - 32px)); margin: 16px auto 32px; }
     .sp-body #slateApp .gbm { width: 100%; height: auto; }

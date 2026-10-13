@@ -46,6 +46,16 @@
     .hp-bp-list { max-height: min(360px, 60vh); overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
     .hp-bpr { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: #c9d1d9; font: inherit; cursor: pointer; }
     .hp-bpr .hp-bp-face { width: 32px; height: 32px; }
+    .hp-bp-body { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+    .hp-bp-ses { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
+    .hp-bpr-acts { flex: none; display: none; gap: 2px; }
+    .hp-bpr:hover .hp-bpr-acts, .hp-bpr:focus-within .hp-bpr-acts { display: inline-flex; }
+    .hp-bpr:hover .hp-bpr-ck { display: none; }
+    @media (hover: none) { .hp-bpr-acts { display: inline-flex; } }
+    .hp-bpr-acts button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #2a3344; background: #1b2230; color: #9aa6b4; font: inherit; font-size: 12px; cursor: pointer; display: grid; place-items: center; padding: 0; }
+    .hp-bpr-acts button:hover { border-color: #e8c860; color: #f3e3b5; }
+    .hp-bpr-acts button.del:hover { border-color: #e06c75; color: #ff9aa2; }
+    .hp-bpr-in { background: #0b1019; border: 1px solid #e8c860; border-radius: 6px; color: #e6edf3; padding: 2px 6px; font: inherit; font-weight: 600; outline: none; width: 100%; }
     .hp-bpr:hover { background: #1b2333; } .hp-bpr.on { background: color-mix(in srgb, #e8c860 12%, #121824); }
     .hp-bpr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
     .hp-bpr-t b { color: #e6edf3; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

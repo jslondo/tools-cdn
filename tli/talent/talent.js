@@ -1143,21 +1143,62 @@ function hpBpRows() {
       `<span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span></button>`).join('');
     return `<div class="hp-bp-list">${rows || (q ? '<div class="hp-bp-none">맞는 빌드가 없습니다</div>' : '')}</div>`;
   }
-  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
-    `<button type="button" class="hp-bpr${p.id === preset.id ? ' on' : ''}" onclick="hpBpPick(${p.id})">` +
-    `<span class="hp-bp-face">${hpBpFace(p)}</span><span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span>` +
-    (p.season && cur && p.season !== cur ? `<span class="hp-bpr-se">${escapeHtml(p.season)}</span>` : '') +
-    (p.id === preset.id ? '<span class="hp-bpr-ck">✓</span>' : '') + '</button>').join('');
-  return `<div class="hp-bp-list">${rows || '<div class="hp-bp-none">맞는 빌드가 없습니다</div>'}</div>`;
+  // 시즌 칩 (2026-10-13 사용자 요청) — 기본은 지금 시즌만, 지금 빌드는 시즌이 달라도 늘 보인다
+  const ses = [...new Set(presets.list.map(hpSeOf))].sort((a, b) => hpSeNum(b) - hpSeNum(a));
+  if (!hpBpSe || ![...hpBpSe].some(l => ses.includes(l))) hpBpSe = new Set([ses.includes(cur) ? cur : hpSeOf(preset)]);
+  const chips = ses.length > 1 ? '<div class="hp-bp-ses">' + ses.map(l => `<button type="button" class="share-se-chip${hpBpSe.has(l) ? ' on' : ''}" onclick="hpBpSeToggle('${l}')">${l} <small>${presets.list.filter(p => hpSeOf(p) === l && !p.shareEdit).length}</small></button>`).join('') + '</div>' : '';
+  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id)
+    .filter(p => p.id === preset.id || ses.length < 2 || hpBpSe.has(hpSeOf(p)))
+    .filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p => {
+      const on = p.id === preset.id;
+      const title = hpBpRenId === p.id
+        ? `<input class="hp-bpr-in" maxlength="30" value="${escapeHtml(p.name || '')}" onclick="event.stopPropagation()" onkeydown="event.stopPropagation();if(event.key==='Enter')this.blur();else if(event.key==='Escape'){hpBpRenId=0;hpBpDraw();}" onblur="hpBpRenSave(${p.id},this.value)">`
+        : `<b>${escapeHtml(hpBpName(p))}</b>`;
+      return `<div class="hp-bpr${on ? ' on' : ''}" role="button" onclick="hpBpPick(${p.id})">` +
+        `<span class="hp-bp-face">${hpBpFace(p)}</span><span class="hp-bpr-t">${title}<small>${escapeHtml(hpBpSub(p))}</small></span>` +
+        (p.season && cur && p.season !== cur ? `<span class="hp-bpr-se">${escapeHtml(p.season)}</span>` : '') +
+        `<span class="hp-bpr-acts"><button type="button" title="이름 바꾸기" onclick="event.stopPropagation();hpBpRen(${p.id})">✎</button>` +
+        `<button type="button" class="del" title="삭제" onclick="event.stopPropagation();hpBpDel(${p.id})">✕</button></span>` +
+        (on ? '<span class="hp-bpr-ck">✓</span>' : '') + '</div>';
+    }).join('');
+  return `<div class="hp-bp-body">${chips}<div class="hp-bp-list">${rows || '<div class="hp-bp-none">맞는 빌드가 없습니다</div>'}</div></div>`;
 }
 function hpBpDraw() {
   const m = document.getElementById('hpBp'); if (!m) return;
-  if (m.dataset.init) { m.querySelector('.hp-bp-list').outerHTML = hpBpRows(); return; }
+  if (m.dataset.init) { const lst = m.querySelector('.hp-bp-list'), st = lst ? lst.scrollTop : 0; m.querySelector('.hp-bp-body').outerHTML = hpBpRows(); const l2 = m.querySelector('.hp-bp-list'); if (l2) l2.scrollTop = st; return; }
   m.dataset.init = '1';
   const n = PAGE_SOLO ? hpBuilds().list.filter(p => !p.shareEdit).length : presets.list.length;
   m.innerHTML = (PAGE_SOLO ? `<div class="hp-bp-cap">${HP_SOLO_WHAT[PAGE_SOLO]}만 바뀝니다 — 덮어쓸 빌드 고르기</div>` : '') + (n > 6 ? '<input class="hp-bp-q" type="search" placeholder="빌드 이름·히어로·스킬 검색" oninput="hpBpQ=this.value;hpBpDraw()"' +
     ' onkeydown="if(event.key===\'Enter\'){const b=document.querySelector(\'#hpBp .hp-bpr\');if(b)b.click();}">' : '') +
     hpBpRows() + (PAGE_SOLO ? '<div class="hp-bp-acts"><button type="button" class="hp-bp-new" onclick="hpSoloOver(0)">＋ 새 빌드로 저장</button></div>' : '') + (typeof hpBuildActs === 'function' ? '<div class="hp-bp-acts">' + hpBuildActs() + '</div>' : '');
+}
+let hpBpSe = null, hpBpRenId = 0;
+const hpSeOf = p => p.season || 'SS13', hpSeNum = l => +String(l).replace(/\D/g, '') || 0;
+function hpBpSeToggle(l) { if (hpBpSe.has(l)) { if (hpBpSe.size > 1) hpBpSe.delete(l); } else hpBpSe.add(l); hpBpDraw(); }
+function hpBpRen(id) {
+  hpBpRenId = id; hpBpDraw();
+  const el = document.querySelector('#hpBp .hp-bpr-in'); if (el) { el.focus(); el.select(); }
+}
+function hpBpRenSave(id, v) {
+  if (hpBpRenId !== id) return;
+  hpBpRenId = 0;
+  const p = presets.list.find(x => x.id === id), nm = String(v || '').trim().slice(0, 30);
+  if (p && nm && nm !== p.name) { p.name = nm; persistPreset(); pageRender(); }
+  hpBpDraw();
+}
+function hpBpDel(id) {
+  const p = presets.list.find(x => x.id === id); if (!p) return;
+  const go = () => {
+    presets.list = presets.list.filter(x => x.id !== id);
+    if (!presets.list.length) presets.list.push({id: 1, name: '빌드 1', slots: {}, talents: [], skills: {}});
+    if (presets.activeId === id || preset.id === id) { // 지금 빌드를 지우면 가장 최근 빌드로
+      const nx = presets.list.filter(x => !x.shareEdit).sort((a, b) => b.id - a.id)[0] || presets.list[0];
+      presets.activeId = nx.id; hpUse(nx);
+    }
+    persistPreset(); pageRender(); hpBpDraw();
+  };
+  const msg = `[${hpBpName(p)}] 빌드를 삭제할까요?`;
+  if (typeof uiConfirm === 'function') uiConfirm(msg, go, {title: '빌드 삭제', ok: '삭제'}); else if (confirm(msg)) go();
 }
 function hpBpPick(id) { hpBpClose(); if (id !== preset.id) hpSwitch(id); }
 document.addEventListener('mousedown', e => {

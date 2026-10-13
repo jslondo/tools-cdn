@@ -4668,9 +4668,11 @@ function vwHead() {
     // 공유 글 수정 중이면 [💾 공유 글에 저장] 을 주 단추로 + 위에 띠 (보조 단추라 못 찾던 것, 2026-10-13 사용자)
     (VW.mine && preset.shareEdit ? `<div class="vw-sebar">✏ 공유 글 <b>${vwEsc(preset.shareEdit.title || preset.shareEdit.id)}</b> 수정 중 — 고친 내용(코멘트 포함)은 <b>[💾 공유 글에 저장]</b>을 눌러야 공유 글에 반영됩니다</div>` : '') +
     `<div class="vw-acts">${VW.mine ? (preset.shareEdit
-      ? '<div class="vw-acts1"><button type="button" class="wz-btn pri" onclick="vwEdit(\'share\')" title="공유 글을 지금 내용으로 바꿉니다 (링크·추천·조회수 유지)">💾 공유 글에 저장</button><button type="button" class="wz-btn" onclick="vwEdit()">수정</button></div>'
+      // 수정 중: 위 [수정]은 섹션별 [수정]과 겹쳐 뺌, [빌드 삭제] 대신 [수정 그만두기](수정용 사본 지우기) — 2026-10-13 사용자
+      ? '<div class="vw-acts1"><button type="button" class="wz-btn pri" onclick="vwEdit(\'share\')" title="공유 글을 지금 내용으로 바꿉니다 (링크·추천·조회수 유지)">💾 공유 글에 저장</button></div>' +
+        '<div class="vw-acts2"><button type="button" class="wz-btn" onclick="vwSeStop()" title="고치던 내용을 지웁니다 — 공유 글은 바뀌지 않습니다">수정 그만두기</button></div>'
       : '<div class="vw-acts1"><button type="button" class="wz-btn pri" onclick="vwEdit()">수정</button><button type="button" class="wz-btn" onclick="vwEdit(\'share\')" title="빌더에서 공유 올리기 창을 엽니다">🌐 공유 올리기</button></div>') +
-      '<div class="vw-acts2"><button type="button" class="wz-btn vw-del" onclick="vwMyDel()" title="이 브라우저에서 이 빌드를 지웁니다">🗑 빌드 삭제</button></div>'
+      (preset.shareEdit ? '' : '<div class="vw-acts2"><button type="button" class="wz-btn vw-del" onclick="vwMyDel()" title="이 브라우저에서 이 빌드를 지웁니다">🗑 빌드 삭제</button></div>')
       : '<button class="wz-btn pri" onclick="vwTake()">내 빌드로 가져오기</button>'}` +
     (s ? `<div class="vw-acts2"><button type="button" class="wz-btn" id="vwLike" onclick="vwLike()"${VW.liked ? ' disabled' : ''}>👍 추천 ${s.likes || 0}${VW.liked ? ' (추천함)' : ''}</button>` +
       '<button type="button" class="wz-btn" onclick="vwCopy()">🔗 링크 복사</button></div>' +
@@ -4985,6 +4987,15 @@ async function vwShareEdit(admin) {
   });
 }
 // [✏ 내용 고치기] — 이 글의 빌드를 수정용 사본으로 담고 빌더의 고치는 단계로 (사본은 내 빌드 목록에 안 보이고, 저장하면 지워진다)
+function vwSeStop() { // 수정 그만두기 — 사본을 지우고 공유 글 보기로
+  if (!confirm('공유 글 수정을 그만둘까요? 고치던 내용은 지워지고, 공유 글은 바뀌지 않습니다.')) return;
+  const sid = preset.shareEdit && preset.shareEdit.id;
+  try {
+    const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null');
+    if (ps) { ps.list = ps.list.filter(x => x.id !== preset.id); if (ps.activeId === preset.id) ps.activeId = (ps.list.filter(x => !x.shareEdit).sort((a, b) => b.id - a.id)[0] || {}).id || 0; localStorage.setItem(PRESETS_KEY, JSON.stringify(ps)); }
+  } catch (e) {}
+  location.href = sid ? '/tli/view/?preset=' + encodeURIComponent(sid) : '/tli/builder/';
+}
 function vwSeGo(info) {
   try {
     const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};

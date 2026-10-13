@@ -2234,7 +2234,7 @@ function hpBpPlace() { // 단추 바로 아래 — 스크롤·창 크기가 바�
 }
 function hpBpRows() {
   const q = hpBpQ.trim().toLowerCase(), cur = typeof wbSeason === 'function' ? wbSeason() : '';
-  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
+  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
     `<button type="button" class="hp-bpr${p.id === preset.id ? ' on' : ''}" onclick="hpBpPick(${p.id})">` +
     `<span class="hp-bp-face">${hpBpFace(p)}</span><span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span>` +
     (p.season && cur && p.season !== cur ? `<span class="hp-bpr-se">${escapeHtml(p.season)}</span>` : '') +
@@ -5858,7 +5858,7 @@ function wbOpen() {
   const seOf = p => p.season || 'SS13', seNum = l => +String(l).replace(/\D/g, '') || 0;
   const ses = [...new Set(presets.list.map(seOf))].sort((a, b) => seNum(b) - seNum(a));
   if (!wbSeOn || ![...wbSeOn].some(l => ses.includes(l))) wbSeOn = new Set([seOf(preset)]);
-  const shown = presets.list.filter(p => ses.length < 2 || wbSeOn.has(seOf(p))).sort((a, b) => b.id - a.id);
+  const shown = presets.list.filter(p => (!p.shareEdit || p.id === preset.id) && (ses.length < 2 || wbSeOn.has(seOf(p)))).sort((a, b) => b.id - a.id);
   const chips = ses.length > 1 ? '<div class="wl-ses">' + ses.map(l => `<button type="button" class="share-se-chip${wbSeOn.has(l) ? ' on' : ''}" onclick="wbSeToggle('${l}')">${l} <small>${presets.list.filter(p => seOf(p) === l).length}</small></button>`).join('') + '</div>' : '';
   const cards = shown.map(p => `<div class="wl-card${p.id === preset.id ? ' on' : ''}" onclick="wbSwitch(${p.id})" title="${p.id === preset.id ? '지금 빌드' : '눌러서 이 빌드로 바꾸기'}">` +
     wlCardBody(p) + (p.id === preset.id ? '<span class="wb-now">지금</span>' : '') + '</div>').join('');
@@ -6018,29 +6018,47 @@ async function wbShareSubmit() {
     try { localStorage.setItem('tli_share_dirty', String(Date.now())); } catch (e) {} // 공유 목록 캐시 건너뛰기
     try { localStorage.setItem('tlidb_author_v1', author); if (!se) localStorage.setItem('tlidb_share_pwd_v1', pwd); } catch (e) {}
     const link = location.origin + '/tli/view/?preset=' + (se ? se.id : d.id);
-    if (se) { delete preset.shareEdit; preset.name = String(preset.name || '').replace(/^✏\s*/, '') || preset.name; persistPreset(); pageRender(); }
-    wbPop(`<h3>${se ? '공유 글을 고쳤습니다' : '공유했습니다'}</h3><div class="wb-msg">${wbUnlisted ? '🔒 링크로만 공유됩니다 — 공유 목록·검색에는 나오지 않고, 이 링크를 받은 사람만 볼 수 있습니다.' : '이 링크로 누구나 빌드를 볼 수 있습니다.'}${se ? ' 추천·조회수는 그대로입니다.' : ''}</div>` +
+    // 수정 저장이 끝나면 수정용 사본은 내 빌드에서 지운다 (사본은 [수정]이 만든 것 — 2026-10-13 사용자). 실패하면 아래 catch 라 사본이 남는다
+    if (se) wbDropCopy(preset.id, true);
+    wbPop(`<h3>${se ? '공유 글을 고쳤습니다' : '공유했습니다'}</h3><div class="wb-msg">${wbUnlisted ? '🔒 링크로만 공유됩니다 — 공유 목록·검색에는 나오지 않고, 이 링크를 받은 사람만 볼 수 있습니다.' : '이 링크로 누구나 빌드를 볼 수 있습니다.'}${se ? ' 추천·조회수는 그대로입니다. 수정하려고 불러온 사본은 내 빌드에서 지웠습니다.' : ''}</div>` +
       `<input class="wb-link" readonly value="${escapeHtml(link)}" onclick="this.select()">` +
       `<div class="wb-btns"><button class="wz-btn pri" onclick="wbCopy('${escapeHtml(link)}')">링크 복사</button><a class="wz-btn" href="${escapeHtml(link)}" target="_blank">열어 보기</a>` +
-      (se && se.admin ? `<button class="wz-btn" onclick="wbDropCopy(${preset.id})" title="관리 화면에서 남의 글을 고치려고 불러온 사본 — 내 빌드 목록에서 뺍니다">내 빌드에서 빼기</button>` : '') +
       '<button class="wz-btn" onclick="wbClose()">닫기</button></div>');
   } catch (e) {
     btn.disabled = false; btn.textContent = se ? '수정 저장' : '올리기';
     showToast('공유하지 못했습니다: ' + e.message);
   }
 }
-function wbDropCopy(id) { // 관리 수정용 사본 지우기 — 다른 빌드로 옮겨 가고, 빌드가 없으면 빈 빌드 하나
+function wbDropCopy(id) { // 공유 글 수정용 사본 지우기 — 다른 빌드로 옮겨 가고(목록 화면), 빌드가 없으면 빈 빌드 하나
   presets.list = presets.list.filter(p => p.id !== id);
-  if (!presets.list.length) presets.list.push({id: 1, name: '빌드 1', slots: {}, talents: [], skills: {}});
-  presets.activeId = presets.list[0].id; hpUse(presets.list[0]); persistPreset(); wbClose();
-  if (typeof wzList === 'function' && presets.list.some(wzFilled)) wzList(); else pageRender();
-  showToast('내 빌드에서 뺐습니다');
+  let next = presets.list.filter(p => !p.shareEdit).sort((a, b) => b.id - a.id)[0]; // 다른 수정 사본(숨김)으로는 가지 않는다
+  if (!next) { next = {id: wbNextId(), name: '빌드 1', slots: {}, talents: [], skills: {}}; presets.list.push(next); }
+  presets.activeId = next.id; hpUse(next); persistPreset();
+  if (typeof wzList === 'function' && presets.list.some(wzFilled)) wzList(); else if (typeof wzGo === 'function') wzGo('hero'); else pageRender();
 }
 async function wbCopy(t) { try { await navigator.clipboard.writeText(t); showToast('복사했습니다'); } catch (e) { showToast('복사하지 못했습니다 — 칸을 눌러 직접 복사해 주세요'); } }
-function wbShareEditStop() { // 고친 빌드는 내 빌드로 남기고, 공유 글과의 연결만 끊는다
-  uiConfirm('공유 글 수정을 그만둘까요? 고친 빌드는 내 빌드로 그대로 남고, 공유 글은 바뀌지 않습니다.', () => {
-    delete preset.shareEdit; persistPreset(); pageRender(); wbOpen();
-  }, {title: '수정 그만두기', ok: '그만두기'});
+function wbShareEditStop() { wbClose(); wzEditStop(preset.id); } // 수정용 사본을 지운다 (내 빌드가 아니라서, 2026-10-13)
+// 공유 글 수정본을 내 빌드 하나로 통째로 덮어쓰기 (2026-10-13 사용자) — 공유 글 연결(shareEdit)·빌드 번호는 그대로,
+// 코멘트는 고른 빌드에 없으면 원래 공유 글 코멘트를 남긴다
+function wbOverwritePick() {
+  const mine = presets.list.filter(p => !p.shareEdit && wzFilled(p)).sort((a, b) => b.id - a.id);
+  if (!mine.length) { showToast('덮어쓸 내 빌드가 없습니다'); return; }
+  wbPop(`<h3>📥 내 빌드로 덮어쓰기</h3><div class="wb-msg">고른 빌드의 히어로·재능·스킬·장비·추억·석판·정령이 이 공유 글 수정본에 그대로 들어갑니다. 저장하기 전까지 공유 글은 바뀌지 않습니다.</div>` +
+    `<div class="wl-grid wb-grid">${mine.map(p => `<div class="wl-card" onclick="wbOverwrite(${p.id})">${wlCardBody(p)}</div>`).join('')}</div>` +
+    '<div class="wb-btns"><button class="wz-btn" onclick="wbClose()">취소</button></div>', 'wb-manage');
+}
+function wbOverwrite(id) {
+  const src = presets.list.find(p => p.id === id); if (!src || !preset.shareEdit) return;
+  uiConfirm(`[${src.name}] 빌드로 지금 수정본을 덮어쓸까요?`, () => {
+    const keep = {id: preset.id, shareEdit: preset.shareEdit, memo: preset.memo};
+    const c = JSON.parse(JSON.stringify(src));
+    delete c.sid;
+    Object.keys(preset).forEach(k => delete preset[k]);
+    Object.assign(preset, c, {id: keep.id, shareEdit: keep.shareEdit});
+    if (!(c.memo || '').trim() && keep.memo) preset.memo = keep.memo; else if (!(c.memo || '').trim()) delete preset.memo;
+    if (!Array.isArray(preset.talents)) preset.talents = [];
+    hpUse(preset); persistPreset(); pageRender(); showToast('덮어썼습니다 — 확인 뒤 [💾 공유 글 저장]');
+  }, {title: '내 빌드로 덮어쓰기', ok: '덮어쓰기'});
 }
 
 // ── /tli/builder (2026-10-09 전환 — 서버가 /tli/builder/ 를 이 화면으로, 파일은 /tli/builder2/) — 빌더 마법사 ──
@@ -6091,6 +6109,12 @@ const wzHash0 = (location.hash || '').slice(1).split('-');
 // 내용이 든 빌드 (히어로·스킬·장비·재능 보드 중 하나라도) — 하나라도 있으면 주소에 단계가 없을 때 '내 빌드' 목록부터 (사용자 2026-10-09)
 const wzFilled = p => !!(p && (p.hero || Object.values(p.skills || {}).some(x => x && x.main) || Object.values(p.slots || {}).some(Boolean) || (p.gboard || []).length));
 let wzStep = WZ_STEPS.some(s => s.id === wzHash0[0]) ? wzHash0[0] : presets.list.some(wzFilled) ? 'list' : 'hero';
+// 보기 화면 [수정] → [📥 내 빌드로 덮어쓰기] — 목록을 '고르기' 상태로 연다 (#pick, 고를 공유 글은 tli_share_over)
+let wlPick = null;
+if (wzHash0[0] === 'pick') {
+  try { wlPick = JSON.parse(localStorage.getItem('tli_share_over') || 'null'); } catch (e) {}
+  wzStep = 'list'; history.replaceState(null, '', location.pathname);
+}
 if (wzStep === 'mem' && (wzHash0[1] === 'slate' || wzHash0[1] === 'dst')) wmPart = wzHash0[1];
 function wzSummary(id) { // 단계 카드 아래 한 줄 — 지금 빌드에 얼마나 채웠나
   if (id === 'hero') {
@@ -6119,14 +6143,17 @@ function wzSummary(id) { // 단계 카드 아래 한 줄 — 지금 빌드에 �
 // ── 내 빌드 목록 (빌더 첫 화면) — 카드 = 보기 화면, [수정] = 빌더 단계, [+ 새 빌드] = 새 빌드로 1단계부터 ──
 function wzList() { wzStep = 'list'; history.replaceState(null, '', location.pathname); pageRender(); window.scrollTo(0, 0); }
 function wzListHtml() {
-  const card = p => `<div class="wl-card${p.id === preset.id ? ' on' : ''}" onclick="wzListView(${p.id})" title="눌러서 보기">` + wlCardBody(p) +
+  const card = p => wlPick ? `<div class="wl-card" onclick="wlPickGo(${p.id})" title="이 빌드로 공유 글 덮어쓰기">` + wlCardBody(p) + '</div>' :
+    `<div class="wl-card${p.id === preset.id ? ' on' : ''}" onclick="wzListView(${p.id})" title="눌러서 보기">` + wlCardBody(p) +
       `<div class="wl-acts"><button class="wz-btn" onclick="event.stopPropagation();wzListEdit(${p.id})">수정</button>` +
       `<button class="wz-btn" onclick="event.stopPropagation();wzListShare(${p.id})" title="이 빌드를 빌드 공유에 올립니다">${p.shareEdit ? '공유 글 저장' : '공유'}</button>` +
       `<button class="wz-btn" onclick="event.stopPropagation();wzListDup(${p.id})" title="복제">복제</button>` +
       `<button class="wz-btn wb-del" onclick="event.stopPropagation();wzListDel(${p.id})" title="삭제">삭제</button></div></div>`;
   // 시즌 칩 + 최신순 (2026-10-10) — 시즌 표시 없는 옛 빌드는 SS13. 처음엔 빌드가 있는 가장 최신 시즌만, 눌러서 여러 개
   // 정렬은 만든 최신순 — 빌드 번호(wbNextId)가 만들 때마다 커져서 번호 역순
-  const allFilled = presets.list.filter(wzFilled), empty = presets.list.length - allFilled.length;
+  // 공유 글 수정용 사본은 내 빌드가 아니라 숨기고 위에 띠로만 (2026-10-13 사용자)
+  const edits = presets.list.filter(p => p.shareEdit);
+  const allFilled = presets.list.filter(p => !p.shareEdit && wzFilled(p)), empty = presets.list.filter(p => !p.shareEdit).length - allFilled.length;
   const seNum = l => +String(l).replace(/\D/g, '') || 0;
   const ses = [...new Set(allFilled.map(wlSeasonOf))].sort((a, b) => seNum(b) - seNum(a));
   if (!wlSeOn || ![...wlSeOn].some(l => ses.includes(l))) wlSeOn = new Set(ses.slice(0, 1));
@@ -6135,9 +6162,11 @@ function wzListHtml() {
   return '<div class="wz-bar wl-bar"><div class="wz-title"><b>빌더</b><span class="wl-sub">내 빌드 ' + allFilled.length + '개</span></div>' +
     '<div class="wz-nav"><button class="wz-btn" onclick="wbLogPick()" title="게임 로그 파일에서 새 빌드로">🎮 로그에서 가져오기</button>' +
     '<button class="wz-btn pri" onclick="wzListNew()">＋ 새 빌드</button></div></div>' +
-    '<div class="wl-wrap">' + chips + '<div class="wl-grid">' + filled.map(card).join('') + '</div>' +
+    '<div class="wl-wrap">' + (wlPick ? `<div class="wz-sebar pick">📥 공유 글 <b>${escapeHtml(wlPick.se.title || wlPick.se.id)}</b> 을(를) 덮어쓸 내 빌드를 고르세요 — 고르면 저장 창이 뜹니다` +
+      '<span class="wz-sebtn"><button class="wz-btn" onclick="wlPickCancel()">취소</button></span></div>' : '') + (wlPick ? [] : edits).map(p => `<div class="wz-sebar">✏ 수정 중인 공유 글 <b>${escapeHtml(p.shareEdit.title || p.name || p.shareEdit.id)}</b> — 저장하지 않고 나갔습니다` +
+      `<span class="wz-sebtn"><button class="wz-btn pri" onclick="wzEditResume(${p.id})">이어서 고치기</button><button class="wz-btn" onclick="wzEditStop(${p.id})">그만두기</button></span></div>`).join('') + chips + '<div class="wl-grid">' + filled.map(card).join('') + '</div>' +
     (empty ? `<div class="wl-note">아무것도 넣지 않은 빈 빌드 ${empty}개는 목록에서 뺐습니다</div>` : '') +
-    '<div class="wl-note">이 브라우저에 저장된 빌드입니다. 카드를 누르면 보기 화면, [수정]을 누르면 빌더에서 고칩니다.</div></div>';
+    `<div class="wl-note">${wlPick ? '고른 빌드는 그대로 남고, 그 내용을 복사해 공유 글에 저장합니다.' : '이 브라우저에 저장된 빌드입니다. 카드를 누르면 보기 화면, [수정]을 누르면 빌더에서 고칩니다.'}</div></div>`;
 }
 // 빌드 카드 몸통(얼굴·이름·특성/스킬·칩) — 목록 화면과 빌드 관리 창이 같이 쓴다 (2026-10-13)
 function wlCardBody(p) {
@@ -6154,6 +6183,22 @@ function wlCardBody(p) {
 let wlSeOn = null; // 내 빌드 시즌 칩 — 켠 시즌들 (처음엔 빌드가 있는 가장 최신 시즌)
 const wlSeasonOf = p => p.season || 'SS13';
 function wlSeToggle(l) { if (wlSeOn.has(l)) { if (wlSeOn.size > 1) wlSeOn.delete(l); } else wlSeOn.add(l); pageRender(); }
+function wlPickCancel() { wlPick = null; try { localStorage.removeItem('tli_share_over'); } catch (e) {} pageRender(); }
+// 고른 내 빌드를 수정용 사본으로 복제(공유 글 연결) → 바로 공유 글 저장 창. 코멘트는 고른 빌드에 없으면 원래 글 것을 남긴다
+function wlPickGo(id) {
+  const src = presets.list.find(p => p.id === id); if (!src || !wlPick) return;
+  const c = JSON.parse(JSON.stringify(src));
+  delete c.sid; c.shareEdit = wlPick.se;
+  if (!(c.memo || '').trim() && wlPick.memo) c.memo = wlPick.memo;
+  presets.list = presets.list.filter(x => !(x.shareEdit && x.shareEdit.id === wlPick.se.id));
+  c.id = wbNextId(); presets.list.push(c); presets.activeId = c.id; hpUse(c); persistPreset();
+  wlPick = null; try { localStorage.removeItem('tli_share_over'); } catch (e) {}
+  wzGo('hero'); wzListShare(c.id);
+}
+function wzEditResume(id) { hpSwitch(id); wzGo('hero'); }
+function wzEditStop(id) {
+  uiConfirm('공유 글 수정을 그만둘까요? 고치던 내용은 지워지고, 공유 글은 바뀌지 않습니다.', () => wbDropCopy(id), {title: '수정 그만두기', ok: '그만두기'});
+}
 function wzListView(id) { location.href = '/tli/view/?my=' + id; }
 function wzListEdit(id) { if (id !== preset.id) hpSwitch(id); wzGo('hero'); }
 function wzListNew() {
@@ -6214,7 +6259,7 @@ function pageRender() {
   const i = WZ_STEPS.findIndex(s => s.id === wzStep);
   const bar = '<div class="wz-bar"><div class="wz-title"><b class="wz-home" onclick="wzList()" title="내 빌드 목록">빌더</b>' + hpBuildPicker() +
     (preset.season && wbSeason() && preset.season !== wbSeason() ? `<span class="wz-oldse" title="지난 시즌에 만든 빌드입니다 — 지금 시즌(${escapeHtml(wbSeason())}) 데이터에 없는 옵션은 저장된 문구 그대로 보입니다">${escapeHtml(preset.season)} 빌드</span>` : '') +
-    (preset.shareEdit ? '<button class="wz-btn pri wz-shedit" onclick="wbShareOpen()" title="보기 화면에서 [수정]으로 불러온 공유 글 — 고친 뒤 저장하면 링크·추천·조회수가 그대로 유지됩니다">💾 공유 글 저장</button>' : '') + '</div>' +
+    '</div>' +
     '<ol class="wz-steps">' + WZ_STEPS.map((s, k) => {
       const sm = wzSummary(s.id);
       return `<li class="wz-step${s.id === wzStep ? ' on' : ''}${sm.done ? ' done' : ''}" onclick="wzGo('${s.id}')" title="${escapeHtml(s.no + '. ' + s.name + ' — ' + sm.txt)}">` +
@@ -6222,8 +6267,16 @@ function pageRender() {
         (k < WZ_STEPS.length - 1 ? '<li class="wz-arrow" aria-hidden="true">›</li>' : '');
     }).join('') + '</ol>' +
     '<div class="wz-nav">' +
+    // 공유 글 수정 중 — 저장 단추는 오른쪽 [다음] 옆 (빌드 이름 옆에 끼어 어색하던 자리에서 옮김, 2026-10-13). 마지막 단계는 아래에서 주 단추로
+    (preset.shareEdit && i < WZ_STEPS.length - 1 ? '<button class="wz-btn wz-shedit" onclick="wbShareOpen()" title="보기 화면에서 [수정]으로 불러온 공유 글 — 고친 뒤 저장하면 링크·추천·조회수가 그대로 유지됩니다">💾 공유 글 저장</button>' : '') +
     // 되돌리기·다시 실행은 단축키만 (Ctrl+Z · Ctrl+Shift+Z/Ctrl+Y) — 버튼·[이전]은 2026-10-13 뺌 (단계는 위 칸을 눌러 이동)
-    `<button class="wz-btn pri wz-next" onclick="wzMove(1)" title="${i === WZ_STEPS.length - 1 ? '보기 화면' : '다음: ' + WZ_STEPS[i + 1].name}">${i === WZ_STEPS.length - 1 ? '보기 화면 ›' : '다음: ' + WZ_STEPS[i + 1].name + ' ›'}</button></div></div>`;
+    // 마지막 단계: 공유 글 수정 중이면 [다음] 대신 [💾 공유 글 저장] (보기 화면엔 위 단계 칸·보기 단추로)
+    (i === WZ_STEPS.length - 1 && preset.shareEdit
+      ? `<a class="wz-btn" href="/tli/view/?my=${preset.id}">보기 화면</a><button class="wz-btn pri wz-next" onclick="wbShareOpen()" title="공유 글을 지금 내용으로 바꿉니다 (링크·추천·조회수 유지)">💾 공유 글 저장</button>`
+      : `<button class="wz-btn pri wz-next" onclick="wzMove(1)" title="${i === WZ_STEPS.length - 1 ? '보기 화면' : '다음: ' + WZ_STEPS[i + 1].name}">${i === WZ_STEPS.length - 1 ? '보기 화면 ›' : '다음: ' + WZ_STEPS[i + 1].name + ' ›'}</button>`) + '</div></div>';
+  const seBar = preset.shareEdit ? `<div class="wz-sebar">✏ 공유 글 <b>${escapeHtml(preset.shareEdit.title || preset.shareEdit.id)}</b> 수정 중 — 다 고치면 오른쪽 위 <b>[💾 공유 글 저장]</b>` +
+    '<span class="wz-sebtn"><button class="wz-btn" onclick="wbOverwritePick()" title="내 빌드 하나의 내용으로 이 공유 글 수정본을 통째로 바꿉니다">📥 내 빌드로 덮어쓰기</button>' +
+    `<button class="wz-btn" onclick="wzEditStop(${preset.id})">그만두기</button></span></div>` : '';
   // 단계 몸통 — 히어로·재능은 단독 화면과 같은 그리기 함수가 그 id 의 칸에 그린다
   const body = wzStep === 'hero' ? '<div id="heroApp"></div>'
     : wzStep === 'talent' ? '<div id="talentApp"></div>'
@@ -6234,7 +6287,7 @@ function pageRender() {
     : wzStep === 'mem' ? wmRender()
     : `<div class="wz-todo"><b>${WZ_STEPS[i].name} 단계</b><p>${escapeHtml(WZ_STEPS[i].desc)} — 큰 화면 구성을 정하는 중입니다.<br>` +
       '지금은 <a href="/tli/builder/">빌더</a>에서 채워 주세요. 같은 빌드라 여기서 고른 히어로·재능이 그대로 보입니다.</p></div>';
-  app.innerHTML = bar + '<div class="wz-body">' + body + '</div>';
+  app.innerHTML = bar + seBar + '<div class="wz-body">' + body + '</div>';
   wzFitHeight();
   if (wzStep === 'hero') { hrModalOpen = true; hrView = hrView || (preset.hero && preset.hero.hero) || SHARE_HEROES[0][0]; hrRenderModal(); }
   else if (wzStep === 'talent') { gbModalOpen = true; gbRenderModal(); }

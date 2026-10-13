@@ -2799,7 +2799,7 @@ function hpBpPlace() { // 단추 바로 아래 — 스크롤·창 크기가 바�
 }
 function hpBpRows() {
   const q = hpBpQ.trim().toLowerCase(), cur = typeof wbSeason === 'function' ? wbSeason() : '';
-  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
+  const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
     `<button type="button" class="hp-bpr${p.id === preset.id ? ' on' : ''}" onclick="hpBpPick(${p.id})">` +
     `<span class="hp-bp-face">${hpBpFace(p)}</span><span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span>` +
     (p.season && cur && p.season !== cur ? `<span class="hp-bpr-se">${escapeHtml(p.season)}</span>` : '') +
@@ -4665,8 +4665,11 @@ function vwHead() {
     (s && s.unlisted ? '<div class="vw-unl" title="공유 목록·검색에는 나오지 않습니다">🔒 링크로만 공유된 빌드</div>' : '') +
     (VW.missing ? `<div class="vw-warn">⚠ 이 사이트 데이터에 없는 항목 ${VW.missing}개는 빠졌습니다 (시즌이 바뀌었거나 새 아이템)</div>` : '') + '</div>' +
     // 내 빌드: [수정][공유 올리기] + 아랫줄 작은 [삭제] (잘못 누르기 쉬운 자리에서 떼어 둠 — 2026-10-10 사용자)
-    `<div class="vw-acts">${VW.mine ? '<div class="vw-acts1"><button type="button" class="wz-btn pri" onclick="vwEdit()">수정</button>' +
-      `<button type="button" class="wz-btn" onclick="vwEdit('share')" title="빌더에서 공유 올리기 창을 엽니다">${preset.shareEdit ? '💾 공유 글 저장' : '🌐 공유 올리기'}</button></div>` +
+    // 공유 글 수정 중이면 [💾 공유 글에 저장] 을 주 단추로 + 위에 띠 (보조 단추라 못 찾던 것, 2026-10-13 사용자)
+    (VW.mine && preset.shareEdit ? `<div class="vw-sebar">✏ 공유 글 <b>${vwEsc(preset.shareEdit.title || preset.shareEdit.id)}</b> 수정 중 — 고친 내용(코멘트 포함)은 <b>[💾 공유 글에 저장]</b>을 눌러야 공유 글에 반영됩니다</div>` : '') +
+    `<div class="vw-acts">${VW.mine ? (preset.shareEdit
+      ? '<div class="vw-acts1"><button type="button" class="wz-btn pri" onclick="vwEdit(\'share\')" title="공유 글을 지금 내용으로 바꿉니다 (링크·추천·조회수 유지)">💾 공유 글에 저장</button><button type="button" class="wz-btn" onclick="vwEdit()">수정</button></div>'
+      : '<div class="vw-acts1"><button type="button" class="wz-btn pri" onclick="vwEdit()">수정</button><button type="button" class="wz-btn" onclick="vwEdit(\'share\')" title="빌더에서 공유 올리기 창을 엽니다">🌐 공유 올리기</button></div>') +
       '<div class="vw-acts2"><button type="button" class="wz-btn vw-del" onclick="vwMyDel()" title="이 브라우저에서 이 빌드를 지웁니다">🗑 빌드 삭제</button></div>'
       : '<button class="wz-btn pri" onclick="vwTake()">내 빌드로 가져오기</button>'}` +
     (s ? `<div class="vw-acts2"><button type="button" class="wz-btn" id="vwLike" onclick="vwLike()"${VW.liked ? ' disabled' : ''}>👍 추천 ${s.likes || 0}${VW.liked ? ' (추천함)' : ''}</button>` +
@@ -4904,7 +4907,7 @@ function pageRender() {
     vwSec('vm', '추억', '히어로 특성 레벨의 기준', vwMems()) +
     vwSec('vb', '신격 석판', '', vwSlate()) +
     vwSec('vp', '전투 정령 · 운명', '', vwPact()) +
-    (vwHasCmt() ? vwSec('vc', '작성자 코멘트', VW.mine ? '쓰는 대로 이 브라우저에 저장됩니다' : '', vwCmt()) : '');
+    (vwHasCmt() ? vwSec('vc', '작성자 코멘트', VW.mine ? (preset.shareEdit ? '쓰는 대로 이 브라우저에 저장됩니다 · 공유 글에는 위 [💾 공유 글에 저장]을 눌러야 반영' : '쓰는 대로 이 브라우저에 저장됩니다') : '', vwCmt()) : '');
   if (preset.hero) { hrView = preset.hero.hero; hrRenderModal(); }
   gbSlots4().forEach(p => { if (p) gbExtra.add(p); }); // 포인트 없는 보드(채워 넣은 신 보드 등)도 판을 그린다
   vwSlateFit();
@@ -4956,31 +4959,46 @@ function vwPwd(title, msg, go) { // 올릴 때 등록한 비밀번호 (이 브�
 // 내 글 수정 — 비밀번호를 먼저 서버에 확인시키고(다 고친 뒤 틀리면 곤란), 이 빌드를 내 빌드로 담아 빌더에서 고친다.
 // 빌더는 preset.shareEdit 가 있으면 [💾 공유 글 저장] 으로 같은 글을 갱신한다 (링크·추천·조회수 유지)
 async function vwShareEdit(admin) {
-  const go = se => {
-    try {
-      const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};
-      const p = JSON.parse(JSON.stringify(preset)), it = VW.share;
-      let tags = []; try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
-      // 이름은 코드에 실린 원래 빌드 이름 그대로 — '✏ 제목' 을 붙였더니 수정 저장 때 그 이름이 코드에 실려
-      // 담아간 사람에게 '✏ …' 로 보였다 (2026-10-13). 수정 중 표시는 shareEdit 로만(목록 카드·빌더 위쪽 [💾 공유 글 저장])
-      p.name = (p.name || it.title || '공유 글').slice(0, 30);
-      p.shareEdit = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se);
-      // 같은 글을 또 [수정]하면 사본을 새로 쌓지 않고 이전 수정 중 사본을 바꾼다
-      const old = ps.list.findIndex(x => x.shareEdit && x.shareEdit.id === it.id);
-      if (old >= 0) { p.id = ps.list[old].id; ps.list[old] = p; }
-      else { p.id = Math.max(0, ...ps.list.map(x => x.id)) + 1; ps.list.push(p); }
-      ps.activeId = p.id;
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
-      location.href = '/tli/builder/#hero'; // 빌더2 첫 화면(내 빌드 목록)이 아니라 바로 고치는 단계로
-    } catch (e) { vwToast('불러오지 못했습니다: ' + e.message); }
+  // 확인이 끝나면 [✏ 내용 고치기](이 글을 빌더로) / [📥 내 빌드로 덮어쓰기](빌더 내 빌드 목록에서 고르기) 중 고른다 (2026-10-13 사용자)
+  const choose = se => {
+    const it = VW.share;
+    let tags = []; try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
+    const info = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se);
+    vwClose();
+    vwPop(`<h3>✏ 공유 글 수정</h3><div class="wb-msg"><b>${vwEsc(it.title || it.id)}</b> — 어떻게 고칠까요? 어느 쪽이든 링크·추천·조회수는 그대로입니다.</div>` +
+      '<div class="vw-se-choice">' +
+      '<button type="button" class="vw-se-opt" id="vwSeEdit"><b>✏ 내용 고치기</b><small>이 글의 빌드를 빌더로 불러와 고칩니다</small></button>' +
+      '<button type="button" class="vw-se-opt" id="vwSeOver"><b>📥 내 빌드로 덮어쓰기</b><small>내 빌드 목록에서 하나를 골라 이 글을 그 빌드로 바꿉니다</small></button></div>' +
+      '<div class="wb-btns"><button class="wz-btn" onclick="vwClose()">취소</button></div>');
+    document.getElementById('vwSeEdit').onclick = () => vwSeGo(info);
+    document.getElementById('vwSeOver').onclick = () => {
+      try { localStorage.setItem('tli_share_over', JSON.stringify({se: info, memo: preset.memo || ''})); } catch (e) { vwToast('저장소를 쓸 수 없습니다'); return; }
+      location.href = '/tli/builder/#pick';
+    };
   };
   if (admin) { // 관리 화면의 [수정] (?edit=1) — 관리 로그인 쿠키로 확인, 아니면 비밀번호로
-    try { await vwApi('/share/edit', {id: VW.share.id, check: 1}); return go({admin: 1}); } catch (e) {}
+    try { await vwApi('/share/edit', {id: VW.share.id, check: 1}); return choose({admin: 1}); } catch (e) {}
   }
-  vwPwd('✏ 내 글 수정', '올릴 때 등록한 비밀번호를 넣으면 이 빌드를 빌더로 불러옵니다.<br>고친 뒤 위쪽 <b>[💾 공유 글 저장]</b>을 누르면 같은 글이 바뀝니다 (링크·추천·조회수 유지).', async pw => {
-    try { await vwApi('/share/edit', {id: VW.share.id, pwd: pw, check: 1}); try { localStorage.setItem('tlidb_share_pwd_v1', pw); } catch (e) {} go({pwd: pw}); }
+  vwPwd('✏ 내 글 수정', '올릴 때 등록한 비밀번호를 넣어 주세요.', async pw => {
+    try { await vwApi('/share/edit', {id: VW.share.id, pwd: pw, check: 1}); try { localStorage.setItem('tlidb_share_pwd_v1', pw); } catch (e) {} choose({pwd: pw}); }
     catch (e) { vwToast('수정할 수 없습니다: ' + e.message); }
   });
+}
+// [✏ 내용 고치기] — 이 글의 빌드를 수정용 사본으로 담고 빌더의 고치는 단계로 (사본은 내 빌드 목록에 안 보이고, 저장하면 지워진다)
+function vwSeGo(info) {
+  try {
+    const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};
+    const p = JSON.parse(JSON.stringify(preset));
+    // 이름은 코드에 실린 원래 빌드 이름 그대로 — '✏ 제목' 을 붙였더니 수정 저장 때 코드에 실려 담아간 사람에게 보였다 (2026-10-13)
+    p.name = (p.name || info.title || '공유 글').slice(0, 30);
+    p.shareEdit = info;
+    const old = ps.list.findIndex(x => x.shareEdit && x.shareEdit.id === info.id); // 같은 글 재수정은 사본 교체
+    if (old >= 0) { p.id = ps.list[old].id; ps.list[old] = p; }
+    else { p.id = Math.max(0, ...ps.list.map(x => x.id)) + 1; ps.list.push(p); }
+    ps.activeId = p.id;
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
+    location.href = '/tli/builder/#hero';
+  } catch (e) { vwToast('불러오지 못했습니다: ' + e.message); }
 }
 function vwShareDel() {
   vwPwd('🗑 공유 글 삭제', '올릴 때 등록한 비밀번호를 넣으면 이 공유 글을 지웁니다. 되돌릴 수 없습니다.', async pw => {

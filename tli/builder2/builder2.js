@@ -1735,6 +1735,23 @@ function tipWrapEffect(effect, tips) {
 function hlNums(html) {
   return String(html).split(/(<[^>]+>)/).map(p => p[0] === '<' ? p : p.replace(/[+-]?\(?[\d.]+(?:[–~-][\d.]+)?\)?%?/g, m => /\d/.test(m) ? '<b class="m">' + m + '</b>' : m)).join('');
 }
+// 지난 시즌 초반 시세 — 易火 ETor 시세 서버에서 시즌마다 한 번 받은 값 (update/etor_prices.py, 2026-10-14 사용자 요청)
+// it.ep = [[시즌, {일차: [평균, 최저, 최고]}], …] · 단위 결정 · ETor 는 중국 트래커라 중국 서버 시세(참고용)
+const ITEM_PRICE_DAYS = [[1, '1일'], [2, '2일'], [3, '3일'], [7, '1주'], [14, '2주']];
+function itemPriceHtml(it) {
+  if (!it || !it.ep || !it.ep.length) return '';
+  const f = v => v >= 100 ? Math.round(v) : v >= 10 ? (Math.round(v * 10) / 10) : (Math.round(v * 100) / 100);
+  return '<div class="icard-price"><div class="icard-price-h">지난 시즌 초반 시세 <small>결정 · 중국 서버 참고 (ETor)</small></div>' +
+    '<table><thead><tr><th></th>' + ITEM_PRICE_DAYS.map(d => `<th>${d[1]}</th>`).join('') + '</tr></thead><tbody>' +
+    it.ep.map(([lb, days]) => `<tr><th>${lb}</th>` + ITEM_PRICE_DAYS.map(([d]) => {
+      const v = days && days[d];
+      return v ? `<td title="${lb} ${d}일차 · 평균 ${v[0]} (최저 ${v[1]} ~ 최고 ${v[2]}) 결정">${f(v[0])}</td>` : '<td class="na">–</td>';
+    }).join('') + '</tr>').join('') + '</tbody></table>' +
+    // 출처·허가 안내 (사용자 요청 2026-10-14 — 문제가 되면 내린다)
+    // 마우스를 올리면 툴팁, 누르면 펼침(터치 화면)
+    `<details class="icard-price-i"><summary title="${ITEM_PRICE_NOTE}">ⓘ 시세 출처 안내</summary><div>${ITEM_PRICE_NOTE.replace(/&#10;/g, '<br>')}</div></details></div>`;
+}
+const ITEM_PRICE_NOTE = '이 시세는 중국 트래커 易火 ETor 의 시세 서버에서 수집했습니다.&#10;ETor 측의 허가를 받지 않고 가져온 자료라, 문제가 된다면 디스코드 win.terer 로 연락 주시면 바로 내리겠습니다.&#10;&#10;ETor 사용자들의 거래소 기록이라 중국 서버 시세로 보이며, 국내 서버 시세와 다를 수 있습니다. 단위: 최초의 불꽃 결정.';
 // 랜덤 옵션 후보 — "<랜덤 …>" 옵션이 있는 레전드(신들의 애도 등)의 나올 수 있는 후보·침식화 후보 (tlidb 상세 페이지, 2026-10-12)
 // 접어 두고 눌러서 펼친다 (후보가 24개까지라 카드가 너무 길어짐)
 function itemPoolsHtml(it) {
@@ -2854,7 +2871,7 @@ function wgItemCard(it) {
     (it.attrs && it.attrs.length ? `<div class="icard-attrs">${it.attrs.map(l => `<div>${l}</div>`).join('')}</div>` : '') +
     (it.opts && it.opts.length ? `<div class="icard-opts">${it.opts.map(l => `<div class="icard-opt">${l}</div>`).join('')}</div>` : '') +
     (it.corr && it.corr.length ? '<div class="ccard-sec">침식화 시 (최대 2개 강화)</div>' + it.corr.map(c => `<div class="icard-opt">${c[1]}</div>`).join('') : '') +
-    itemPoolsHtml(it) +
+    itemPoolsHtml(it) + itemPriceHtml(it) +
     (it.flavor ? `<div class="wg-flavor">${it.flavor}</div>` : '') + '</div>';
 }
 function wgFocusOn(idx) { const b = document.getElementById('wgCard'); if (b) b.innerHTML = wgItemCard(ITEMS[idx]); }
@@ -3227,7 +3244,7 @@ function wgViewOptsHtml(v) {
     return `<div class="wg-vsec">${WG_ADD[k]}</div><div class="wg-vo wg-vadd"><span>${wgOptHtml(v[k].effect, src.tips)}</span>${sub ? `<em class="wg-vt">${escapeHtml(sub)}</em>` : ''}</div>`;
   }).join('');
   const it = v.kind === 'item' ? (ITEMS[wgItemIdx(v.name)] || v.snap || {}) : {};
-  return wgViewOptsCore(v, addSec) + (it.flavor ? `<div class="wg-flavor">${it.flavor}</div>` : ''); // 설명 문구는 맨 끝
+  return wgViewOptsCore(v, addSec) + itemPriceHtml(it) + (it.flavor ? `<div class="wg-flavor">${it.flavor}</div>` : ''); // 지난 시즌 초반 시세(ETor) · 설명 문구는 맨 끝
 }
 function wgViewOptsCore(v, addSec) { // addSec = 조향·시퀀스 — 기본 옵션 바로 아래(레전드는 옵션 위) (사용자 요청)
   const ero = v.ero || [], list = wgEroList(v);

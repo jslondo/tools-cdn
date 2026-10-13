@@ -3425,7 +3425,10 @@ function wgItemCard(it) {
 function wgFocusOn(idx) { const b = document.getElementById('wgCard'); if (b) b.innerHTML = wgItemCard(ITEMS[idx]); }
 function wgItemGridHtml() {
   const q = wgQuery.trim().toLowerCase(), cur = wgCur(wgSlot);
-  const list = wgItemPool().filter(g => !q || g.txt.toLowerCase().includes(q));
+  // '… 침식화' 레전드는 원본이 있으면 목록에서 뺀다 — 침식은 장착 뒤 옵션 줄을 눌러 고른다 (사용자 요청 2026-10-14). 이미 장착한 것은 그대로 보인다
+  const pool = wgItemPool(), names = new Set(pool.map(g => g.name));
+  const list = pool.filter(g => !(/ 침식화$/.test(g.name) && names.has(g.name.replace(/ 침식화$/, '')) && !(cur && cur.kind === 'item' && cur.name === g.name)))
+    .filter(g => !q || g.txt.toLowerCase().includes(q));
   wgCount = list.length;
   if (!list.length) return '<div class="hrm-empty">조건에 맞는 레전드가 없습니다</div>';
   return list.map(g => {

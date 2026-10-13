@@ -109,6 +109,10 @@
     .hrm-colh b { color: #c9d1d9; font-size: 13.5px; }
     .hrm-colh small { color: #5d6878; font-size: 11px; }
     .hrm-lv { margin-left: auto; font-size: 11px; color: #9ec1ff; background: #10203a; border: 1px solid #23406b; border-radius: 4px; padding: 0 6px; }
+    .hrm-grp { border: 1px dashed #34405a; border-radius: 13px; padding: 20px 7px 7px; display: flex; flex-direction: column; gap: 8px; position: relative; background: rgba(20,26,40,.35); align-self: stretch; } /* 빈 「크리에이티브 지니어스」 묶음 상자 */
+    .hrm-grp.done { border-color: #6b5a2a; }
+    .hrm-grp-h { position: absolute; top: 3px; left: 11px; font-size: 10.5px; letter-spacing: .04em; color: #7d8794; }
+    .hrm-grp.done .hrm-grp-h { color: #d4a84a; }
     .hrm-node { border: 1px solid #222b3b; border-radius: 10px; padding: 9px 11px; background: #0e131c; cursor: pointer; transition: .15s; position: relative; }
     .hrm-node.base { cursor: default; border-color: #5a4a26; background: linear-gradient(180deg, #1d1810, #0e0d12); }
     .hrm-nh { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }

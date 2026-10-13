@@ -133,12 +133,18 @@ const HERO_PICKS = 3;
 // SS14 유가 「최후의 존재」: 추억 부활 옵션 '전 우주에 존재하는 유가 최대치 +1'(패치노트 '전 우주의 유가 존재 상한 +1') —
 // 앞의 세 특성을 활성화하면 네 번째 히어로 특성을 하나 더 (그 특성은 바로 최고 레벨). 빌더는 찍을 수를 4로 늘리고 레벨은 안내만 (2026-10-10)
 const heroExtraPick = t => !!(t && t.trait === '최후의 존재' && /유가.*(최대치|상한)\s*\+1/.test(((preset.revival || {}).effect) || ''));
-const heroPickMax = t => HERO_PICKS + (heroExtraPick(t) ? 1 : 0);
+// 빈 「크리에이티브 지니어스」: 단계마다 위·아래 두 묶음에서 하나씩 (45 대폭발 | 소닉·실드, 60 마인드·트러블 | 독창성·엔트로피·지능형, 75 …) —
+// 게임 ID 끝 두 자리의 십의 자리(1~6)가 묶음이다. heroNodes = {묶음: 노드 이름} (사용자 인게임 확인 2026-10-13)
+const heroSlotOf = n => Math.floor((Number(n && n.nid) || 0) % 100 / 10);
+const heroIsDual = t => !!(t && !t.tree && (t.nodes || []).some(n => n.step && heroSlotOf(n) > 3));
+const heroKeyOf = (t, n) => heroIsTree(t) ? n.code : heroIsDual(t) ? heroSlotOf(n) : n.step;
+const heroPickMax = t => heroIsDual(t) ? 6 : HERO_PICKS + (heroExtraPick(t) ? 1 : 0);
 const heroIsTree = t => !!(t && t.tree);
 function heroPicked(t) { // 기본 노드를 뺀, 지금 찍힌 노드들
   const pick = preset.heroNodes || {};
   if (!t) return [];
   if (heroIsTree(t)) return (t.nodes || []).filter(n => n.step && pick[n.code] === n.name);
+  if (heroIsDual(t)) return (t.nodes || []).filter(n => n.step && (pick[heroSlotOf(n)] === n.name || pick[n.step] === n.name)); // 단계 키(묶음 규칙 전 저장분)도 받는다
   return (t.nodes || []).filter(n => n.step && pick[n.step] === n.name);
 }
 function heroNodesOn() { // 이 빌드가 실제로 보유한 노드 [{node, lv}]
@@ -179,6 +185,14 @@ function pickHeroNode(step, name) {
       if (why) heroMsg = '⚠ ' + why;
       else preset.heroNodes[n.code] = name;
     }
+  } else if (heroIsDual(t)) {
+    if (!n || !n.step) return;
+    const k = heroSlotOf(n), on = heroPicked(t).includes(n);
+    Object.keys(preset.heroNodes).forEach(x => { // 같은 묶음 노드가 다른 키(옛 단계 키)에 있으면 정리
+      const o = (t.nodes || []).find(y => y.name === preset.heroNodes[x]);
+      if (o && heroSlotOf(o) === k) delete preset.heroNodes[x];
+    });
+    if (!on) preset.heroNodes[k] = name;
   } else if (preset.heroNodes[step] === name) delete preset.heroNodes[step]; // 다시 누르면 해제
   else preset.heroNodes[step] = name;
   persistPreset();
@@ -225,7 +239,7 @@ function hrRenderModal() {
   // ── 가운데 위: 이 히어로의 특성 카드
   const jh = JSON.stringify(entry[0]).replace(/"/g, '&quot;');
   let main = `<div class="gbm-head plain"><div><small>히어로</small><b>${escapeHtml(entry[0])}</b></div>` +
-    `<span class="gbm-hint">특성을 고르면 아래에서 노드를 찍습니다 — 기본 노드 외 3개</span></div>` +
+    `<span class="gbm-hint">특성을 고르면 아래에서 노드를 찍습니다 — 기본 노드 외 3개 (빈 「크리에이티브 지니어스」는 단계마다 둘씩 6개)</span></div>` +
     '<div class="hrm-traits">' + entry[1].filter(([, full]) => HERO.some(x => x.trait === full)).map(([short, full, img]) => { // 데이터에 아직 없는 특성(새 시즌 전)은 숨김
       const t = HERO.find(x => x.trait === full), on = cur && cur.trait === short;
       return `<div class="hrm-trait${on ? ' on' : ''}" onclick="pickHero(${jh}, ${JSON.stringify(short).replace(/"/g, '&quot;')})">` +
@@ -252,7 +266,10 @@ function hrRenderModal() {
       if (base) walk(base.name);
       (t.nodes || []).forEach(x => { if (x.step && !treeRow.has(x.name)) treeRow.set(x.name, ++r); }); // 이어지지 않은 노드는 맨 아래
     }
-    const rowOf = n => tree ? (treeRow.get(n.name) || 1) : (n.ord || 1);
+    const dual = heroIsDual(t);
+    // 빈: 위 묶음(1~3) 줄 아래에 아래 묶음(4~6) 줄 — 위 묶음 최대 줄 수만큼 내린다
+    const dualTop = dual ? Math.max(1, ...(t.nodes || []).filter(n => n.step && heroSlotOf(n) <= 3).map(n => Number(n.nid) % 10)) : 0;
+    const rowOf = n => tree ? (treeRow.get(n.name) || 1) : dual ? (heroSlotOf(n) > 3 ? dualTop : 0) + (Number(n.nid) % 10 || 1) : (n.ord || 1);
     const depthOf = n => { let d = 0, x = n; const seen = new Set(); while (x && x.par && !seen.has(x.name)) { seen.add(x.name); d++; x = (t.nodes || []).find(y => y.name === x.par); } return d; };
     const colOf = n => tree ? Math.min(3, depthOf(n)) : n.step;
     const rows = Math.max(1, ...(t.nodes || []).filter(n => n.step).map(rowOf));
@@ -263,14 +280,14 @@ function hrRenderModal() {
         `<span class="hrm-lv" title="${escapeHtml(part)}의 레벨을 따릅니다 (기본 1, 장착한 추억에 따라 오름)">특성 Lv ${lv}</span></div>`;
     }).join('');
     const herbs = preset.heroHerbs || {};
-    grid += (t.nodes || []).map(n => {
+    const nodeHtml = n => {
       const lv = heroStepLevel(n.step), on = n.step === 0 || got.has(n);
       const why = n.step && !on ? heroWhyNot(t, n, true) : '';
-      const free = !tree && n.step && !on && (t.nodes || []).some(x => x.step === n.step && got.has(x)); // 같은 단계에서 다른 걸 골라 둠
+      const free = !tree && n.step && !on && (t.nodes || []).some(x => (dual ? heroSlotOf(x) === heroSlotOf(n) : x.step === n.step) && got.has(x)); // 같은 단계(빈은 같은 묶음)에서 다른 걸 골라 둠
       const cls = n.step === 0 ? ' base on' : on ? ' on' : why ? ' lock' : free ? ' alt' : ' can';
-      const pos = n.step === 0 ? `grid-column:1;grid-row:2 / span ${rows}` : `grid-column:${colOf(n) + 1};grid-row:${rowOf(n) + 1}`;
+      const pos = n.step === 0 ? `grid-column:1;grid-row:2 / span ${rows}` : dual ? '' : `grid-column:${colOf(n) + 1};grid-row:${rowOf(n) + 1}`; // 빈은 묶음 상자가 자리를 잡는다
       const jn = JSON.stringify(n.name).replace(/"/g, '&quot;');
-      const tip = n.step === 0 ? '기본 노드 — 늘 보유' : why || (on ? (tree ? '다시 누르면 빼기 (이어진 뒤 노드도 함께)' : '다시 누르면 빼기') : free ? '누르면 이 노드로 바꿉니다 (단계마다 하나)' : '눌러서 찍기');
+      const tip = n.step === 0 ? '기본 노드 — 늘 보유' : why || (on ? (tree ? '다시 누르면 빼기 (이어진 뒤 노드도 함께)' : '다시 누르면 빼기') : free ? '누르면 이 노드로 바꿉니다 (' + (dual ? '묶음마다 하나' : '단계마다 하나') + ')' : '눌러서 찍기');
       const ic = hrIconUrl(cur.trait, n);
       let herbHtml = '';
       if (on) herbHtml = heroNodeHerbs(n, lv).map(h => `<div class="hn-herb"><span class="hn-hcat">${escapeHtml(h.cat)} · 택1</span><div class="hn-hrow">` +
@@ -283,9 +300,19 @@ function hrRenderModal() {
         // 갈래형: 앞 노드가 다른 줄이면 어디서 이어지는지 (같은 줄이면 ▸ 화살표로 충분)
         (tree && n.step && n.par && treeRow.has(n.par) && treeRow.get(n.par) !== rowOf(n) ? `<div class="hrm-par">← ${escapeHtml(n.par)}</div>` : '') +
         `<ul>${heroNodeLines(n, lv).map(l => `<li>${heroTipWrap(l, n.tips)}</li>`).join('')}</ul>${herbHtml}</div>`;
-    }).join('');
+    };
+    if (dual) { // 빈: 묶음(위 1~3 · 아래 4~6)마다 테두리 상자 — 상자 안에서 하나 고른다 (사용자 요청 2026-10-13)
+      grid += (t.nodes || []).filter(n => !n.step).map(nodeHtml).join('');
+      for (const k of [1, 4, 2, 5, 3, 6]) { // 좁은 화면(자리 지정 해제)에서도 단계 순서로 위·아래가 붙어 나오게
+        const ns = (t.nodes || []).filter(n => n.step && heroSlotOf(n) === k).sort((a, b) => Number(a.nid) - Number(b.nid));
+        if (!ns.length) continue;
+        const st = ns[0].step, done = ns.some(n => got.has(n));
+        grid += `<div class="hrm-grp${done ? ' done' : ''}" style="grid-column:${st + 1};grid-row:${(k > 3 ? dualTop : 0) + 2} / span ${k > 3 ? rows - dualTop : dualTop}">` +
+          `<span class="hrm-grp-h">${k > 3 ? '아래' : '위'} 묶음 · ${ns.length > 1 ? '택 1' : '1개'}</span>${ns.map(nodeHtml).join('')}</div>`;
+      }
+    } else grid += (t.nodes || []).map(nodeHtml).join('');
     main += `<div class="hrm-boardh"><b>${escapeHtml(t.trait)}</b><span class="hrm-cnt">${got.size} / ${heroPickMax(t)}</span>` + (heroExtraPick(t) ? '<span class="gbm-hint">부활 옵션으로 네 번째 특성 (게임에서는 그 특성이 바로 최고 레벨)</span>' : '') +
-      `<span class="gbm-hint">${tree ? '갈래형 — 기본에서 이어진 노드만 찍을 수 있고, 여러 갈래에 나눠 찍어도 됩니다' : '단계마다 하나씩 고릅니다'}</span></div>` +
+      `<span class="gbm-hint">${tree ? '갈래형 — 기본에서 이어진 노드만 찍을 수 있고, 여러 갈래에 나눠 찍어도 됩니다' : dual ? '단계마다 위 묶음에서 하나, 아래 묶음에서 하나씩 고릅니다' : '단계마다 하나씩 고릅니다'}</span></div>` +
       (tree ? heroTreeHtml(t, got, cur, herbs) : `<div class="hrm-board" style="grid-template-rows:auto repeat(${rows}, auto)">${grid}</div>`);
   } else if (cur && cur.hero !== entry[0]) {
     main += `<div class="hrm-empty">지금 빌드의 히어로는 <b>${escapeHtml(heroLabel(cur))}</b>입니다. 위에서 특성을 누르면 이 히어로로 바뀝니다.</div>`;

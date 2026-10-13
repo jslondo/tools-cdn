@@ -24,7 +24,15 @@
     .hp-build b { color: #c9d1d9; }
     .hp-bp { display: inline-flex; align-items: center; gap: 8px; max-width: 300px; padding: 4px 10px 4px 4px; border-radius: 10px; cursor: pointer;
       background: #0f141f; border: 1px solid #2f3a4d; color: #e6edf3; font: inherit; font-size: 13px; transition: .15s; }
-    .hp-solo-reset { order: 9; margin-left: auto; background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; transition: .15s; } /* 단독 화면(연습판) 처음부터 */
+    .hp-solo-acts { order: 9; margin-left: auto; display: inline-flex; gap: 8px; flex-wrap: wrap; }
+    .hp-solo-acts .hp-solo-over { padding: 6px 14px; font-weight: 600; color: #f3e3b5; border-color: #6b5a2a; background: #1d1a12; }
+    .hp-bp-cap { color: #9aa4b2; font-size: 12px; padding: 4px 6px 8px; }
+    .hp-bp-acts .hp-bp-new { grid-column: 1 / -1; padding: 8px; }
+    #hpToast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 9500; transition: .2s;
+      background: #151b28; border: 1px solid #e8c860; color: #e6edf3; border-radius: 10px; padding: 10px 16px; font-size: 13.5px; box-shadow: 0 8px 28px rgba(0,0,0,.5); max-width: calc(100vw - 32px); }
+    #hpToast.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+    #hpToast a { color: #e8c860; margin-left: 10px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .hp-solo-reset { background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; transition: .15s; } /* 단독 화면(연습판) 처음부터 */
     .hp-solo-reset:hover { border-color: #e8c860; color: #fff; }
     .hp-bp:hover, .hp-bp.open { border-color: #e8c860; background: #151b28; }
     .hp-bp-face { flex: none; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: #1b2230; display: grid; place-items: center; }

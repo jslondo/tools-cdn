@@ -625,9 +625,45 @@ function hpBpSub(p) {
   return (p.shareEdit ? '✏ 공유 글 수정 중 · ' : '') + ([p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음');
 }
 function hpBuildPicker() {
-  if (PAGE_SOLO) return '<button type="button" class="hp-solo-reset" onclick="hpSoloReset()" title="이 화면에서 찍은 것을 모두 지웁니다 (Ctrl+Z 로 되돌리기)">↺ 처음부터</button>'; // 단독 화면 = 빌드 고르기 없음
+  if (PAGE_SOLO) return '<span class="hp-solo-acts"><button type="button" class="hp-bp hp-solo-over" onclick="hpBpToggle(this)" title="이 화면의 ' + HP_SOLO_WHAT[PAGE_SOLO] + '을(를) 내 빌드 하나에 옮깁니다">📥 내 빌드에 덮어쓰기</button>' +
+    '<button type="button" class="hp-solo-reset" onclick="hpSoloReset()" title="이 화면에서 찍은 것을 모두 지웁니다 (Ctrl+Z 로 되돌리기)">↺ 처음부터</button></span>'; // 단독 화면 = 빌드 고르기 없음
   return `<button type="button" class="hp-build hp-bp" onclick="hpBpToggle(this)" title="빌드 바꾸기">` +
     `<span class="hp-bp-face">${hpBpFace(preset)}</span><span class="hp-bp-nm">${escapeHtml(hpBpName(preset))}</span><svg class="hp-bp-car" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+}
+// ── 단독 화면 → 내 빌드 덮어쓰기 (2026-10-13 사용자 요청) — 이 화면이 다루는 필드만 바꾸고 나머지(장비·스킬 등)는 그대로
+const HP_SOLO_WHAT = {talent: '재능 보드', slate: '석판', hero: '히어로·특성'};
+const HP_SOLO_FIELDS = {talent: ['gboard', 'gbOrder', 'gbPrism', 'prism', 'inverse'], slate: ['slateBd'], hero: ['hero', 'heroNodes', 'heroHerbs']};
+function hpBuilds() { try { const p = JSON.parse(localStorage.getItem(PRESETS_KEY)); if (p && Array.isArray(p.list)) return p; } catch (e) {} return {list: [], activeId: 0}; }
+function hpSoloApply(dst, src) { // src(연습판)의 이 화면 몫을 dst(내 빌드)에 — 재능 줄은 핵심 재능(보드)·석판 파생(src 표시) 몫만 갈아 끼운다
+  const cp = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+  HP_SOLO_FIELDS[PAGE_SOLO].forEach(f => { if (src[f] === undefined) delete dst[f]; else dst[f] = cp(src[f]); });
+  const mine = PAGE_SOLO === 'talent' ? (t => !t.src && talGroup(t.type) === 0) : PAGE_SOLO === 'slate' ? (t => !!t.src) : null;
+  if (mine) dst.talents = (dst.talents || []).filter(t => !mine(t)).concat(cp((src.talents || []).filter(mine)));
+}
+function hpSoloOver(id) {
+  hpBpClose();
+  const bs = hpBuilds(), isNew = id === 0;
+  let dst = bs.list.find(p => p.id === id);
+  if (!isNew && !dst) return;
+  if (PAGE_SOLO === 'hero' && dst && preset.hero && preset.hero.hero !== '아이리스' &&
+      Object.values(dst.skills || {}).some(s => s && s.main && s.main.name === '마령')) {
+    alert('그 빌드의 액티브 칸에 마령 스킬이 있어 아이리스가 아닌 히어로로 바꿀 수 없습니다.\n빌더에서 먼저 해당 스킬을 비워주세요.'); return;
+  }
+  if (!isNew && !confirm(`「${hpBpName(dst)}」의 ${HP_SOLO_WHAT[PAGE_SOLO]}을(를) 이 화면 것으로 바꿀까요?\n장비·스킬 등 나머지는 그대로 둡니다.`)) return;
+  if (isNew) {
+    dst = {id: bs.list.reduce((m, p) => Math.max(m, p.id || 0), 0) + 1, name: HP_SOLO_WHAT[PAGE_SOLO] + ' 연습', slots: {}, talents: [], skills: {}};
+    bs.list.push(dst);
+  }
+  hpSoloApply(dst, preset);
+  bs.activeId = dst.id; // 빌더를 열면 바로 그 빌드
+  try { localStorage.setItem(PRESETS_KEY, JSON.stringify(bs)); } catch (e) { alert('저장하지 못했습니다 (브라우저 저장 공간)'); return; }
+  hpToast(`「${escapeHtml(hpBpName(dst))}」에 ${isNew ? '새 빌드로 저장' : '덮어썼습니다'} <a href="/tli/builder/">빌더에서 보기 →</a>`);
+}
+function hpToast(html) {
+  let el = document.getElementById('hpToast');
+  if (!el) { el = document.createElement('div'); el.id = 'hpToast'; document.body.appendChild(el); }
+  el.innerHTML = html; el.classList.add('on');
+  clearTimeout(hpToast.t); hpToast.t = setTimeout(() => el.classList.remove('on'), 6000);
 }
 function hpSoloReset() {
   if (!confirm('이 화면에서 찍은 것을 모두 지울까요?')) return;
@@ -658,6 +694,12 @@ function hpBpPlace() { // 단추 바로 아래 — 스크롤·창 크기가 바�
 }
 function hpBpRows() {
   const q = hpBpQ.trim().toLowerCase(), cur = typeof wbSeason === 'function' ? wbSeason() : '';
+  if (PAGE_SOLO) { // 덮어쓸 내 빌드 고르기 (공유 글 수정 중인 사본은 뺀다)
+    const rows = hpBuilds().list.filter(p => !p.shareEdit).sort((a, b) => b.id - a.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
+      `<button type="button" class="hp-bpr" onclick="hpSoloOver(${p.id})"><span class="hp-bp-face">${hpBpFace(p)}</span>` +
+      `<span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span></button>`).join('');
+    return `<div class="hp-bp-list">${rows || (q ? '<div class="hp-bp-none">맞는 빌드가 없습니다</div>' : '')}</div>`;
+  }
   const rows = presets.list.slice().sort((a, b) => b.id - a.id).filter(p => !p.shareEdit || p.id === preset.id).filter(p => !q || (hpBpName(p) + ' ' + hpBpSub(p)).toLowerCase().includes(q)).map(p =>
     `<button type="button" class="hp-bpr${p.id === preset.id ? ' on' : ''}" onclick="hpBpPick(${p.id})">` +
     `<span class="hp-bp-face">${hpBpFace(p)}</span><span class="hp-bpr-t"><b>${escapeHtml(hpBpName(p))}</b><small>${escapeHtml(hpBpSub(p))}</small></span>` +
@@ -669,9 +711,10 @@ function hpBpDraw() {
   const m = document.getElementById('hpBp'); if (!m) return;
   if (m.dataset.init) { m.querySelector('.hp-bp-list').outerHTML = hpBpRows(); return; }
   m.dataset.init = '1';
-  m.innerHTML = (presets.list.length > 6 ? '<input class="hp-bp-q" type="search" placeholder="빌드 이름·히어로·스킬 검색" oninput="hpBpQ=this.value;hpBpDraw()"' +
+  const n = PAGE_SOLO ? hpBuilds().list.filter(p => !p.shareEdit).length : presets.list.length;
+  m.innerHTML = (PAGE_SOLO ? `<div class="hp-bp-cap">${HP_SOLO_WHAT[PAGE_SOLO]}만 바뀝니다 — 덮어쓸 빌드 고르기</div>` : '') + (n > 6 ? '<input class="hp-bp-q" type="search" placeholder="빌드 이름·히어로·스킬 검색" oninput="hpBpQ=this.value;hpBpDraw()"' +
     ' onkeydown="if(event.key===\'Enter\'){const b=document.querySelector(\'#hpBp .hp-bpr\');if(b)b.click();}">' : '') +
-    hpBpRows() + (typeof hpBuildActs === 'function' ? '<div class="hp-bp-acts">' + hpBuildActs() + '</div>' : '');
+    hpBpRows() + (PAGE_SOLO ? '<div class="hp-bp-acts"><button type="button" class="hp-bp-new" onclick="hpSoloOver(0)">＋ 새 빌드로 저장</button></div>' : '') + (typeof hpBuildActs === 'function' ? '<div class="hp-bp-acts">' + hpBuildActs() + '</div>' : '');
 }
 function hpBpPick(id) { hpBpClose(); if (id !== preset.id) hpSwitch(id); }
 document.addEventListener('mousedown', e => {

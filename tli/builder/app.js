@@ -924,7 +924,7 @@ function hrRenderModal() {
   el.innerHTML = '<div class="gbm hrm"><div class="gbm-top"><b class="gbm-title">히어로 · 특성</b>' + (typeof gbmHelp === 'function' ? gbmHelp('hero') : '') + (page && typeof hpBuildPicker === 'function' ? hpBuildPicker() : '') +
     '<span class="gbm-keys"><kbd>클릭</kbd> 찍기 / 빼기 <span class="gbm-sep">·</span> 특성 레벨은 장착한 추억(근원·자기 수호·진격)을 따릅니다</span>' +
     (heroMsg ? '<span class="gbm-msg">' + escapeHtml(heroMsg.replace(/^⚠\s*/, '')) + '</span>' : '') +
-    '<button class="gbm-x" onclick="hrCloseModal()">' + (page ? '빌더에서 이어서 짜기 →' : '닫기 ✕') + '</button></div>' +
+    (typeof PAGE_SOLO !== 'undefined' && PAGE_SOLO ? '' : '<button class="gbm-x" onclick="hrCloseModal()">' + (page ? '빌더에서 이어서 짜기 →' : '닫기 ✕') + '</button>') + '</div>' +
     `<div class="gbm-body"><div class="gbm-side">${side}</div><div class="gbm-main">${main}</div></div></div>`;
   if (!page) el.style.display = 'flex';
   heroClampMark(el);
@@ -1991,7 +1991,7 @@ function gbCorePopup() {
     '<div class="gbz-list">' + tids.map(tid => {
       const r = gbCoreRow(tid); if (!r) return '';
       const ic = gbCoreIcon(pre, tid);
-      return `<div class="gbz-row gbz-core${cur === tid ? ' on' : ''}${lock ? ' lock' : ''}" onclick="gbCorePick('${tid}')">${ic ? `<img src="${ic}" alt="" loading="lazy">` : ''}<div><b>${escapeHtml(gbCoreName(r))}</b><small>${r.tips && Array.isArray(r.tips[0]) && typeof r.tips[0][1] === 'string' ? tipWrapEffect(gbCoreBody(r), r.tips) : escapeHtml(gbCoreBody(r))}</small></div></div>`;
+      return `<div class="gbz-row gbz-core${cur === tid ? ' on' : ''}${lock ? ' lock' : ''}" onclick="gbCorePick('${tid}')">${ic ? `<img src="${ic}" alt="" loading="lazy">` : ''}<div><b>${escapeHtml(gbCoreName(r))}</b><small>${typeof tipWrapEffect === 'function' && r.tips && Array.isArray(r.tips[0]) && typeof r.tips[0][1] === 'string' ? tipWrapEffect(gbCoreBody(r), r.tips) : escapeHtml(gbCoreBody(r))}</small></div></div>`;
     }).join('') + '</div>';
 }
 // ── 프리즘·역상 배치 (빌더 2 재능 단계 · /tli/talent — 2026-10-08) ──
@@ -2411,7 +2411,7 @@ function gbRenderModal() {
   el.innerHTML = '<div class="gbm"><div class="gbm-top"><b class="gbm-title">재능 보드</b>' + (typeof gbmHelp === 'function' ? gbmHelp('talent') : '') + (page && typeof hpBuildPicker === 'function' ? hpBuildPicker() : '') +
     '<span class="gbm-keys"><kbd>클릭</kbd> +1 <kbd>우클릭</kbd> −1 <span class="gbm-sep">·</span> 열 위 숫자 = 그 열을 여는 데 필요한 왼쪽 포인트</span>' +
     (gbMsg ? '<span class="gbm-msg">' + escapeHtml(gbMsg.replace(/^⚠\s*/, '')) + '</span>' : '') +
-    '<button class="gbm-x" onclick="gbCloseModal()">' + (gbTalentPage() ? '빌더에서 이어서 짜기 →' : '닫기 ✕') + '</button></div>' +
+    (gbTalentPage() ? '' : '<button class="gbm-x" onclick="gbCloseModal()">닫기 ✕</button>') + '</div>' + // 단독 화면은 프리셋과 별개라 빌더로 잇지 않는다
     `<div class="gbm-body"><div class="gbm-side">${side}</div><div class="gbm-main">${main}</div></div>` +
     (gbPzEd ? `<div class="gbz-dim" onclick="if (event.target === this) gbPzClose()"><div class="gbz">${gbPzPopup()}</div></div>` : '') +
     (gbCorePop ? `<div class="gbz-dim" onclick="if (event.target === this) { gbCorePop = null; gbRenderModal(); }"><div class="gbz gbz-narrow">${gbCorePopup()}</div></div>` : '') + '</div>';

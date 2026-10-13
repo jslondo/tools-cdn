@@ -556,9 +556,12 @@ function slateSockOk(info, r, ranks) { // 이 소켓에 이 옵션 행이 들어
 
 // ── 단독 화면(/tli/hero · /tli/talent) 공용 연결부 (2026-10-08) ──
 // 빌더를 통째로 띄우지 않고 기능 조각(00_*.js)과 그 데이터만 싣는다.
-// 빌드는 빌더와 같은 브라우저 저장소(tlidb_presets_v1)의 활성 빌드 — 여기서 바꾼 것이 빌더에 그대로 보인다.
+// 빌더2·보기 화면은 빌더와 같은 브라우저 저장소(tlidb_presets_v1)의 활성 빌드를 쓴다.
+// 메뉴로 들어가는 단독 화면(히어로·재능·석판)은 내 빌드와 완전 별개 연습판 — 화면마다 따로 저장(tli_solo_*), 빌드 목록·빌더와 오가지 않는다 (2026-10-13 사용자 요청)
 // 각 화면은 pageRender(다시 그리기)·pageOnSwitch(빌드 바꿀 때 정리, 선택)를 정의한다.
 const PRESETS_KEY = 'tlidb_presets_v1';
+const PAGE_SOLO = (['heroApp', 'talentApp', 'slateApp'].find(id => document.getElementById(id)) || '').replace('App', '');
+const HP_KEY = PAGE_SOLO ? 'tli_solo_' + PAGE_SOLO + '_v1' : PRESETS_KEY;
 const KEY_MAP = new Map(); // 옵션 문구는 저장된 effect 로 읽는다 ((KEY_MAP.get(k) || o).effect 폴백)
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -566,8 +569,8 @@ function escapeHtml(s) {
 const _stripDiv = document.createElement('div');
 function stripHtml(s) { _stripDiv.innerHTML = String(s).replace(/<br\s*\/?>/gi, ' '); return _stripDiv.textContent.replace(/\s+/g, ' ').trim(); } // 빌더 05_ui 와 같음
 function hpLoad() {
-  try { const p = JSON.parse(localStorage.getItem(PRESETS_KEY)); if (p && Array.isArray(p.list) && p.list.length) return p; } catch (e) {}
-  return {list: [{id: 1, name: '빌드 1', slots: {}, talents: [], skills: {}}], activeId: 1};
+  try { const p = JSON.parse(localStorage.getItem(HP_KEY)); if (p && Array.isArray(p.list) && p.list.length) return p; } catch (e) {}
+  return {list: [{id: 1, name: PAGE_SOLO ? '연습판' : '빌드 1', slots: {}, talents: [], skills: {}}], activeId: 1};
 }
 let presets = hpLoad();
 let preset = presets.list.find(p => p.id === presets.activeId) || presets.list[0];
@@ -585,7 +588,7 @@ function persistPreset() {
     }
     undoLast = cur;
   }
-  try { localStorage.setItem(PRESETS_KEY, cur); } catch (e) {}
+  try { localStorage.setItem(HP_KEY, cur); } catch (e) {}
 }
 function undoPreset(redo) {
   const from = redo ? redoStack : undoStack, to = redo ? undoStack : redoStack;
@@ -593,7 +596,7 @@ function undoPreset(redo) {
   to.push(undoLast);
   presets = JSON.parse(from.pop());
   undoLast = JSON.stringify(presets);
-  try { localStorage.setItem(PRESETS_KEY, undoLast); } catch (e) {}
+  try { localStorage.setItem(HP_KEY, undoLast); } catch (e) {}
   undoQuiet = true;
   try { hpUse(presets.list.find(p => p.id === presets.activeId) || presets.list[0]); pageRender(); } finally { undoQuiet = false; }
   return true;
@@ -622,8 +625,16 @@ function hpBpSub(p) {
   return (p.shareEdit ? '✏ 공유 글 수정 중 · ' : '') + ([p.hero && p.hero.trait, main && main.name].filter(Boolean).join(' · ') || '비어 있음');
 }
 function hpBuildPicker() {
+  if (PAGE_SOLO) return '<button type="button" class="hp-solo-reset" onclick="hpSoloReset()" title="이 화면에서 찍은 것을 모두 지웁니다 (Ctrl+Z 로 되돌리기)">↺ 처음부터</button>'; // 단독 화면 = 빌드 고르기 없음
   return `<button type="button" class="hp-build hp-bp" onclick="hpBpToggle(this)" title="빌드 바꾸기">` +
     `<span class="hp-bp-face">${hpBpFace(preset)}</span><span class="hp-bp-nm">${escapeHtml(hpBpName(preset))}</span><svg class="hp-bp-car" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+}
+function hpSoloReset() {
+  if (!confirm('이 화면에서 찍은 것을 모두 지울까요?')) return;
+  presets = {list: [{id: 1, name: '연습판', slots: {}, talents: [], skills: {}}], activeId: 1};
+  hpUse(presets.list[0]);
+  persistPreset();
+  pageRender();
 }
 function hpBpClose() { const m = document.getElementById('hpBp'); if (m) m.remove(); document.querySelectorAll('.hp-bp.open').forEach(b => b.classList.remove('open')); }
 function hpBpToggle(btn) {
@@ -685,7 +696,7 @@ function hpSwitch(id) {
 }
 // 다른 탭(빌더)에서 바꾸면 따라간다
 window.addEventListener('storage', e => {
-  if (e.key !== PRESETS_KEY) return;
+  if (e.key !== HP_KEY) return;
   presets = hpLoad(); undoLast = JSON.stringify(presets);
   hpUse(presets.list.find(p => p.id === presets.activeId) || presets.list[0]);
   pageRender();
@@ -743,7 +754,7 @@ const GBM_HELP = {
     '놓인 석판을 누르면 회전 · 신격 모양 · 삭제 · 옵션 소켓 — 끌어서 옮기기도 됩니다',
     '레전드 석판은 종류마다 1개, 명왕 석판은 하나만 — 겹치거나 판 밖이면 ⚠',
     '칸에 마우스를 올리면 그 칸의 옵션·복제·전염 같은 파생 효과, 이어진 석판이 함께 강조됩니다',
-    '아래 \'적용되는 효과\' = 지금 배치에서 실제로 걸리는 재능 옵션 합계 · 빌더의 같은 빌드에 저장']],
+    '아래 \'적용되는 효과\' = 지금 배치에서 실제로 걸리는 재능 옵션 합계 · 내 빌드와 별개로 이 화면에만 저장']],
   mem: ['추억 · 석판 · 정령', ['추억: 기본 속성 1 · 고유 옵션 2 · 랜덤 옵션 2 — 추억 등급이 히어로 특성 레벨의 기준',
     '부활 옵션: 추억 하나에만 — \'추가 슬롯\' 옵션이면 추가 추억을 하나 더 만듭니다',
     '신격 석판: 판에 놓고 소켓마다 옵션을 고릅니다 (석판 종류별 개수 제한)',
@@ -985,7 +996,7 @@ function wsbRender() {
 
 // ── /tli/slate 단독 화면 — 석판 시뮬레이터 (2026-10-10, 사용자 요청: 빌더에서 석판 기능만) ──
 // 화면은 빌더 2 의 석판 칸(wz_slate.js wsbRender)을 그대로 쓰고, 오른쪽 아래에 '적용되는 효과'(보드 파생 재능 행 합계)를 붙인다.
-// 저장은 빌더와 같은 빌드(preset.slateBd) — 여기서 놓은 석판이 빌더 「추억·석판·정령」에 그대로 보인다.
+// 저장은 이 화면 전용 연습판(page_common.js PAGE_SOLO) — 내 빌드와 별개 (2026-10-13)
 const wgOptHtml = (text, tips) => hlNums(tipWrapEffect(text, tips)); // wz_gear.js 와 같음 (장비 화면 전체는 안 싣는다)
 function spEffects() { // rebuildSlateTalents 가 만든 석판 파생 행 (t.src 있는 것) — 같은 옵션은 ×개수, 배율은 ×배율
   const rows = (preset.talents || []).filter(t => t.src);
@@ -1000,7 +1011,7 @@ function pageRender() {
   const nfx = (preset.talents || []).filter(t => t.src).length;
   document.getElementById('slateApp').innerHTML = '<div class="gbm wsp"><div class="gbm-top"><b class="gbm-title">석판 시뮬레이터</b>' + gbmHelp('slate') + hpBuildPicker() +
     '<span class="gbm-keys"><kbd>클릭</kbd> 놓기 · 고르기 <span class="gbm-sep">·</span> <kbd>끌기</kbd> 옮기기 <span class="gbm-sep">·</span> 칸에 마우스를 올리면 옵션</span>' +
-    '<a class="gbm-x" href="/tli/builder/#mem-slate">빌더에서 이어서 짜기 →</a></div>' +
+    '</div>' +
     `<div class="sp-main">${wsbRender()}<div class="wg-addbox sp-fxbox"><div class="wg-addh"><b>적용되는 효과</b><span>${nfx}줄</span></div>${spEffects()}</div></div></div>`;
 }
 function pageOnSwitch() { wsbSel = null; wsbPal = null; wsbSock = null; wsbMsg = ''; }

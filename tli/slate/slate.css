@@ -24,6 +24,8 @@
     .hp-build b { color: #c9d1d9; }
     .hp-bp { display: inline-flex; align-items: center; gap: 8px; max-width: 300px; padding: 4px 10px 4px 4px; border-radius: 10px; cursor: pointer;
       background: #0f141f; border: 1px solid #2f3a4d; color: #e6edf3; font: inherit; font-size: 13px; transition: .15s; }
+    .hp-solo-reset { order: 9; margin-left: auto; background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; transition: .15s; } /* 단독 화면(연습판) 처음부터 */
+    .hp-solo-reset:hover { border-color: #e8c860; color: #fff; }
     .hp-bp:hover, .hp-bp.open { border-color: #e8c860; background: #151b28; }
     .hp-bp-face { flex: none; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: #1b2230; display: grid; place-items: center; }
     .hp-bp-face img { width: 100%; height: 100%; object-fit: cover; } .hp-bp-face i { font-style: normal; color: #59636e; font-size: 12px; }

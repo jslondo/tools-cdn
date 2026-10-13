@@ -11920,10 +11920,15 @@ function totalMatch(tokens, fields) {
   });
 }
 // 용어 툴팁 설명 텍스트도 검색 대상에 포함 — 행별 1회만 계산해 캐시(참조 배열이라 메모리 부담 없음)
+// '툴팁 제외'(통합 검색줄, 2026-10-13 제보 — 콤보 검색에 툴팁에 콤보가 든 매직 버스트 옵션이 섞임) 체크 시 빈 배열
+function tipOffOn() { const el = document.getElementById('tipOff'); return !!(el && el.checked); }
+function tipOffChanged() { saveUiState(); renderTotal(); }
 function rowTipTexts(r) { // craft_data 계열: tips = [용어, 전역 인덱스]
+  if (tipOffOn()) return [];
   return r._tt || (r._tt = (r.tips || []).map(t => TIPS[t[1]] || ''));
 }
 function selfTipTexts(o) { // 조향·타워·프리즘·부활: tips = [용어, 설명] 자체 완결형
+  if (tipOffOn()) return [];
   return o._tt || (o._tt = (o.tips || []).map(t => t[1]));
 }
 function syncFromTotal() {
@@ -11938,6 +11943,7 @@ function resetSearch() {
   document.getElementById('effOnly').checked = false;
   document.getElementById('effOnly2').checked = false;
   document.getElementById('coreOnly').checked = false;
+  if (document.getElementById('tipOff')) document.getElementById('tipOff').checked = false;
   // 카테고리·상세 검색 체크박스도 전부 선택 상태로 복원
   document.getElementById('cb-grade-기본').checked = true;
   document.getElementById('cb-grade-레전드').checked = true;
@@ -12657,6 +12663,7 @@ function saveUiState() {
       sortKey, sortDir, skillSortKey, skillSortDir,
       effOnly: effOnlyOn(),
       coreOnly: coreOnlyOn(),
+      tipOff: tipOffOn(),
       pageSize: document.getElementById('pageSize').value,
       ppanels: presetPanelOpen,
     }));
@@ -12689,6 +12696,7 @@ function restoreUiState() {
   ['name', 'tags', 'kind'].forEach(k => { const el = document.getElementById('sort-sk-' + k); if (el) el.textContent = skillSortKey === k ? (skillSortDir === 1 ? '▲' : '▼') : ''; });
   if (typeof s.effOnly === 'boolean') { document.getElementById('effOnly').checked = s.effOnly; document.getElementById('effOnly2').checked = s.effOnly; }
   if (typeof s.coreOnly === 'boolean') document.getElementById('coreOnly').checked = s.coreOnly;
+  if (typeof s.tipOff === 'boolean' && document.getElementById('tipOff')) document.getElementById('tipOff').checked = s.tipOff;
   if (['50', '100', '200', '500'].includes(String(s.pageSize))) document.getElementById('pageSize').value = String(s.pageSize);
   if (s.ppanels && typeof s.ppanels === 'object') presetPanelOpen = s.ppanels;
   applyPresetPanels();

@@ -1569,7 +1569,8 @@ function supFits(sup, main) {
   if (!mi || !(mi.tags || []).length) return true;
   // 마령·주입 패시브는 패시브 칸에 있어도 '액티브 스킬을 보조한다' 보조(MP 소모 전환·스탠바이·주술 부착…)를 받는다 (사용자 2026-10-14)
   const actLike = mi.kind === '액티브' || mi.kind === '모듈화' || isSpiritPassive(mi) || isInjectPassive(mi);
-  const has = t => t === '#액티브' ? actLike : t === '#패시브' ? mi.kind === '패시브' : mi.tags.includes(t);
+  // 마령은 주술로 분류돼도 마령이 쓰는 스킬이 공격일 수 있어 '공격' 보조도 받는다 (사용자 2026-10-14)
+  const has = t => t === '#액티브' ? actLike : t === '#패시브' ? mi.kind === '패시브' : mi.tags.includes(t) || (t === '공격' && isSpiritPassive(mi));
   if (r.not.some(has)) return false;
   return r.alts.some(a => a.every(has));
 }

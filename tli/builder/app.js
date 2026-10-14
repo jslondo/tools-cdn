@@ -1197,6 +1197,248 @@ function rolledItem(v, base) {
   if (it.corr) out.corr = it.corr.map((c, i) => [c[0], rd[i] != null ? rdHtml(i) : applyRollHtml(c[1], rolled[i])]); // 랜덤 자리는 고른(복원한) 문구가 곧 침식 반영본
   return out;
 }
+// ── 프리셋 옵션 줄 모으기 (공용, 2026-10-14) ──
+// 프리셋에 실제로 붙은 옵션 문구를 [출처, 문구] 줄로 모은다 — 장비·제작·조향·시퀀스·베이스·정령·히어로·프로토콜·재능/석판/운명·추억·프리즘·부활·재능 보드.
+// 빌더 1(04_calc·05_ui)에 있던 것을 그대로 옮겼다: 빌더 2·보기 화면의 MP 봉인 계산(00_seal.js)도 같은 줄을 쓰려고.
+// 기대하는 바깥 것: preset · KEY_MAP · applyRollText · rolledItem · plainText · tierEffect · eroEffect · BASEIDX · PRESET_SLOTS · ITEMS · BLENDS ·
+//   pactList/pactByName/pactAdvEffects · heroNodesOn/heroNodeLines/heroNodeHerbs · talGroup · scaleEffect · boardTier · SKILL_LV · findSkill · SKILLS
+//   재능 보드 노드 효과는 빌더 1 = ALL_DATA[SLATEIDX.idx[노드]] · 빌더 2 = NODE_FX[노드] (talent_glue)
+//   영약 배율(potionAmpPct)·켜고 끈 줄(liveOptionLines)은 빌더 1 에만 있다 — 없으면 건너뛴다
+let heroAmpBusy = false; // potionAmpPct → optSummary → heroOptionLines 순환 방지
+function heroOptionLines() {
+  const herbs = preset.heroHerbs || {};
+  // 약병(영약 스킬) 계열 특성의 약재는 총 영약 효과 배율을 적용한 수치로 합류 (화면 툴팁과 동일 규칙)
+  let amp = null;
+  if (!heroAmpBusy && typeof potionAmpPct === 'function') { // 빌더 2 엔 영약 배율 계산이 없다
+    heroAmpBusy = true;
+    try {
+      const t = heroTraitData();
+      if (t && (t.nodes || []).some(n => (n.lines || []).join('').indexOf('약병') >= 0)) {
+        const a = potionAmpPct();
+        if (a.any) amp = a.lo;
+      }
+    } catch (e) {} finally { heroAmpBusy = false; }
+  }
+  return heroNodesOn().flatMap(({n, lv}) => {
+    const src = '히어로 · ' + n.name + ' Lv' + lv;
+    const out = heroNodeLines(n, lv).map(l => [src, l]);
+    heroNodeHerbs(n, lv).forEach(h => { // 고른 약재의 효과도 합류
+      const it = h.items.find(x => x.name === herbs[heroHerbKey(n, h.cat)]);
+      if (it) out.push([src + ' · ' + it.name + (amp != null ? ' (영약 효과 적용)' : ''),
+                        amp != null ? ampPotionText(it.text, amp) : it.text]);
+    });
+    return out;
+  });
+}
+// 이 프리셋의 정령이 실제로 주는 효과 줄 (승급 보상 + 활성 노드)
+function pactOptionLines() {
+  const out = [];
+  pactList().forEach(pc => {
+    if (!pc || !pc.name) return;
+    const sp = pactByName(pc.name);
+    if (!sp) return;
+    const advEff = pactAdvEffects(sp, pc.adv);
+    advEff.forEach(e => out.push(['정령 · ' + sp.name + ' 승급' + (pc.adv || 1), e]));
+    const on = pc.nodes || {}; // {노드자리: 1} — 로그에서 채워지거나 직접 고른다
+    (sp.nodes || []).forEach(n => {
+      if (n.ring === '미정' || n.ring === '운명') return; // 운명 슬롯은 숙명이 채운다
+      // 외환(고리 없음) 노드는 그 정령의 고유 효과이고, 승급 보상 표가 같은 효과의 현재 수치를 담는다
+      // (이터널: 노드 이동 속도 +30%/+6% ↔ 승급6 +40%/+8%). 둘 다 세면 이중 계산이다
+      if (!n.ring && advEff.length) return;
+      if (!on[n.pos]) return;
+      out.push(['정령 · ' + sp.name, n.effect]);
+    });
+  });
+  return out;
+}
+// 레벨별 표에서 특정 레벨의 수치를 계산 (표에 없는 레벨은 앞뒤 값으로 선형 보간, 표 범위 밖은 끝값)
+function skillLvValues(name, level) {
+  const d = SKILL_LV[name];
+  if (!d || !d.rows || !d.cols || !d.rows.length) return null;
+  const rows = d.rows.map(r => [parseFloat(r[0]), r.slice(1)]).filter(r => isFinite(r[0])).sort((a, b) => a[0] - b[0]);
+  if (!rows.length) return null;
+  const pick = ci => {
+    if (level <= rows[0][0]) return rows[0][1][ci];
+    if (level >= rows[rows.length - 1][0]) return rows[rows.length - 1][1][ci];
+    let i = 0;
+    while (i < rows.length - 1 && rows[i + 1][0] < level) i++;
+    const [l0, v0] = rows[i], [l1, v1] = rows[i + 1];
+    const n0 = parseFloat(String(v0[ci])), n1 = parseFloat(String(v1[ci]));
+    if (!isFinite(n0) || !isFinite(n1) || l1 === l0) return v0[ci];
+    const v = n0 + (n1 - n0) * (level - l0) / (l1 - l0);
+    const suffix = String(v0[ci]).replace(/^[-\d.]+/, ''); // % 같은 꼬리표 유지
+    return (Math.round(v * 10) / 10) + suffix;
+  };
+  return d.cols.map((c, ci) => [c, pick(ci)]);
+}
+// 조향(벨트) 효과 문구 — 데이터가 두 형태로 섞여 있다.
+// "[동상] 냉기 적중 대미지를 입힐 시 …"처럼 효과가 직접 든 것과 "부패의 과실"처럼 이름만 든 것.
+// 이름만이면 용어 툴팁의 본문을 쓴다 (부패의 과실 = "… 모든 스킬 레벨 +3")
+function blendEffectText(blend) {
+  const e = blend && blend.effect ? String(blend.effect).trim() : '';
+  if (!e) return e;
+  try {
+    // 프리셋에 저장된 조향은 {effect, req}뿐이라 목록에서 원본을 찾는다
+    const src = (typeof BLENDS !== 'undefined' ? BLENDS : []).find(x => String(x.effect).trim() === e);
+    const tip = src && src.tips && src.tips[0];
+    // effect가 툴팁 제목과 똑같을 때만 = 이름만 적힌 경우다. 효과 문장이 들어 있는 조향
+    // ("주술 대미지를 입힐 시, 연약을 부여한다")은 툴팁이 그 안에 나온 용어의 설명이라 덮어쓰면 안 된다
+    if (!tip || String(tip[0]).trim() !== e) return e;
+    // 툴팁 첫 줄은 이름이 한 번 더 반복된다 — 떼고 본문만.
+    // 줄바꿈은 마침표로 바꿔 이어 붙인다 (공백으로 붙이면 앞 줄 끝말이 다음 줄 앞머리로
+    // 읽혀 범위 판정이 깨진다 — "간격 0.1초 모든 스킬 레벨 +3" → 범위가 "초 모든")
+    const body = String(tip[1]).split(/\r?\n/).map(t => t.trim()).filter(t => t && t !== e)
+      .map(t => /[.。]$/.test(t) ? t : t + '.').join(' ').trim();
+    return body || e;
+  } catch (x) { return e; }
+}
+// 슬롯 하나의 옵션 줄 — presetOptionLines가 슬롯마다 부르고, 무기 대미지 조립도 이걸 쓴다
+// (무기 한 자리만 따로 봐야 해서 뺐다)
+function slotOptionLines(sid, v) {
+  const out = [];
+  if (!v) return out;
+  const optEff = o => { if (!o) return null; const e = (o.rolled && o.effect) || o.effect || (KEY_MAP.get(o.k) || {}).effect; return o.v ? applyRollText(e, o.v) : e; };
+  const add = (src, e) => { if (e) out.push([src, plainText(e).replace(/[–—−~]/g, '-')]); };
+  {
+    const part = v.part || (PRESET_SLOTS.find(x => x.id === sid) || {}).part || sid; // 어느 부위에서 온 옵션인지
+    if (v.kind === 'item') { // 스냅이 없거나 비어 있는 옛 프리셋은 현재 데이터의 같은 이름 아이템으로 폴백
+      const base = (v.snap && v.snap.opts && v.snap.opts.length) ? v.snap : (ITEMS.find(x => x.name === v.name) || {});
+      const ro = rolledItem(v, base) || {};
+      // 침식 강화된 옵션은 침식 문구로 계산한다 (corr는 opts와 1:1 — 저항 합산과 같은 규칙).
+      // 로그가 복원해 준 실제 문구(rand)가 있으면 그게 이미 침식을 반영하므로 건드리지 않는다
+      const ero = v.ero || [], rd = v.rand || {}, corr = ro.corr || base.corr;
+      const opts = (ro.opts || []).map((o, i) =>
+        (ero.includes(i) && rd[i] == null && corr && corr[i]) ? corr[i][1] : o);
+      opts.forEach(o => String(typeof o === 'string' ? o : optEff(o)).split(/<br\s*\/?>|\n/).forEach(x => add('레전드 ' + part, x))); // 한 자리에 두 줄(랜덤 옵션 침식화)
+    }
+    // 제작 옵션은 화면과 같은 티어(T0/T1/T2) 기준 수치로, 침식된 옵션은 침식(T0+) 수치로
+    if (v.opts) {
+      let ci = 0;
+      const ero = v.ero || [];
+      ['basic', 'main', 'sub'].forEach(k => (v.opts[k] || []).forEach(o => add('제작 ' + part, ero.includes(ci++) ? eroEffect(o) : tierEffect(o))));
+      ['chip', 'ench', 'blood', 'base', 'extra'].forEach(k => (v.opts[k] || []).forEach(o => add('제작 ' + part, k === 'extra' ? tierEffect(o) : optEff(o))));
+    }
+    if (v.blend) add('조향 ' + part, blendEffectText(v.blend));
+    if (v.tower) add('시퀀스 ' + part, v.tower.effect);
+    // 베이스(기본) 아이템의 수치·고정 옵션 — 아머·회피·보호막은 여기서만 나온다 (로그 BaseId로 확정)
+    const bi = v.base && BASEIDX[v.base];
+    if (bi) [...(bi.stats || []), ...(bi.imps || [])].forEach(e => add('베이스 ' + part, e));
+  }
+  return out;
+}
+function presetOptionLines() {
+  const out = [];
+  const optEff = o => { if (!o) return null; const e = (o.rolled && o.effect) || o.effect || (KEY_MAP.get(o.k) || {}).effect; return o.v ? applyRollText(e, o.v) : e; };
+  const add = (src, e) => { if (e) out.push([src, plainText(e).replace(/[–—−~]/g, '-')]); };
+  Object.entries(preset.slots || {}).forEach(([sid, v]) => { if (v) slotOptionLines(sid, v).forEach(x => out.push(x)); });
+  pactOptionLines().forEach(([src, e]) => add(src, e)); // 정령 노드 (활성인 것만)
+  heroOptionLines().forEach(([src, e]) => add(src, e)); // 히어로 특성 (고른 노드만, 레벨 반영)
+  Object.values(preset.skills || {}).forEach(v => { // 모듈 프로토콜 — "자신과 아군" 부여분이 내 옵션이다
+    if (!v) return;
+    [v.main, ...(v.sup || [])].forEach(ref => {
+      if (ref && ref.proto) ref.proto.forEach(pr => add('프로토콜 · ' + ref.name, pr.effect));
+    });
+  });
+  (preset.talents || []).forEach(t => { // 같은 옵션을 여러 장 보유하면(×N) 그 수만큼 적용된다
+    const src = talGroup(t.type) === 1 ? '석판' : talGroup(t.type) === 2 ? '운명' : '재능';
+    const n = Math.max(1, Math.min(99, t.cnt || 1));
+    const eff = t.mul ? scaleEffect(t.effect, t.mul) : t.effect; // 전염 옵션은 줄어든 수치로
+    for (let i = 0; i < n; i++) add(src + (t.mul ? ' 전염' : ''), eff);
+  });
+  Object.values(preset.mems || {}).forEach(m => ['basic', 'unique', 'random'].forEach(k => (m[k] || []).forEach(o => add('추억', optEff(o)))));
+  if (preset.prism) {
+    // 제노 프리즘: 환영 — 고유 옵션이 "해당 프리즘의 랜덤 옵션의 효과 +75%" (사용자 확인).
+    // 효과 수치형 옵션에만 ×1.75 — 범위 확장(3×4 직사각형)·횟수(2회 포인트) 문구는 곱하면 안 된다
+    const amp = preset.prism.name === '제노 프리즘: 환영' ? 1.75 : 1;
+    const ampable = e => !/직사각형|포인트 추가 가능|영향 범위/.test(e || '');
+    // "범위 내의 모든 X 재능 추가 획득: …"은 범위 안에서 실제로 찍은 그 등급 포인트만큼 곱한다
+    const gain = prismGainOn();
+    (preset.prism.opts || []).forEach(o => {
+      if (!o) return;
+      let e = amp !== 1 && ampable(o.effect) ? scaleEffect(o.effect, amp) : o.effect;
+      const mm = /범위 내의 모든 (레전드 중위|중위|하위) 재능 추가 획득:\s*(.+)$/.exec(e || '');
+      if (mm && gain) {
+        const t = mm[1] === '하위' ? 1 : mm[1] === '중위' ? 3 : 4;
+        const pts = (gain[t] || {p: 0}).p;
+        if (!pts) return; // 범위 안에 찍은 노드가 없으면 효과도 없다
+        // 스탯 집계 파서는 부호 있는 수치만 읽는다 — 환산 결과의 첫 수치에 부호를 붙인다 ("힘 918.9" → "힘 +918.9")
+        e = scaleEffect(mm[2].trim(), pts).replace(/(^|\s)(\d)/, '$1+$2');
+      }
+      add('프리즘', e);
+    });
+  }
+  if (preset.revival) add('부활', preset.revival.effect);
+  const invIv = [preset.gbPrism, preset.gbPrism2].filter(Boolean).find(g => g.k === 'i' && g.iv);
+  (preset.gboard || []).forEach(x => { // 재능 보드는 찍은 포인트만큼 곱해서
+    // 노드 효과 — 빌더 2·보기 화면은 재능 보드 데이터(NODE_FX), 빌더 1 은 전체 행(ALL_DATA)
+    const fx = typeof NODE_FX !== 'undefined' ? NODE_FX[x[0]] : (ALL_DATA[SLATEIDX.idx[x[0]]] || {}).effect;
+    if (!fx || !(x[1] > 0)) return;
+    let mul2 = x[1];
+    if ((x[4] || 0) & 1) { // 역상으로 반사돼 온 노드 — "반사 후 재능 효과 %"를 곱한다 (수치는 로그 실측)
+      const t = boardTier(String(x[0]));
+      const pct = invIv ? ({1: invIv.iv.low, 3: invIv.iv.mid, 4: invIv.iv.leg})[t] : undefined;
+      if (pct !== undefined) {
+        const eff = 1 + pct / 100;
+        if (eff <= 0) return; // -100% = 반사 효과 없음
+        mul2 = x[1] * eff;
+      }
+    }
+    add('보드', scaleEffect(fx, mul2));
+  });
+  return out;
+}
+// 프리즘(역상 아닌 쪽) 범위 안에서 실제로 찍은 등급별 노드·포인트 — 부여 옵션 환산용.
+// gbPrism.c와 gboard의 r·c는 둘 다 로그 좌표(행·열)라 그대로 비교한다
+function prismGainOn() {
+  const g = [preset.gbPrism, preset.gbPrism2].filter(Boolean).find(x => x.k !== 'i');
+  if (!g || !(preset.gboard || []).length) return null;
+  const cells = new Set(g.c.map(([r, c]) => r + ',' + c));
+  const out = {1: {n: 0, p: 0}, 3: {n: 0, p: 0}, 4: {n: 0, p: 0}};
+  preset.gboard.forEach(x => {
+    if (String(x[0]).slice(0, 2) !== String(g.b) || !(x[1] > 0)) return;
+    if (!cells.has((x[2] || 0) + ',' + (x[3] || 0))) return;
+    const t = boardTier(String(x[0]));
+    if (out[t]) { out[t].n++; out[t].p += x[1]; }
+  });
+  return out;
+}
+// ── 스킬 레벨 계산: 모든 스킬 기본 20레벨 + 프리셋 옵션의 레벨 보너스 ──
+// (촉발체·부귀 보조·숭고 보조는 레벨 개념이 없어 제외 — 사용자 확인)
+const SKLV_NOBASE = ['촉발체', '부귀 보조', '숭고 보조'];
+const SKLV_TAG = { // 옵션 문구의 범위 → 스킬 태그
+  '공격': '공격', '주술': '주술', '화염': '화염', '냉기': '냉기', '번개': '번개', '부식': '부식',
+  '물리': '물리', '투사체': '투사체', '근접': '근접전', '지속': '지속', '소환체 소환': '소환',
+  '실드': '실드', '자극': '자극', '주입': '주입', '마령': '마령', '영약': '영약', '오라': '오라',
+  '수평 투사체': '수평 사격', '공격 투사체': '투사체', '채널링': '채널링', '저주': '저주', '함성': '함성',
+};
+const SKLV_KIND = {'액티브': '액티브', '패시브': '패시브', '보조': '보조'};
+// 프리셋 옵션에서 "OO 스킬 레벨 +N" 줄만 모은다 (조건부·국소 문구는 제외)
+// 뺀 줄은 스킬 레벨에도 반영된다 ("모든 스킬 레벨 +10"을 빼면 Lv가 내려간다) — liveOptionLines 규칙
+function skillLvBonuses() {
+  const out = [];
+  (typeof liveOptionLines === 'function' ? liveOptionLines() : presetOptionLines()).forEach(([src, e]) => {
+    if (!/스킬 레벨 \+/.test(e) || /해당 장비|당,| 당 |때마다|확률로|레벨당/.test(e)) return;
+    const m = /([가-힣 ]*?)스킬 레벨 \+\(?(\d+)(?:-(\d+))?\)?/.exec(e);
+    if (!m) return;
+    const scope = (m[1] || '').trim().replace(/^모든$/, '');
+    if (scope && !SKLV_TAG[scope] && !SKLV_KIND[scope] && scope !== '메인') return; // 해석 못 하는 범위는 제외
+    out.push({src, e, scope: scope || '모든', lo: +m[2], hi: +(m[3] || m[2])});
+  });
+  return out;
+}
+// 스킬 하나에 적용되는 보너스만 골라 최종 레벨 계산 (isMain = 메인 스킬 = 액티브 1번 칸)
+function skillLevelOf(sk, isMain, bonuses) {
+  const info = SKILLS[findSkill(sk)] || {};
+  const tags = info.tags || [];
+  const hit = bonuses.filter(b => b.scope === '모든' ||
+    (SKLV_KIND[b.scope] && SKLV_KIND[b.scope] === sk.kind) ||
+    (SKLV_TAG[b.scope] && tags.indexOf(SKLV_TAG[b.scope]) >= 0) ||
+    (b.scope === '메인' && isMain));
+  // 기본 레벨: 로그가 준 아이템 자체 레벨(17·21 등)이 있으면 그것, 없으면 20.
+  // 부귀·숭고·촉발체는 일반 스킬 레벨이 없다 — 그 lv는 0~5짜리 육성 레벨이라 여기 쓰면 안 된다
+  const own = sk && SKLV_NOBASE.indexOf(sk.kind) < 0 && +sk.lv > 0 ? +sk.lv : 20;
+  return {base: own, hit, lo: hit.reduce((s, b) => s + b.lo, 0), hi: hit.reduce((s, b) => s + b.hi, 0), tags};
+}
 // ── 전투 정령 · 운명 공용 조각 (2026-10-08) ──
 // 빌더와 빌더 2(「추억·석판·정령」 화면)가 함께 쓴다: 정령 3칸·승급 보상·운명(숙명) 규칙.
 // 정령 하나당 노드 10개(내환 6 · 중환 3 · 외환 1) + 미정 숙명 슬롯, 최대 3개. 노드 자리에 운명을 끼우면 노드 대신 운명 효과.
@@ -1240,6 +1482,128 @@ function dstRank(t) {
   if (/^\[?중위 숙명/.test(e)) return 3;
   if (/^\[?하위 숙명/.test(e)) return 4;
   return 5;
+}
+// ── MP 봉인 계산 (2026-10-14 사용자 요청 — 계산 없는 빌더 2 의 예외) ──
+// 패시브 칸마다: 최종 봉인 = 기본 봉인 × 보조 MP 배율 누적 ÷ (1 + 봉인 보상 합) ÷ Π(1 + 봉인 보상 추가)
+//   · 기본 봉인 = 패시브 스킬의 'MP 봉인' 수치, 보조 MP 배율 = 끼운 보조마다 'MP 소모 배율'(개척자의 길이면 보조마다 95%)
+//   · 봉인 보상 합 = 프리셋 옵션 줄의 "MP 봉인 보상 ±N%"(전역) + 그 스킬 대상 옵션("마령 스킬의 …"·"맹렬의 …") + 끼운 보조의 "보조 대상 스킬의 MP 봉인 보상"
+//   · 봉인 보상 추가 = "…의 MP 봉인 보상 추가 -20%"·봉인 전환(-65%, HP 봉인으로 대체) — 합에 섞지 않고 따로 나눈다
+// 공식은 카키 게이밍 MP 봉인 계산기(nextkaki.kr)와 같다. 옵션 줄 해석·보조 레벨 수치는 빌더 1 오라 계산(04_calc auraSummary)의 규칙을 따른다.
+// 기대하는 바깥 것: preset · SKILL_SLOTS · SKILLS · findSkill · plainText · presetOptionLines · skillLvBonuses · skillLevelOf · skillLvValues · SKLV_TAG
+const SEAL_RE = /MP 봉인 보상( 추가)? ?([+-])?\(?([+-]?\d+(?:\.\d+)?)(?:-([+-]?\d+(?:\.\d+)?))?\)?%/g;
+function sealNum(x) { return parseFloat(String(x || '').replace(/[^\d.+-]/g, '')); }
+function sealCalc() {
+  const lines = presetOptionLines();
+  const pathfinder = lines.find(([, e]) => /보조 스킬 MP 배율 95%로 고정/.test(e)) || null;
+  const bonuses = skillLvBonuses();
+  // 옵션 줄의 봉인 보상 — {scope: 'all' | 'tag' | 'name', key, add(추가 여부), lo, hi, src, e}
+  const opts = [];
+  lines.forEach(([src, e]) => {
+    let m;
+    SEAL_RE.lastIndex = 0;
+    while ((m = SEAL_RE.exec(e))) {
+      if (/^ ?당/.test(e.slice(m.index + m[0].length))) continue; // "MP 봉인 보상 +3% 당, 오라 효과 +2%" — 변환의 기준값
+      const sg = m[2] === '-' ? -1 : 1;
+      const a = sg * parseFloat(m[3]), b = m[4] != null ? sg * parseFloat(m[4]) : a;
+      const pre = e.slice(0, m.index).trimEnd();
+      const o = {src, e, add: !!m[1], lo: Math.min(a, b), hi: Math.max(a, b), scope: 'all', key: ''};
+      let t;
+      if ((t = /([가-힣]+) 스킬의$/.exec(pre))) { o.scope = 'tag'; o.key = SKLV_TAG[t[1]] || t[1]; }
+      else if ((t = /([가-힣 :]+)의$/.exec(pre))) { o.scope = 'name'; o.key = t[1]; }
+      opts.push(o);
+    }
+  });
+  // 장비·옵션이 패시브 칸에 붙여 주는 보조 — 모든 / 앞쪽 N개 / 뒤쪽 N개
+  const pIds = SKILL_SLOTS.filter(s => s.group === 'p').map(s => s.id), granted = [];
+  lines.forEach(([src, e]) => {
+    const re = /(모든|앞쪽|뒤쪽) 패시브 스킬 슬롯(?: ?(\d+)개)?(?:이|가) \(?(\d+)(?:-(\d+))?\)? ?레벨(?:의)? ([^.,]+)의 보조를 받는다/g;
+    let m;
+    while ((m = re.exec(e))) {
+      const n = +(m[2] || pIds.length);
+      granted.push({src, name: m[5].trim(), lo: +m[3], hi: +(m[4] || m[3]),
+        slots: m[1] === '모든' ? pIds : m[1] === '앞쪽' ? pIds.slice(0, n) : pIds.slice(-n)});
+    }
+  });
+  const slots = [];
+  SKILL_SLOTS.filter(s => s.group === 'p').forEach(sl => {
+    const v = (preset.skills || {})[sl.id];
+    if (!v || !v.main) return;
+    const si = findSkill(v.main), sk = si >= 0 ? SKILLS[si] : null;
+    if (!sk) return;
+    const base = sealNum((sk.stats || []).find(x => x[0] === 'MP 봉인')?.[1]);
+    if (!(base > 0)) return;
+    const nm = sk.name.replace(/^정밀 /, ''), tags = sk.tags || [];
+    const r = {id: sl.id, label: sl.label, name: sk.name, base, mult: 1, sups: [], comp: {lo: 0, hi: 0}, rows: [], extra: [], hp: false};
+    // 옵션 줄 — 전역 · 이 스킬 계열 · 이 스킬 이름
+    opts.forEach(o => {
+      if (o.scope === 'tag' && !tags.includes(o.key)) return;
+      if (o.scope === 'name' && !(o.key.trim().endsWith(nm) || o.key.trim().endsWith(sk.name))) return;
+      if (o.add) r.extra.push({src: o.src, lo: o.lo, hi: o.hi});
+      else { r.comp.lo += o.lo; r.comp.hi += o.hi; r.rows.push({src: o.src, e: o.e, lo: o.lo, hi: o.hi}); }
+    });
+    // 끼운 보조 + 장비가 이 칸에 붙여 주는 보조("모든 패시브 스킬 슬롯이 30 레벨의 정밀 봉인 제어의 보조를 받는다")
+    const lvOf = sup => { const lr = skillLevelOf(sup, false, bonuses); return [lr.base + lr.lo, lr.base + lr.hi]; };
+    (v.sup || []).filter(Boolean).map(sup => [sup, lvOf(sup), '보조 ']).concat(granted.filter(g => g.slots.includes(sl.id)).map(g => [{name: g.name}, [g.lo, g.hi], g.src + ' → ']))
+      .forEach(([sup, [l1, l2], tag]) => {
+        const i2 = findSkill(sup), s2 = i2 >= 0 ? SKILLS[i2] : SKILLS.find(x => x.name === sup.name);
+        if (!s2) return;
+        const mul = pathfinder ? 0.95 : (sealNum((s2.stats || []).find(x => x[0] === 'MP 소모 배율')?.[1]) || 100) / 100;
+        r.mult *= mul;
+        r.sups.push({name: s2.name, mul});
+        const txt = plainText((s2.desc || [])[0] || '');
+        const at = (lv, re, add) => { // 레벨표가 있으면 그 레벨 수치, 없으면 설명 문구의 수치
+          const m = re.exec(txt);
+          if (!m) return null;
+          const col = (skillLvValues(s2.name, lv) || []).find(([c]) => /MP 봉인 보상/.test(c) && /추가/.test(c) === add);
+          const x = col ? parseFloat(col[1]) : parseFloat(m[1]);
+          return isFinite(x) ? x : null;
+        };
+        const lvTxt = SKILL_LV[s2.name] ? ' Lv' + (l1 === l2 ? l1 : l1 + '~' + l2) : '';
+        const reC = /보조 대상 스킬의 MP 봉인 보상 ([+-]?\d+(?:\.\d+)?)%/, reX = /보조 대상 스킬에 MP 봉인 보상 추가 ([+-]?\d+(?:\.\d+)?)%/;
+        const c1 = at(l1, reC, false), c2 = at(l2, reC, false);
+        if (c1 != null) {
+          const lo = Math.min(c1, c2), hi = Math.max(c1, c2);
+          r.comp.lo += lo; r.comp.hi += hi;
+          r.rows.push({src: tag + s2.name + lvTxt, e: '보조 대상 스킬의 MP 봉인 보상 ' + sealFmt({lo, hi}, true) + '%', lo, hi});
+        }
+        const x1 = at(l1, reX, true), x2 = at(l2, reX, true);
+        if (x1 != null) r.extra.push({src: tag + s2.name + lvTxt, lo: Math.min(x1, x2), hi: Math.max(x1, x2)});
+        if (/MP 봉인이 HP 봉인으로 대체/.test(txt)) r.hp = true;
+      });
+    const div = (comp, ex) => Math.max(0.01, 1 + comp / 100) * r.extra.reduce((t, e) => t * Math.max(0.01, 1 + e[ex] / 100), 1);
+    // 보상이 클수록 봉인이 작다 — 범위 옵션이면 보상 hi 가 봉인 lo
+    r.final = {lo: base * r.mult / div(r.comp.hi, 'hi'), hi: base * r.mult / div(r.comp.lo, 'lo')};
+    slots.push(r);
+  });
+  const sum = (hp, k) => slots.filter(s => s.hp === hp).reduce((t, s) => t + s.final[k], 0);
+  return {slots, pathfinder, mp: {lo: sum(false, 'lo'), hi: sum(false, 'hi')}, hpSeal: {lo: sum(true, 'lo'), hi: sum(true, 'hi')}};
+}
+// 표시 — 범위면 "a~b", 소수 1자리
+function sealFmt(r, sign) {
+  const f = x => (Math.round(x * 10) / 10).toString();
+  const s = x => (sign && x > 0 ? '+' : '') + f(x);
+  return Math.abs(r.lo - r.hi) < 0.05 ? s(r.lo) : s(r.lo) + '~' + s(r.hi);
+}
+function sealTip(r) { // 칸 하나의 계산 내역 (툴팁)
+  const L = [r.name + (r.hp ? ' — HP 봉인' : '') + ' · 최종 ' + sealFmt(r.final) + '%', '',
+    '기본 봉인 ' + r.base + '%',
+    '보조 MP 배율 ×' + (Math.round(r.mult * 1000) / 1000) + (r.sups.length ? ' (' + r.sups.map(s => s.name + ' ' + Math.round(s.mul * 100) + '%').join(' · ') + ')' : ' (보조 없음)'),
+    'MP 봉인 보상 ' + sealFmt(r.comp, true) + '%'];
+  r.rows.forEach(x => L.push('  · ' + x.src + ' — ' + x.e));
+  r.extra.forEach(x => L.push('봉인 보상 추가 ' + sealFmt(x, true) + '% (' + x.src + ')'));
+  L.push('', '최종 = ' + r.base + ' × ' + (Math.round(r.mult * 1000) / 1000) + ' ÷ (1 + 보상) ' + (r.extra.length ? '÷ (1 + 추가) ' : '') + '— 소수점은 인게임과 조금 다를 수 있습니다');
+  return L.join('\n');
+}
+// 패시브 묶음 아래 요약 상자 (빌더 2 스킬 단계 · 보기 화면 공용)
+function sealBoxHtml() {
+  const S = sealCalc();
+  if (!S.slots.length) return '';
+  const over = S.mp.lo > 100;
+  return `<div class="seal-box${over ? ' over' : ''}"><div class="seal-h">MP 봉인 <span class="psum">추정 · ${S.pathfinder ? "개척자의 길 적용 · " : ""}마우스를 올리면 계산 내역</span></div>` +
+    S.slots.map(r => `<div class="seal-r tip2" title="${escapeHtml(sealTip(r))}"><span>${escapeHtml(r.name)}${r.hp ? ' <em>HP</em>' : ''}</span><b>${sealFmt(r.final)}%</b></div>`).join('') +
+    `<div class="seal-t"><span>총 MP 봉인 <b>${sealFmt(S.mp)}%</b></span><span>남은 MP <b>${sealFmt({lo: 100 - S.mp.hi, hi: 100 - S.mp.lo})}%</b></span>` +
+    (S.hpSeal.hi > 0 ? `<span>HP 봉인 <b>${sealFmt(S.hpSeal)}%</b></span>` : '') + `</div>` +
+    (over ? '<div class="seal-warn">⚠ 봉인이 100%를 넘어 모든 패시브를 켤 수 없습니다</div>' : '') + '</div>';
 }
 // ── 스킬 칸 규칙 공용 조각 (2026-10-08) ──
 // 빌더와 빌더 2(마법사, /tli/builder2)의 스킬 단계가 함께 쓴다.
@@ -4781,7 +5145,7 @@ function buildPresetFromLog(r, liSrc) {
     const row = ALL_DATA[i];
     const eff = applyArgs(row.effect, args);
     const k = rowKey(row);
-    const seenKey = k + (eff !== row.effect ? OPT_SEP + eff : ''); // 값이 다르면 다른 줄
+    const seenKey = k + (eff !== row.effect ? '|::|' + eff : ''); // 값이 다르면 다른 줄 (구분자는 빌더 1 OPT_SEP 와 같은 값 — 빌더 2 엔 04_calc 가 없어 글자로, 2026-10-14 운명 굴림값 있는 로그가 빌더 2 에서 막히던 것)
     if (talSeen.has(seenKey)) {
       const t = talents[talSeen.get(seenKey)];
       t.cnt = (t.cnt || 1) + 1;
@@ -9248,137 +9612,7 @@ function liveOptionLines() {
     return out;
   } catch (e) { return presetOptionLines(); }
 }
-// 조향(벨트) 효과 문구 — 데이터가 두 형태로 섞여 있다.
-// "[동상] 냉기 적중 대미지를 입힐 시 …"처럼 효과가 직접 든 것과 "부패의 과실"처럼 이름만 든 것.
-// 이름만이면 용어 툴팁의 본문을 쓴다 (부패의 과실 = "… 모든 스킬 레벨 +3")
-function blendEffectText(blend) {
-  const e = blend && blend.effect ? String(blend.effect).trim() : '';
-  if (!e) return e;
-  try {
-    // 프리셋에 저장된 조향은 {effect, req}뿐이라 목록에서 원본을 찾는다
-    const src = (typeof BLENDS !== 'undefined' ? BLENDS : []).find(x => String(x.effect).trim() === e);
-    const tip = src && src.tips && src.tips[0];
-    // effect가 툴팁 제목과 똑같을 때만 = 이름만 적힌 경우다. 효과 문장이 들어 있는 조향
-    // ("주술 대미지를 입힐 시, 연약을 부여한다")은 툴팁이 그 안에 나온 용어의 설명이라 덮어쓰면 안 된다
-    if (!tip || String(tip[0]).trim() !== e) return e;
-    // 툴팁 첫 줄은 이름이 한 번 더 반복된다 — 떼고 본문만.
-    // 줄바꿈은 마침표로 바꿔 이어 붙인다 (공백으로 붙이면 앞 줄 끝말이 다음 줄 앞머리로
-    // 읽혀 범위 판정이 깨진다 — "간격 0.1초 모든 스킬 레벨 +3" → 범위가 "초 모든")
-    const body = String(tip[1]).split(/\r?\n/).map(t => t.trim()).filter(t => t && t !== e)
-      .map(t => /[.。]$/.test(t) ? t : t + '.').join(' ').trim();
-    return body || e;
-  } catch (x) { return e; }
-}
-// 슬롯 하나의 옵션 줄 — presetOptionLines가 슬롯마다 부르고, 무기 대미지 조립도 이걸 쓴다
-// (무기 한 자리만 따로 봐야 해서 뺐다)
-function slotOptionLines(sid, v) {
-  const out = [];
-  if (!v) return out;
-  const optEff = o => { if (!o) return null; const e = (o.rolled && o.effect) || o.effect || (KEY_MAP.get(o.k) || {}).effect; return o.v ? applyRollText(e, o.v) : e; };
-  const add = (src, e) => { if (e) out.push([src, plainText(e).replace(/[–—−~]/g, '-')]); };
-  {
-    const part = v.part || (PRESET_SLOTS.find(x => x.id === sid) || {}).part || sid; // 어느 부위에서 온 옵션인지
-    if (v.kind === 'item') { // 스냅이 없거나 비어 있는 옛 프리셋은 현재 데이터의 같은 이름 아이템으로 폴백
-      const base = (v.snap && v.snap.opts && v.snap.opts.length) ? v.snap : (ITEMS.find(x => x.name === v.name) || {});
-      const ro = rolledItem(v, base) || {};
-      // 침식 강화된 옵션은 침식 문구로 계산한다 (corr는 opts와 1:1 — 저항 합산과 같은 규칙).
-      // 로그가 복원해 준 실제 문구(rand)가 있으면 그게 이미 침식을 반영하므로 건드리지 않는다
-      const ero = v.ero || [], rd = v.rand || {}, corr = ro.corr || base.corr;
-      const opts = (ro.opts || []).map((o, i) =>
-        (ero.includes(i) && rd[i] == null && corr && corr[i]) ? corr[i][1] : o);
-      opts.forEach(o => String(typeof o === 'string' ? o : optEff(o)).split(/<br\s*\/?>|\n/).forEach(x => add('레전드 ' + part, x))); // 한 자리에 두 줄(랜덤 옵션 침식화)
-    }
-    // 제작 옵션은 화면과 같은 티어(T0/T1/T2) 기준 수치로, 침식된 옵션은 침식(T0+) 수치로
-    if (v.opts) {
-      let ci = 0;
-      const ero = v.ero || [];
-      ['basic', 'main', 'sub'].forEach(k => (v.opts[k] || []).forEach(o => add('제작 ' + part, ero.includes(ci++) ? eroEffect(o) : tierEffect(o))));
-      ['chip', 'ench', 'blood', 'base', 'extra'].forEach(k => (v.opts[k] || []).forEach(o => add('제작 ' + part, k === 'extra' ? tierEffect(o) : optEff(o))));
-    }
-    if (v.blend) add('조향 ' + part, blendEffectText(v.blend));
-    if (v.tower) add('시퀀스 ' + part, v.tower.effect);
-    // 베이스(기본) 아이템의 수치·고정 옵션 — 아머·회피·보호막은 여기서만 나온다 (로그 BaseId로 확정)
-    const bi = v.base && BASEIDX[v.base];
-    if (bi) [...(bi.stats || []), ...(bi.imps || [])].forEach(e => add('베이스 ' + part, e));
-  }
-  return out;
-}
-function presetOptionLines() {
-  const out = [];
-  const optEff = o => { if (!o) return null; const e = (o.rolled && o.effect) || o.effect || (KEY_MAP.get(o.k) || {}).effect; return o.v ? applyRollText(e, o.v) : e; };
-  const add = (src, e) => { if (e) out.push([src, plainText(e).replace(/[–—−~]/g, '-')]); };
-  Object.entries(preset.slots || {}).forEach(([sid, v]) => { if (v) slotOptionLines(sid, v).forEach(x => out.push(x)); });
-  pactOptionLines().forEach(([src, e]) => add(src, e)); // 정령 노드 (활성인 것만)
-  heroOptionLines().forEach(([src, e]) => add(src, e)); // 히어로 특성 (고른 노드만, 레벨 반영)
-  Object.values(preset.skills || {}).forEach(v => { // 모듈 프로토콜 — "자신과 아군" 부여분이 내 옵션이다
-    if (!v) return;
-    [v.main, ...(v.sup || [])].forEach(ref => {
-      if (ref && ref.proto) ref.proto.forEach(pr => add('프로토콜 · ' + ref.name, pr.effect));
-    });
-  });
-  (preset.talents || []).forEach(t => { // 같은 옵션을 여러 장 보유하면(×N) 그 수만큼 적용된다
-    const src = talGroup(t.type) === 1 ? '석판' : talGroup(t.type) === 2 ? '운명' : '재능';
-    const n = Math.max(1, Math.min(99, t.cnt || 1));
-    const eff = t.mul ? scaleEffect(t.effect, t.mul) : t.effect; // 전염 옵션은 줄어든 수치로
-    for (let i = 0; i < n; i++) add(src + (t.mul ? ' 전염' : ''), eff);
-  });
-  Object.values(preset.mems || {}).forEach(m => ['basic', 'unique', 'random'].forEach(k => (m[k] || []).forEach(o => add('추억', optEff(o)))));
-  if (preset.prism) {
-    // 제노 프리즘: 환영 — 고유 옵션이 "해당 프리즘의 랜덤 옵션의 효과 +75%" (사용자 확인).
-    // 효과 수치형 옵션에만 ×1.75 — 범위 확장(3×4 직사각형)·횟수(2회 포인트) 문구는 곱하면 안 된다
-    const amp = preset.prism.name === '제노 프리즘: 환영' ? 1.75 : 1;
-    const ampable = e => !/직사각형|포인트 추가 가능|영향 범위/.test(e || '');
-    // "범위 내의 모든 X 재능 추가 획득: …"은 범위 안에서 실제로 찍은 그 등급 포인트만큼 곱한다
-    const gain = prismGainOn();
-    (preset.prism.opts || []).forEach(o => {
-      if (!o) return;
-      let e = amp !== 1 && ampable(o.effect) ? scaleEffect(o.effect, amp) : o.effect;
-      const mm = /범위 내의 모든 (레전드 중위|중위|하위) 재능 추가 획득:\s*(.+)$/.exec(e || '');
-      if (mm && gain) {
-        const t = mm[1] === '하위' ? 1 : mm[1] === '중위' ? 3 : 4;
-        const pts = (gain[t] || {p: 0}).p;
-        if (!pts) return; // 범위 안에 찍은 노드가 없으면 효과도 없다
-        // 스탯 집계 파서는 부호 있는 수치만 읽는다 — 환산 결과의 첫 수치에 부호를 붙인다 ("힘 918.9" → "힘 +918.9")
-        e = scaleEffect(mm[2].trim(), pts).replace(/(^|\s)(\d)/, '$1+$2');
-      }
-      add('프리즘', e);
-    });
-  }
-  if (preset.revival) add('부활', preset.revival.effect);
-  const invIv = [preset.gbPrism, preset.gbPrism2].filter(Boolean).find(g => g.k === 'i' && g.iv);
-  (preset.gboard || []).forEach(x => { // 재능 보드는 찍은 포인트만큼 곱해서
-    const i = SLATEIDX.idx[x[0]];
-    if (i === undefined || !(x[1] > 0)) return;
-    let mul2 = x[1];
-    if ((x[4] || 0) & 1) { // 역상으로 반사돼 온 노드 — "반사 후 재능 효과 %"를 곱한다 (수치는 로그 실측)
-      const t = boardTier(String(x[0]));
-      const pct = invIv ? ({1: invIv.iv.low, 3: invIv.iv.mid, 4: invIv.iv.leg})[t] : undefined;
-      if (pct !== undefined) {
-        const eff = 1 + pct / 100;
-        if (eff <= 0) return; // -100% = 반사 효과 없음
-        mul2 = x[1] * eff;
-      }
-    }
-    add('보드', scaleEffect(ALL_DATA[i].effect, mul2));
-  });
-  return out;
-}
 
-// 프리즘(역상 아닌 쪽) 범위 안에서 실제로 찍은 등급별 노드·포인트 — 부여 옵션 환산용.
-// gbPrism.c와 gboard의 r·c는 둘 다 로그 좌표(행·열)라 그대로 비교한다
-function prismGainOn() {
-  const g = [preset.gbPrism, preset.gbPrism2].filter(Boolean).find(x => x.k !== 'i');
-  if (!g || !(preset.gboard || []).length) return null;
-  const cells = new Set(g.c.map(([r, c]) => r + ',' + c));
-  const out = {1: {n: 0, p: 0}, 3: {n: 0, p: 0}, 4: {n: 0, p: 0}};
-  preset.gboard.forEach(x => {
-    if (String(x[0]).slice(0, 2) !== String(g.b) || !(x[1] > 0)) return;
-    if (!cells.has((x[2] || 0) + ',' + (x[3] || 0))) return;
-    const t = boardTier(String(x[0]));
-    if (out[t]) { out[t].n++; out[t].p += x[1]; }
-  });
-  return out;
-}
 
 // ── 옵션이 부여하는 보조 스킬 ("25 레벨 압살이 메인 스킬을 보조한다") ──
 // 실제로 보조칸을 차지하지 않고 붙는 보조라 프리셋 행에 별도 색 칩으로 표시한다
@@ -9403,43 +9637,6 @@ function grantedFor(sl, sk, gs) {
     : g.target === '모든' ? true
     : g.target === '해당' ? false // "해당 스킬" = 그 장비에 붙은 스킬 지정 — 대상을 특정할 수 없어 제외
     : tags.indexOf(g.target) >= 0 || tags.indexOf(g.target.replace('근접', '근접전')) >= 0);
-}
-// ── 스킬 레벨 계산: 모든 스킬 기본 20레벨 + 프리셋 옵션의 레벨 보너스 ──
-// (촉발체·부귀 보조·숭고 보조는 레벨 개념이 없어 제외 — 사용자 확인)
-const SKLV_NOBASE = ['촉발체', '부귀 보조', '숭고 보조'];
-const SKLV_TAG = { // 옵션 문구의 범위 → 스킬 태그
-  '공격': '공격', '주술': '주술', '화염': '화염', '냉기': '냉기', '번개': '번개', '부식': '부식',
-  '물리': '물리', '투사체': '투사체', '근접': '근접전', '지속': '지속', '소환체 소환': '소환',
-  '실드': '실드', '자극': '자극', '주입': '주입', '마령': '마령', '영약': '영약', '오라': '오라',
-  '수평 투사체': '수평 사격', '공격 투사체': '투사체', '채널링': '채널링', '저주': '저주', '함성': '함성',
-};
-const SKLV_KIND = {'액티브': '액티브', '패시브': '패시브', '보조': '보조'};
-// 프리셋 옵션에서 "OO 스킬 레벨 +N" 줄만 모은다 (조건부·국소 문구는 제외)
-// 뺀 줄은 스킬 레벨에도 반영된다 ("모든 스킬 레벨 +10"을 빼면 Lv가 내려간다) — liveOptionLines 규칙
-function skillLvBonuses() {
-  const out = [];
-  liveOptionLines().forEach(([src, e]) => {
-    if (!/스킬 레벨 \+/.test(e) || /해당 장비|당,| 당 |때마다|확률로|레벨당/.test(e)) return;
-    const m = /([가-힣 ]*?)스킬 레벨 \+\(?(\d+)(?:-(\d+))?\)?/.exec(e);
-    if (!m) return;
-    const scope = (m[1] || '').trim().replace(/^모든$/, '');
-    if (scope && !SKLV_TAG[scope] && !SKLV_KIND[scope] && scope !== '메인') return; // 해석 못 하는 범위는 제외
-    out.push({src, e, scope: scope || '모든', lo: +m[2], hi: +(m[3] || m[2])});
-  });
-  return out;
-}
-// 스킬 하나에 적용되는 보너스만 골라 최종 레벨 계산 (isMain = 메인 스킬 = 액티브 1번 칸)
-function skillLevelOf(sk, isMain, bonuses) {
-  const info = SKILLS[findSkill(sk)] || {};
-  const tags = info.tags || [];
-  const hit = bonuses.filter(b => b.scope === '모든' ||
-    (SKLV_KIND[b.scope] && SKLV_KIND[b.scope] === sk.kind) ||
-    (SKLV_TAG[b.scope] && tags.indexOf(SKLV_TAG[b.scope]) >= 0) ||
-    (b.scope === '메인' && isMain));
-  // 기본 레벨: 로그가 준 아이템 자체 레벨(17·21 등)이 있으면 그것, 없으면 20.
-  // 부귀·숭고·촉발체는 일반 스킬 레벨이 없다 — 그 lv는 0~5짜리 육성 레벨이라 여기 쓰면 안 된다
-  const own = sk && SKLV_NOBASE.indexOf(sk.kind) < 0 && +sk.lv > 0 ? +sk.lv : 20;
-  return {base: own, hit, lo: hit.reduce((s, b) => s + b.lo, 0), hi: hit.reduce((s, b) => s + b.hi, 0), tags};
 }
 // 스킬 호버 카드용: 이 스킬이 현재 프리셋에 장착돼 있으면 최종 레벨을 돌려준다
 function presetSkillLevel(s) {
@@ -9754,32 +9951,6 @@ function customCardHtml(v) {
 // 저장한 재능·석판·운명의 3묶음 구분 (프리셋 화면·이미지 내보내기 공용)
 // 0=재능 계열(사냥의 여신 등, 레전드 신격의 석판 포함) / 1=비레전드 신격의 석판 / 2=운명(숙명)
 const TAL_GROUPS = ['✨ 핵심 재능', '🪨 석판', '🌠 운명'];
-let heroAmpBusy = false; // potionAmpPct → optSummary → heroOptionLines 순환 방지
-function heroOptionLines() {
-  const herbs = preset.heroHerbs || {};
-  // 약병(영약 스킬) 계열 특성의 약재는 총 영약 효과 배율을 적용한 수치로 합류 (화면 툴팁과 동일 규칙)
-  let amp = null;
-  if (!heroAmpBusy) {
-    heroAmpBusy = true;
-    try {
-      const t = heroTraitData();
-      if (t && (t.nodes || []).some(n => (n.lines || []).join('').indexOf('약병') >= 0)) {
-        const a = potionAmpPct();
-        if (a.any) amp = a.lo;
-      }
-    } catch (e) {} finally { heroAmpBusy = false; }
-  }
-  return heroNodesOn().flatMap(({n, lv}) => {
-    const src = '히어로 · ' + n.name + ' Lv' + lv;
-    const out = heroNodeLines(n, lv).map(l => [src, l]);
-    heroNodeHerbs(n, lv).forEach(h => { // 고른 약재의 효과도 합류
-      const it = h.items.find(x => x.name === herbs[heroHerbKey(n, h.cat)]);
-      if (it) out.push([src + ' · ' + it.name + (amp != null ? ' (영약 효과 적용)' : ''),
-                        amp != null ? ampPotionText(it.text, amp) : it.text]);
-    });
-    return out;
-  });
-}
 function renderPresetHeroTraits() {
   const box = document.getElementById('presetHeroTraitBox');
   if (!box) return;
@@ -9849,27 +10020,6 @@ function cyclePactStar(ev, i) {
   pc.adv = (pc.adv || 1) % 6 + 1; // 1~6 순환 (미상 '?'도 클릭하면 2부터)
   persistPreset();
   renderPreset();
-}
-// 이 프리셋의 정령이 실제로 주는 효과 줄 (승급 보상 + 활성 노드)
-function pactOptionLines() {
-  const out = [];
-  pactList().forEach(pc => {
-    if (!pc || !pc.name) return;
-    const sp = pactByName(pc.name);
-    if (!sp) return;
-    const advEff = pactAdvEffects(sp, pc.adv);
-    advEff.forEach(e => out.push(['정령 · ' + sp.name + ' 승급' + (pc.adv || 1), e]));
-    const on = pc.nodes || {}; // {노드자리: 1} — 로그에서 채워지거나 직접 고른다
-    (sp.nodes || []).forEach(n => {
-      if (n.ring === '미정' || n.ring === '운명') return; // 운명 슬롯은 숙명이 채운다
-      // 외환(고리 없음) 노드는 그 정령의 고유 효과이고, 승급 보상 표가 같은 효과의 현재 수치를 담는다
-      // (이터널: 노드 이동 속도 +30%/+6% ↔ 승급6 +40%/+8%). 둘 다 세면 이중 계산이다
-      if (!n.ring && advEff.length) return;
-      if (!on[n.pos]) return;
-      out.push(['정령 · ' + sp.name, n.effect]);
-    });
-  });
-  return out;
 }
 function renderPresetPact() {
   const box = document.getElementById('presetPactBox');
@@ -11331,26 +11481,6 @@ function skillOverLv20(level) {
   const a = Math.min(n, 10), b = Math.max(0, n - 10);
   const mul = Math.pow(1.10, a) * Math.pow(1.08, b);
   return {mul, pct: (mul - 1) * 100, a, b};
-}
-// 레벨별 표에서 특정 레벨의 수치를 계산 (표에 없는 레벨은 앞뒤 값으로 선형 보간, 표 범위 밖은 끝값)
-function skillLvValues(name, level) {
-  const d = SKILL_LV[name];
-  if (!d || !d.rows || !d.cols || !d.rows.length) return null;
-  const rows = d.rows.map(r => [parseFloat(r[0]), r.slice(1)]).filter(r => isFinite(r[0])).sort((a, b) => a[0] - b[0]);
-  if (!rows.length) return null;
-  const pick = ci => {
-    if (level <= rows[0][0]) return rows[0][1][ci];
-    if (level >= rows[rows.length - 1][0]) return rows[rows.length - 1][1][ci];
-    let i = 0;
-    while (i < rows.length - 1 && rows[i + 1][0] < level) i++;
-    const [l0, v0] = rows[i], [l1, v1] = rows[i + 1];
-    const n0 = parseFloat(String(v0[ci])), n1 = parseFloat(String(v1[ci]));
-    if (!isFinite(n0) || !isFinite(n1) || l1 === l0) return v0[ci];
-    const v = n0 + (n1 - n0) * (level - l0) / (l1 - l0);
-    const suffix = String(v0[ci]).replace(/^[-\d.]+/, ''); // % 같은 꼬리표 유지
-    return (Math.round(v * 10) / 10) + suffix;
-  };
-  return d.cols.map((c, ci) => [c, pick(ci)]);
 }
 // 레벨표가 20까지만 있는 액티브 스킬은 그 이후 성장분을 별도로 안내한다
 function overLv20Html(s, lvs) {

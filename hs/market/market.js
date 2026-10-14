@@ -13,7 +13,7 @@
   function loadEn() { // /hs/db/data_en.js — 영문 옵션·분류명 오버레이(window.CODEX_EN), 영문일 때만 한 번
     if (window.CODEX_EN) return Promise.resolve();
     if (enLoading) return enLoading;
-    enLoading = new Promise((res) => { const sc = document.createElement('script'); sc.src = '/hs/db/data_en.js'; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); });
+    enLoading = window.wtScript ? wtScript('/hs/db/data_en.js') : new Promise((res) => { const sc = document.createElement('script'); sc.src = '/hs/db/data_en.js'; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); }); // jsDelivr 먼저 (nav.js)
     return enLoading;
   }
   if (lang === 'en') loadEn();
@@ -194,15 +194,15 @@
   function loadFull() {          // 옵션 문구까지 필요한 순간(툴팁)에 부른다. 이미 있으면 그대로
     if (window.CODEX) return Promise.resolve();
     if (fullLoading) return fullLoading;
-    fullLoading = new Promise((res) => {
+    const merge = () => {
+      for (const it of (window.CODEX && CODEX.items) || []) {
+        const cur = byUid.get(uidOf(it));
+        if (cur) { cur.affixes = it.affixes; cur.rw = it.rw || cur.rw; cur.places = it.places || cur.places; }
+      }
+    };
+    fullLoading = window.wtScript ? wtScript('/hs/db/data.js').then(merge) : new Promise((res) => { // jsDelivr 먼저 (nav.js)
       const sc = document.createElement('script'); sc.src = '/hs/db/data.js';
-      sc.onload = () => {
-        for (const it of (window.CODEX && CODEX.items) || []) {
-          const cur = byUid.get(uidOf(it));
-          if (cur) { cur.affixes = it.affixes; cur.rw = it.rw || cur.rw; cur.places = it.places || cur.places; }
-        }
-        res();
-      };
+      sc.onload = () => { merge(); res(); };
       sc.onerror = res; document.head.appendChild(sc);
     });
     return fullLoading;

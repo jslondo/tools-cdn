@@ -5,6 +5,23 @@
 //  - body 여백을 0 으로 강제하고, 콘텐츠 폭/여백은 각 페이지 컨테이너가 var(--page-w) 로 맞춘다.
 //  - 헤더는 순수 sticky(top:0) — 음수 마진 안 쓴다(스크롤 시 상단에서 떨어지던 버그 원인).
 //  - 헤더 우측에 '와이드/표준' 폭 토글(선택값 localStorage 기억, 모든 페이지 공통 적용).
+// 나중에 붙이는 큰 데이터 스크립트 — jsDelivr(이 nav.js 를 받아 온 같은 커밋) 먼저, 실패하면 우리 서버. 성공 여부를 돌려준다 (2026-10-14)
+// 우리 워커는 한국 접속이 미국 거점이라 느리다(_dev/cdn_sync.py 참고). 올려 둘 파일 목록은 cdn_sync.py 의 LAZY
+(() => {
+  const me = document.currentScript && document.currentScript.src || '';
+  const m = /^(https:\/\/cdn\.jsdelivr\.net\/gh\/jslondo\/tools-cdn@[0-9a-f]+\/)/.exec(me);
+  if (m) window.WT_CDN = m[1];
+  window.wtScript = (path) => new Promise((res) => {
+    const urls = window.WT_CDN ? [window.WT_CDN + path.replace(/^\//, '').split('?')[0], path] : [path];
+    const go = (i) => {
+      const s = document.createElement('script'); s.src = urls[i];
+      s.onload = () => res(true);
+      s.onerror = () => { s.remove(); if (i + 1 < urls.length) go(i + 1); else res(false); };
+      document.head.appendChild(s);
+    };
+    go(0);
+  });
+})();
 (() => {
   const path = location.pathname;
   const isTli = path.indexOf('/tli') === 0;

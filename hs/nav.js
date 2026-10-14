@@ -400,7 +400,7 @@
     const hsm = /^\/hs\/(db|augments|skills|crystals|tree|ether|journal|guides|tracker|market)(\/|$)/.exec(path);
     const pg = hsm ? 'hs_' + hsm[1] : path.startsWith('/tli/slate') ? 'slate' : !isTli ? '' : /^\/tli\/ss\d+\/db/.test(path) ? 'ss_db' : /^\/tli\/ss\d+\/view/.test(path) ? 'ss_view'
       : path.startsWith('/tli/db') ? 'db' : path.startsWith('/tli/share') ? 'share' : path.startsWith('/tli/view') ? 'view'
-      : path.startsWith('/tli/hero') ? 'hero' : path.startsWith('/tli/talent') ? 'talent'
+      : path.startsWith('/tli/hero') ? 'hero' : path.startsWith('/tli/tracker') ? 'tracker' : path.startsWith('/tli/talent') ? 'talent'
       : path.startsWith('/tli/preview/changes') ? 'changes' : path.startsWith('/tli/preview') ? 'notes'
       // /tli/builder/ = 새 빌더, 같은 주소의 옛 빌더(쿼리·craft_search)는 hub_head 가 data-tli-mode='builder' 를 단다
       : path.startsWith('/tli/builder') ? (mode() === 'builder' ? 'oldbuilder' : 'builder') : '';

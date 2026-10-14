@@ -18,7 +18,7 @@
     .gbm-head small { display: block; color: #7d8794; font-size: 11.5px; }
     .gbm-head b { color: #f3e3b5; font-size: 19px; }
     .gbm-hint { color: #7d8794; font-size: 12.5px; }
-    @media (max-width: 760px) { .gbm-body { grid-template-columns: 1fr; grid-template-rows: none; } .gbm-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #1e2533; } }
+    @media (max-width: 760px) { .gbm-body { grid-template-columns: 1fr; grid-template-rows: none; align-content: start; } .gbm-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #1e2533; } }
     /* 단독 화면 위쪽 줄의 빌드 고르기 (page_common.js hpBuildPicker) */
     .hp-build { color: #7d8794; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
     .hp-build b { color: #c9d1d9; }
@@ -94,6 +94,16 @@
     .icard-price-i summary::-webkit-details-marker { display: none; }
     .icard-price-i summary:hover, .icard-price-i[open] summary { color: #e8c860; }
     .icard-price-i > div { margin-top: 4px; padding: 6px 8px; border-radius: 6px; background: #0f141f; border: 1px solid #2a3344; color: #9aa6b4; line-height: 1.5; }
+    /* 모바일 — DB(app.css 768px 이하)가 표를 세로로 풀어 쌓는 공용 규칙(table·tr·td block, thead 숨김)에서 시세표는 빼고 표 모양 유지 (2026-10-14) */
+    .icard-price table { display: table !important; table-layout: fixed; }
+    .icard-price thead { display: table-header-group !important; }
+    .icard-price tbody { display: table-row-group !important; }
+    .icard-price tr { display: table-row !important; padding: 0 !important; border: 0; background: none; }
+    .icard-price th, .icard-price td { display: table-cell !important; width: auto !important; position: static; background: none; line-height: 1.4; white-space: nowrap; }
+    .icard-price thead th, .icard-price tbody th { padding: 3px 4px; }
+    .icard-price tbody th { width: 46px !important; }
+    .icard-price { text-align: left; } /* 빌더 2 카드(가운데 정렬) 안에서도 왼쪽 */
+    .icard-price td::before { content: none !important; } .icard-price td { font-size: 12px !important; color: #e6edf3 !important; } .icard-price td.na { color: #4a5568 !important; }
     /* 단계 막대 아래 남는 높이 — 막대 높이는 builder2_page.js 가 재서 --wzbar-h 로 넣는다 (PC 에서 페이지 스크롤 없게) */
     :root { --wz-room: calc(100vh - var(--hubnav-h, 44px) - var(--wzbar-h, 70px) - 48px); }
     /* /tli/builder2 마법사 — 단계 막대 + 단계 몸통(히어로·재능은 단독 화면과 같은 틀) */

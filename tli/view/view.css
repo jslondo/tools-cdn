@@ -18,7 +18,7 @@
     .gbm-head small { display: block; color: #7d8794; font-size: 11.5px; }
     .gbm-head b { color: #f3e3b5; font-size: 19px; }
     .gbm-hint { color: #7d8794; font-size: 12.5px; }
-    @media (max-width: 760px) { .gbm-body { grid-template-columns: 1fr; grid-template-rows: none; } .gbm-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #1e2533; } }
+    @media (max-width: 760px) { .gbm-body { grid-template-columns: 1fr; grid-template-rows: none; align-content: start; } .gbm-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #1e2533; } }
     /* 단독 화면 위쪽 줄의 빌드 고르기 (page_common.js hpBuildPicker) */
     .hp-build { color: #7d8794; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
     .hp-build b { color: #c9d1d9; }
@@ -94,6 +94,16 @@
     .icard-price-i summary::-webkit-details-marker { display: none; }
     .icard-price-i summary:hover, .icard-price-i[open] summary { color: #e8c860; }
     .icard-price-i > div { margin-top: 4px; padding: 6px 8px; border-radius: 6px; background: #0f141f; border: 1px solid #2a3344; color: #9aa6b4; line-height: 1.5; }
+    /* 모바일 — DB(app.css 768px 이하)가 표를 세로로 풀어 쌓는 공용 규칙(table·tr·td block, thead 숨김)에서 시세표는 빼고 표 모양 유지 (2026-10-14) */
+    .icard-price table { display: table !important; table-layout: fixed; }
+    .icard-price thead { display: table-header-group !important; }
+    .icard-price tbody { display: table-row-group !important; }
+    .icard-price tr { display: table-row !important; padding: 0 !important; border: 0; background: none; }
+    .icard-price th, .icard-price td { display: table-cell !important; width: auto !important; position: static; background: none; line-height: 1.4; white-space: nowrap; }
+    .icard-price thead th, .icard-price tbody th { padding: 3px 4px; }
+    .icard-price tbody th { width: 46px !important; }
+    .icard-price { text-align: left; } /* 빌더 2 카드(가운데 정렬) 안에서도 왼쪽 */
+    .icard-price td::before { content: none !important; } .icard-price td { font-size: 12px !important; color: #e6edf3 !important; } .icard-price td.na { color: #4a5568 !important; }
     /* 히어로 화면 — 빌더와 /tli/hero 가 함께 쓴다 (틀은 frame.css) */
     /* ── 히어로 ── */
     /* 히어로 팝업 (#hrModal) — 틀은 재능 보드 팝업(.gbm-*) 그대로, 안쪽만 hrm-* */
@@ -167,7 +177,7 @@
     .hrm-empty b { color: #e6edf3; }
     .hn-msg { color: #ffb37a; font-size: 12px; margin-bottom: 6px; }
     @media (max-width: 1000px) { .hrm-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hrm-colh { display: none; } .hrm-board > * { grid-column: auto !important; grid-row: auto !important; } .hrm-nst { display: inline-block; } .hrm-board.tree .hrm-node.lnk::before { display: none; } }
-    @media (max-width: 760px) { .hrm .gbm-side > * { flex: 1 1 100%; } .hrm-heroes { grid-template-columns: repeat(6, minmax(0, 1fr)); } .hrm-hero img { width: 40px; height: 40px; } .hrm-hero small { display: none; } }
+    @media (max-width: 760px) { .hrm .gbm-side > * { flex: 1 1 100%; } .hrm .gbm-side { align-content: flex-start; } .hrm-heroes { align-content: start; } .hrm-heroes { grid-template-columns: repeat(6, minmax(0, 1fr)); } .hrm-hero img { width: 40px; height: 40px; } .hrm-hero small { display: none; } }
     @media (max-width: 520px) { .hrm-board { grid-template-columns: 1fr; } .hrm-heroes { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
     .hn-herb { margin-top: 5px; border-top: 1px dashed #21262d; padding-top: 4px; }
     .hn-hcat { font-size: 10.5px; color: #6e7681; }
@@ -356,7 +366,7 @@
     #gbmBoard .gb-node.gb-lock { opacity: .3; }
     #gbmBoard .gb-colreq { fill: #6f7b8c; font-size: 3.4px; font-weight: 700; letter-spacing: .02em; }
     @keyframes gbPulse { 50% { stroke-opacity: .35; } }
-    @media (max-width: 760px) { .gbm-slot { flex: 1 1 150px; } .gbm-total { margin-top: 0; flex: 1 1 100%; } .gbm-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gbm-banner { height: 140px; } .gbm-bemb { width: 64px; height: 64px; } }
+    @media (max-width: 760px) { .gbm-slot { flex: 1 1 150px; } .gbm-total { margin-top: 0; flex: 1 1 100%; } .gbm-side > .gbm-cap { flex: 1 1 100%; } /* 「보드」「프리즘 · 역상」 머리가 옆 칸 사이에 끼지 않게 (2026-10-14 모바일 점검) */ .gbm-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gbm-banner { height: 140px; } .gbm-bemb { width: 64px; height: 64px; } }
     .gb-slot { display: inline-block; min-width: 16px; margin-right: 5px; padding: 0 4px; border-radius: 4px; background: #30363d; color: #e6edf3; font-size: 11px; text-align: center; }
     /* ── /tli/talent 단독 화면: 틀을 팝업이 아니라 페이지로 + 빌더에 있던 작은 툴팁 스타일 ── */
     .tp-body #talentApp { width: min(1400px, 100%); margin: 0 auto; padding: 12px 16px 24px; box-sizing: border-box; }

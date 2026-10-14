@@ -1692,7 +1692,9 @@ function supFits(sup, main) {
   if (r.name) return main.name === r.name;
   const mi = SKILLS.find(k => k.name === main.name && k.kind === main.kind);
   if (!mi || !(mi.tags || []).length) return true;
-  const has = t => t === '#액티브' ? (mi.kind === '액티브' || mi.kind === '모듈화') : t === '#패시브' ? mi.kind === '패시브' : mi.tags.includes(t);
+  // 마령·주입 패시브는 패시브 칸에 있어도 '액티브 스킬을 보조한다' 보조(MP 소모 전환·스탠바이·주술 부착…)를 받는다 (사용자 2026-10-14)
+  const actLike = mi.kind === '액티브' || mi.kind === '모듈화' || isSpiritPassive(mi) || isInjectPassive(mi);
+  const has = t => t === '#액티브' ? actLike : t === '#패시브' ? mi.kind === '패시브' : mi.tags.includes(t);
   if (r.not.some(has)) return false;
   return r.alts.some(a => a.every(has));
 }

@@ -72,7 +72,7 @@
       { href: '/hs/tracker/',     label: '받기',      match: /^\/hs\/tracker\/(index\.html)?$/ },
       { href: '/hs/tracker/zone', label: '사탄존 로그', match: /^\/hs\/tracker\/zone/ },
     ] },
-    { href: '/hs/market/',  label: '장터',    match: /^\/hs\/market\// },
+    // 장터(/hs/market/)는 쓰는 사람이 없어 메뉴에서 뺐다 (사용자 2026-10-14) — 페이지·주소는 그대로
   ];
 
   // 폭 선택값을 그리기 전에 <html> 에 먼저 반영(깜빡임 방지).

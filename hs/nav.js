@@ -9,7 +9,7 @@
 // 우리 워커는 한국 접속이 미국 거점이라 느리다(_dev/cdn_sync.py 참고). 올려 둘 파일 목록은 cdn_sync.py 의 LAZY
 (() => {
   const me = document.currentScript && document.currentScript.src || '';
-  const m = /^(https:\/\/cdn\.jsdelivr\.net\/gh\/jslondo\/tools-cdn@[0-9a-f]+\/)/.exec(me);
+  const m = /^(https:\/\/cdn\.jsdelivr\.net\/gh\/(?:jslondo|win-terer)\/tools-cdn@[0-9a-f]+\/)/.exec(me);
   if (m) window.WT_CDN = m[1];
   window.wtScript = (path) => new Promise((res) => {
     const urls = window.WT_CDN ? [window.WT_CDN + path.replace(/^\//, '').split('?')[0], path] : [path];

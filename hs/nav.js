@@ -46,7 +46,11 @@
       { href: '/tli/slate/',   label: '석판',      match: /^\/tli\/slate/ },
     ] },
     { href: '/tli/share/',   label: '빌드 공유',   match: /^\/tli\/share/ },
-    { href: '/tli/tracker/', label: '트래커',      match: /^\/tli\/tracker/ }, // 지인(Hoza)의 TITrack-KR 안내 (2026-10-14)
+    // 트래커 — 누르면 PC(TITrack-KR, 지인 Hoza), 하위로 모바일(mTTD, listil) (2026-10-14)
+    { label: '트래커', match: /^\/tli\/tracker/, kids: [
+      { href: '/tli/tracker/',        label: 'PC (TITrack-KR)', match: /^\/tli\/tracker\/(index\.html)?$/ },
+      { href: '/tli/tracker/mobile/', label: '모바일 (mTTD)',   match: /^\/tli\/tracker\/mobile/ },
+    ] },
     // 새 시즌 관련 (2026-10-10, 유출 번역 3쪽을 대신함) — 둘 다 tli/builder/update/build_preview.py 가 만든다
     { label: 'SS14 관련', match: /^\/tli\/preview/, kids: [
       { href: '/tli/preview/',          label: 'SS14 패치노트',      match: /^\/tli\/preview\/(index\.html)?$/ },
@@ -418,7 +422,7 @@
     const hsm = /^\/hs\/(db|augments|skills|crystals|tree|ether|journal|guides|tracker|market)(\/|$)/.exec(path);
     const pg = hsm ? 'hs_' + hsm[1] : path.startsWith('/tli/slate') ? 'slate' : !isTli ? '' : /^\/tli\/ss\d+\/db/.test(path) ? 'ss_db' : /^\/tli\/ss\d+\/view/.test(path) ? 'ss_view'
       : path.startsWith('/tli/db') ? 'db' : path.startsWith('/tli/share') ? 'share' : path.startsWith('/tli/view') ? 'view'
-      : path.startsWith('/tli/hero') ? 'hero' : path.startsWith('/tli/tracker') ? 'tracker' : path.startsWith('/tli/talent') ? 'talent'
+      : path.startsWith('/tli/hero') ? 'hero' : path.startsWith('/tli/tracker/mobile') ? 'tracker_m' : path.startsWith('/tli/tracker') ? 'tracker' : path.startsWith('/tli/talent') ? 'talent'
       : path.startsWith('/tli/preview/changes') ? 'changes' : path.startsWith('/tli/preview') ? 'notes'
       // /tli/builder/ = 새 빌더, 같은 주소의 옛 빌더(쿼리·craft_search)는 hub_head 가 data-tli-mode='builder' 를 단다
       : path.startsWith('/tli/builder') ? (mode() === 'builder' ? 'oldbuilder' : 'builder') : '';

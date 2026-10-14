@@ -5419,7 +5419,7 @@ function vwSkills() {
       return `<div class="vw-skill"><div class="vw-skm${tip(sk.main)}"><span class="ws-main">${ic(sk.main)}</span><div><small>${vwEsc(sl.label)}</small><b>${vwEsc(sk.main.name)}</b>${sk.main.lv ? `<em>Lv ${sk.main.lv}</em>` : ''}</div></div>` +
         '<ul class="vw-sups">' + sk.sup.map((sp, k) => `<li class="${sp ? '' : 'none'}${sp ? tip(sp) : ''}"><span class="ws-sock${sp ? ' have' : ''}">${sp ? ic(sp) : k + 1}</span>` +
           `<span>${sp ? vwEsc(sp.name) : '<i>보조 ' + (k + 1) + ' 비어 있음</i>'}</span></li>`).join('') + '</ul></div>';
-    }).join('') + '</div>').join('') + wsSealHtml();
+    }).join('') + (g === 'p' ? wsSealHtml() : '') + '</div>').join(''); // MP 봉인 요약은 패시브 줄의 빈 다섯째 칸에 (사용자 2026-10-14)
 }
 
 function vwGear() {

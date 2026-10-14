@@ -1215,3 +1215,7 @@
     .vw-memo.empty { color: #6b7686; font-size: 13px; }
     .vw-page .wcb-hint { display: none; } /* 빌더용 안내(누르면 꽂기)는 읽기 전용 보기 화면에선 숨김 */
     .vw-skm > div { min-width: 0; } .vw-skm b { display: block; }
+    /* MP 봉인 요약 — 패시브 줄 다섯째 칸 (2026-10-14) */
+    .vw-skills .seal-box { margin: 0; border-radius: 12px; min-width: 0; border-color: #1f2735; }
+    .vw-skills .seal-box.over { border-color: #7a2e2e; }
+    .vw-skills .seal-r span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

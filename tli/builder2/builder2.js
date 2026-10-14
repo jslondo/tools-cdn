@@ -2608,9 +2608,11 @@ function sealBoxHtml() {
   if (!S.slots.length) return '';
   const over = S.mp.lo > 100;
   return `<div class="seal-box${over ? ' over' : ''}"><div class="seal-h">MP 봉인 <span class="psum">추정 · ${S.pathfinder ? "개척자의 길 적용 · " : ""}마우스를 올리면 계산 내역</span></div>` +
-    S.slots.map(r => `<div class="seal-r tip2" title="${escapeHtml(sealTip(r))}"><span>${escapeHtml(r.name)}${r.hp ? ' <em>HP</em>' : ''}</span><b>${sealFmt(r.final)}%</b></div>`).join('') +
-    `<div class="seal-t"><span>총 MP 봉인 <b>${sealFmt(S.mp)}%</b></span><span>남은 MP <b>${sealFmt({lo: 100 - S.mp.hi, hi: 100 - S.mp.lo})}%</b></span>` +
-    (S.hpSeal.hi > 0 ? `<span>HP 봉인 <b>${sealFmt(S.hpSeal)}%</b></span>` : '') + `</div>` +
+    S.slots.map(r => `<div class="seal-r tip2${r.hp ? ' hp' : ''}" title="${escapeHtml(sealTip(r))}"><span>${escapeHtml(r.name)}${r.hp ? ' <em>HP</em>' : ''}</span><b>${sealFmt(r.final)}%</b></div>`).join('') +
+    // 합계 — HP(빨강) 위 · MP(파랑) 아래, 봉인 | 남은 두 칸 (사용자 2026-10-14)
+    '<div class="seal-t">' +
+    (S.hpSeal.hi > 0 ? `<div class="seal-tr hp"><span>총 HP 봉인</span><b>${sealFmt(S.hpSeal)}%</b><span>남은 HP</span><b>${sealFmt({lo: 100 - S.hpSeal.hi, hi: 100 - S.hpSeal.lo})}%</b></div>` : '') +
+    `<div class="seal-tr mp"><span>총 MP 봉인</span><b>${sealFmt(S.mp)}%</b><span>남은 MP</span><b>${sealFmt({lo: 100 - S.mp.hi, hi: 100 - S.mp.lo})}%</b></div></div>` +
     (over ? '<div class="seal-warn">⚠ 봉인이 100%를 넘어 모든 패시브를 켤 수 없습니다</div>' : '') + '</div>';
 }
 

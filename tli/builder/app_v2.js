@@ -12176,13 +12176,14 @@ function legendBase() {
 function renderLegend() {
   const box = document.getElementById('legendResults');
   if (!box) return;
-  const norm = v => String(v || '').toLowerCase();
-  const q = norm((document.getElementById('legendSearch').value || '').trim());
+  // 이름·태그·부위 + 옵션 문구(침식 옵션 포함)까지 — 띄어쓰기는 무시하고, 여러 단어면 모두 들어 있는 것 (사용자 요청 2026-10-14)
+  const norm = v => String(v || '').toLowerCase().replace(/\s+/g, '');
+  const words = (document.getElementById('legendSearch').value || '').trim().toLowerCase().split(/\s+/).filter(Boolean).map(norm);
   const base = legendBase();
-  const list = ITEMS.map((it, i) => ({ it, i })).filter(x =>
-    !q || norm(x.it.name).includes(q)
-       || (x.it.tags || []).some(t => norm(t).includes(q))
-       || norm(base[x.it.name] || '').includes(q));
+  const hay = it => it._lgHay || (it._lgHay = norm([it.name, ...(it.tags || []), base[it.name] || '',
+    ...(it.opts_t || (it.opts || []).map(o => plainText(typeof o === 'string' ? o : (o && o.effect) || ''))),
+    ...(it.corr_t || []).map(c => c[1])].join('\n')));
+  const list = ITEMS.map((it, i) => ({ it, i })).filter(x => !words.length || words.every(w => hay(x.it).includes(w)));
   const cnt = document.getElementById('legendCount'); if (cnt) cnt.textContent = list.length + '개';
   wtMiss('legend', (document.getElementById('legendSearch').value || '').trim(), list.length);
   box.innerHTML = list.length

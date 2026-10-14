@@ -330,3 +330,15 @@
 
     /* 티아 「계시의 예언」으로 축복 변형이 된 칸 (SS14) */
     .gb-node.gb-var { stroke-dasharray: 3 2; stroke: #ffd98a; }
+    /* 다른 보드 보기 (보기만, 2026-10-14) — 00_talent.js gbPeekMain */
+    .gbp-open, .gbp-other, .gbp-back { background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; transition: .15s; }
+    .gbp-open:hover, .gbp-other:hover { border-color: #7ab8ff; color: #fff; }
+    .gbp-back { border-color: #6b5a2a; background: #1d1a12; color: #f3e3b5; font-weight: 600; }
+    .gbp-back:hover { border-color: #e8c860; color: #fff; }
+    .gbm-head.plain .gbp-back { margin-left: auto; }
+    .gbp-note { margin: -4px 0 10px; padding: 7px 12px; border-radius: 8px; background: #101a2b; border: 1px solid #263a5c; color: #a9c2e6; font-size: 12.5px; }
+    .gbp-core { margin-bottom: 10px; }
+    .gbp-coreh { color: #e8c860; font-size: 12px; font-weight: 600; margin-bottom: 4px; } .gbp-coreh small { color: #7d8794; font-weight: 400; }
+    .gbp-corel { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+    .gbp-row { cursor: default; } .gbp-row:hover { transform: none; }
+    .gbp-pick .gbm-banner, .gbp-pick .gbm-sub { cursor: pointer; }

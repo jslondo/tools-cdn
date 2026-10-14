@@ -591,7 +591,7 @@ function gbSlots4() { const sl = gbSlotsOf(gbPresent()); return [sl[0] || null, 
 function gbOpenModal(ev) {
   if (ev) ev.stopPropagation();
   if (guardShareView()) return;
-  gbModalOpen = true; gbMsg = '';
+  gbModalOpen = true; gbMsg = ''; gbPeek = null;
   const s4 = gbSlots4();
   gbSlot = s4[0] ? 0 : 0;
   gbRenderModal();
@@ -604,7 +604,43 @@ function gbCloseModal() {
   // 고르기만 하고 포인트를 안 넣은 보드는 정리하지 않는다(빌더 화면에서도 빈 판으로 보인다 — 다시 열어 이어서 찍도록)
   renderTalentBoard();
 }
+// 다른 보드 잠깐 보기 (사용자 요청 2026-10-14 — 바꾸기 전에 바꿀 만한 게 있는지 살펴보기). 내 보드·포인트는 그대로, 보기만
+// gbPeek: null = 끔 · '' = 볼 보드 고르는 중 · '보드 번호' = 그 보드를 보는 중 (세션 한정, 저장 안 함)
+let gbPeek = null;
+function gbPeekGo(p) { gbPeek = p; gbPlace = null; gbCorePop = null; gbMsg = ''; gbRenderModal(); }
+function gbPeekCores(pre) { // 핵심 재능 선택지 — 묶음(필요 포인트)마다 펼쳐서 보기만
+  return (BOARDS[pre].k || []).map(([need, tids]) => `<div class="gbp-core"><div class="gbp-coreh">핵심 재능 · ${need}pt 묶음 <small>(하나 고름)</small></div><div class="gbp-corel">` +
+    tids.map(tid => {
+      const r = gbCoreRow(tid); if (!r) return '';
+      const ic = gbCoreIcon(pre, tid);
+      return `<div class="gbz-row gbz-core gbp-row">${ic ? `<img src="${ic}" alt="" loading="lazy">` : ''}<div><b>${escapeHtml(gbCoreName(r))}</b><small>${typeof tipWrapEffect === 'function' && r.tips && Array.isArray(r.tips[0]) && typeof r.tips[0][1] === 'string' ? tipWrapEffect(gbCoreBody(r), r.tips) : escapeHtml(gbCoreBody(r))}</small></div></div>`;
+    }).join('') + '</div></div>').join('');
+}
+function gbPeekMain(present, s4) {
+  const back = '<button class="gbp-back" onclick="gbPeekGo(null)">← 내 보드로</button>';
+  if (!gbPeek || !BOARDS[gbPeek]) { // 볼 보드 고르기 — 전부 누를 수 있다 (고르기 규칙과 상관없이)
+    const badge = p => present.has(p) ? `<span class="gbm-badge" title="내 빌드 ${s4.indexOf(p) + 1}번 칸">${s4.indexOf(p) + 1}</span>` : '';
+    const tip = p => escapeHtml(gbInfo(p) + '눌러서 보기 (내 보드는 바뀌지 않음)');
+    return `<div class="gbm-head plain"><div><small>👁 다른 보드 보기</small><b>볼 보드를 고르세요</b></div>` +
+      `<span class="gbm-hint">보기만 합니다 — 내 보드·포인트는 바뀌지 않습니다</span>${back}</div>` +
+      '<div class="gbm-pick gbp-pick">' + GB_GODS.map(([g, col]) => {
+        const gp = g + '0';
+        return `<div class="gbm-col" style="--gc:${col}">` +
+          `<div class="gbm-banner can" onclick="gbPeekGo('${gp}')" title="${tip(gp)}">${badge(gp)}${gbEmb(gp, 'gbm-bemb')}<b>${escapeHtml(BOARDS[gp].n)}</b>${gbTags(gp, 'gbm-btag')}</div>` +
+          [1, 2, 3, 4].map(k => { const p = g + k; return BOARDS[p] ? `<div class="gbm-sub can" onclick="gbPeekGo('${p}')" title="${tip(p)}">${gbEmb(p, 'gbm-subemb')}<div class="gbm-sn"><span>${escapeHtml(BOARDS[p].n)}</span>${gbTags(p, 'gbm-stag')}</div>${badge(p)}</div>` : ''; }).join('') +
+          '</div>';
+      }).join('') + '</div>';
+  }
+  const p = gbPeek, mine = present.has(p);
+  return `<div class="gbm-head" style="--gc:${gbColor(p)}">${gbEmb(p, 'gbm-hemb')}<div><small>👁 다른 보드 보기 · ${gbIsGod(p) ? '신 보드' : '하위 보드'}${mine ? ' · 내 빌드 ' + (s4.indexOf(p) + 1) + '번 칸' : ''}</small>` +
+    `<b>${escapeHtml(BOARDS[p].n)}</b>${gbTags(p, 'gbm-htag')}</div>` +
+    `<div class="gbm-hright"><button class="gbp-other" onclick="gbPeekGo('')">다른 보드</button>${back}</div></div>` +
+    `<div class="gbp-note">보기만 하는 화면입니다 — 노드에 마우스를 올리면 효과가 나옵니다. 찍으려면 왼쪽에서 내 보드 칸을 고르세요.</div>` +
+    gbPeekCores(p) +
+    `<div class="gbm-stage" style="--gc:${gbColor(p)};--em:url('${location.origin}/tli/builder/emblem/${BOARDS[p].e || ''}')"><div id="gbmBoard"></div></div>`;
+}
 function gbPickSlot(i) {
+  gbPeek = null; // 왼쪽 내 보드 칸을 누르면 보기 끝
   const s4 = gbSlots4();
   if (i > 0 && !s4[i - 1]) { gbMsg = '⚠ ' + i + '번 보드부터 골라 주세요'; gbRenderModal(); return; }
   gbSlot = i; gbMsg = ''; gbRenderModal();
@@ -624,7 +660,7 @@ function gbSwap34() {
 function gbPickBoard(pre) {
   const why = gbWhyNotAdd(pre, gbPresent());
   if (why) { gbMsg = '⚠ ' + why; gbRenderModal(); return; }
-  gbExtra.add(pre); gbMsg = '';
+  gbExtra.add(pre); gbMsg = ''; gbPeek = null;
   gbSlot = Math.max(0, gbSlots4().indexOf(pre));
   gbRefresh();
 }
@@ -653,6 +689,7 @@ function gbRenderModal() {
   }
   gbPzSync();
   const present = gbPresent(), s4 = gbSlots4();
+  const peeking = gbPeek !== null; // 다른 보드 보기 중
   const total = (preset.gboard || []).reduce((t, x) => t + (x[1] || 0), 0);
   const ptsOf = pre => (preset.gboard || []).reduce((t, x) => t + (String(x[0]).slice(0, 2) === pre ? (x[1] || 0) : 0), 0);
   const god = s4[0];
@@ -665,12 +702,12 @@ function gbRenderModal() {
     if (pre) {
       const pt = ptsOf(pre), pct = Math.min(100, Math.round(pt / gbMaxPts(pre) * 100));
       const dnd = i >= 2 && s4[2] && s4[3] ? ` draggable="true" data-slot="${i}" title="끌어서 3·4번 순서 바꾸기"` : '';
-      side += `<div class="gbm-slot filled${i === gbSlot ? ' on' : ''}${dnd ? ' dnd' : ''}" style="--gc:${gbColor(pre)}" onclick="gbPickSlot(${i})"${dnd}>` + (dnd ? '<span class="gbm-grip">⠿</span>' : '') +
+      side += `<div class="gbm-slot filled${i === gbSlot && !peeking ? ' on' : ''}${dnd ? ' dnd' : ''}" style="--gc:${gbColor(pre)}" onclick="gbPickSlot(${i})"${dnd}>` + (dnd ? '<span class="gbm-grip">⠿</span>' : '') +
         `<span class="gbm-no">${i + 1}</span>${gbEmb(pre, 'gbm-semb')}<div class="gbm-st"><small>${escapeHtml(label(i))}</small>` +
         `<b>${escapeHtml(BOARDS[pre].n)}</b><span class="gbm-bar"><i style="width:${pct}%"></i></span><em>${pt}pt${(BOARDS[pre].k || []).map((g, gi) => { const t = gbCorePicked(pre, gi), r = t && gbCoreRow(t); return r ? ' · ' + escapeHtml(gbCoreName(r)) : ''; }).join('')}</em></div>` +
         `<button class="gbm-del" onclick="event.stopPropagation();gbClearBoard('${pre}')" title="이 보드의 포인트를 모두 지우고 빼기">✕</button></div>`;
     } else {
-      side += `<div class="gbm-slot empty${i === gbSlot ? ' on' : ''}${open ? '' : ' off'}" onclick="gbPickSlot(${i})">` +
+      side += `<div class="gbm-slot empty${i === gbSlot && !peeking ? ' on' : ''}${open ? '' : ' off'}" onclick="gbPickSlot(${i})">` +
         `<span class="gbm-plus">${open ? '+' : i + 1}</span><div class="gbm-st"><small>${i + 1}번 · ${escapeHtml(label(i))}</small>` +
         `<b class="gbm-empty">${open ? '눌러서 고르기' : '앞 칸 먼저'}</b></div></div>`;
     }
@@ -679,14 +716,15 @@ function gbRenderModal() {
   side += gbPzSide() + `<div class="gbm-total${over ? ' over' : ''}"><small>총합 포인트</small><b>${total}<span> / ${GB_BUDGET}</span></b>` +
     `<span class="gbm-bar big"><i style="width:${tp}%"></i></span>${over ? '<em>총 포인트를 넘었습니다</em>' : ''}</div>`;
   // ── 가운데: 보드 고르기 또는 그 보드
-  const cur = s4[gbSlot];
+  const cur = peeking ? null : s4[gbSlot];
   let main;
-  if (cur) {
+  if (peeking) main = gbPeekMain(present, s4);
+  else if (cur) {
     const pt = ptsOf(cur);
     main = `<div class="gbm-head" style="--gc:${gbColor(cur)}">${gbEmb(cur, 'gbm-hemb')}<div><small>${gbSlot + 1}번 · ${escapeHtml(label(gbSlot))}</small>` +
       `<b>${escapeHtml(BOARDS[cur].n)}</b>${gbTags(cur, 'gbm-htag')}</div><div class="gbm-cslots">${gbCoreSlots(cur)}</div>` +
       `<div class="gbm-hright">` + (gbSlot < 3 && !s4[gbSlot + 1] ? `<button class="gbm-next" onclick="gbPickSlot(${gbSlot + 1})">다음 보드 고르기 →</button>` : '') +
-      gbPzHead(cur, gbSlot) + `<span class="gbm-pt">${pt}<small>pt</small></span></div></div>` +
+      gbPzHead(cur, gbSlot) + `<button class="gbp-open" onclick="gbPeekGo('')" title="내 보드는 그대로 두고 다른 보드를 잠깐 봅니다">👁 다른 보드 보기</button><span class="gbm-pt">${pt}<small>pt</small></span></div></div>` +
       (gbPlace ? `<div class="gbm-placing"><i class="gbm-pzi ${gbPlace}">◆</i> ${gbPlace === 'i' ? '역상' : '프리즘'}을 놓을 노드를 누르세요 — 신 보드 제외${gbPlace === 'i' ? ' · 가운데 3×3 제외' : ''} · 왼쪽에서 다른 보드로 바꿀 수 있습니다 <button onclick="gbPlaceMode('${gbPlace}')">취소</button></div>` : '') +
       `<div class="gbm-stage" style="--gc:${gbColor(cur)};--em:url('${location.origin}/tli/builder/emblem/${BOARDS[cur].e || ''}')"><div id="gbmBoard"></div></div>`;
   } else {
@@ -716,12 +754,14 @@ function gbRenderModal() {
     (gbCorePop ? `<div class="gbz-dim" onclick="if (event.target === this) { gbCorePop = null; gbRenderModal(); }"><div class="gbz gbz-narrow">${gbCorePopup()}</div></div>` : '') + '</div>';
   if (!page) el.style.display = 'flex';
   if (cur) renderTalentBoard({into: document.getElementById('gbmBoard'), only: [cur], edit: true});
+  else if (peeking && gbPeek && BOARDS[gbPeek]) renderTalentBoard({into: document.getElementById('gbmBoard'), only: [gbPeek], peek: true});
 }
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (gbCorePop) { gbCorePop = null; gbRenderModal(); return; }
   if (gbPzEd) { gbPzClose(); return; }
   if (gbPlace) { gbPlace = null; gbRenderModal(); return; }
+  if (gbPeek !== null && (gbModalOpen || gbTalentPage())) { gbPeekGo(null); return; }
   if (gbModalOpen && !gbTalentPage()) gbCloseModal();
 });
 function renderTalentBoard(opt) {
@@ -764,6 +804,7 @@ function renderTalentBoard(opt) {
     .filter(p => order.indexOf(p) < 0)
     .sort((a, b) => byBoard[b].reduce((s, x) => s + (pt[x] || 0), 0) - byBoard[a].reduce((s, x) => s + (pt[x] || 0), 0))
     .forEach(p => order.push(p));
+  if (opt.peek && BOARDS[opt.only[0]]) { if (!byBoard[opt.only[0]]) byBoard[opt.only[0]] = []; if (order.indexOf(opt.only[0]) < 0) order.push(opt.only[0]); } // 다른 보드 보기 — 포인트 없는 보드도 그린다
   if (opt.only) { const keep = order.filter(p => opt.only.includes(p)); order.length = 0; keep.forEach(p => order.push(p)); }
   if (ED) { // 칸 순서로 다시 줄 세운다 (1번 신 → 2번 그 신의 하위 → 3·4번)
     const slotted = gbSlotsOf(new Set(order)).filter(Boolean);

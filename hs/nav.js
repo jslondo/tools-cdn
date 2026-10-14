@@ -46,6 +46,7 @@
       { href: '/tli/slate/',   label: '석판',      match: /^\/tli\/slate/ },
     ] },
     { href: '/tli/share/',   label: '빌드 공유',   match: /^\/tli\/share/ },
+    { href: '/tli/tracker/', label: '트래커',      match: /^\/tli\/tracker/ }, // 지인(Hoza)의 TITrack-KR 안내 (2026-10-14)
     // 새 시즌 관련 (2026-10-10, 유출 번역 3쪽을 대신함) — 둘 다 tli/builder/update/build_preview.py 가 만든다
     { label: 'SS14 관련', match: /^\/tli\/preview/, kids: [
       { href: '/tli/preview/',          label: 'SS14 패치노트',      match: /^\/tli\/preview\/(index\.html)?$/ },

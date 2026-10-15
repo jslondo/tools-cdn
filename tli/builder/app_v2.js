@@ -13166,11 +13166,11 @@ function shareRowHtml(it) {
   return `<div class="share-row share-card" data-shid="${escapeHtml(it.id)}">` +
     `<div class="shc-faces"><div class="shc-face">${tr ? `<img src="${tr.img}" alt="" loading="lazy" onerror="this.remove()">` : '<span>?</span>'}</div>` +
     `<img class="shc-sk" src="${skillIconOf(it.main)}" alt="" title="메인 스킬 · ${escapeHtml(it.main || '')}" loading="lazy" onerror="this.onerror=null;this.src=SK_FALLBACK"></div>` +
-    `<div class="shc-info"><div class="share-title">${se}${it.yt ? '<span class="shc-yt" title="가이드 영상이 있습니다">▶</span>' : ''}${escapeHtml(shareTitleText(it))}</div>` +
+    `<div class="shc-info"><div class="share-title">${se}${escapeHtml(shareTitleText(it))}</div>` +
     `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}${it.main ? ' · ' + escapeHtml(it.main) : ''}</small>` +
     (it.stage_t ? `<div class="shc-stages" title="단계별 빌드 — 보기 화면에서 탭으로 바꿔 봅니다">🪜 ${String(it.stage_t).split(',').map(t => `<span>${escapeHtml(t)}</span>`).join('')}</div>` : '') +
     (chips ? `<div class="share-tags">${chips}</div>` : '') + '</div>' +
-    `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-date">${escapeHtml(shareDateText(it))}</span></div></div>`;
+    `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-date">${escapeHtml(shareDateText(it))}</span>${it.yt ? '<span class="shc-yt" title="가이드 영상이 있습니다">▶</span>' : ''}</div></div>`; // 영상 표시는 날짜 뒤 (2026-10-15 사용자)
 }
 // 정렬 스위치 (최신순·추천순·조회순)
 function setShareSort(v) {

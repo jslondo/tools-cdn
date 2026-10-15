@@ -13155,22 +13155,38 @@ function shareDateText(it) { // 작성일 + 고친 적 있으면 수정일(MM-DD
   const c = it.created_at ? kstDate(it.created_at) : '', u = it.updated_at ? kstDate(it.updated_at) : '';
   return c + (u ? ' (수정 ' + u.slice(5) + ')' : '');
 }
-// 공유 카드 (2026-10-15 사용자: 빌더 '내 프리셋' 카드처럼) — 왼쪽 초상화 + 밑에 메인 스킬, 오른쪽 제목·특성·태그, 아래 추천·조회·작성자
+// 짧은 날짜 — 오늘·어제·N일 전(일주일 안)·MM-DD(올해)·YYYY-MM-DD (전체 날짜·수정일은 title 로)
+function shareShortDate(iso) {
+  const d = kstDate(iso); if (!d) return '';
+  const today = kstDate(new Date().toISOString()), n = Math.round((Date.parse(today) - Date.parse(d)) / 86400000);
+  return n <= 0 ? '오늘' : n === 1 ? '어제' : n < 7 ? n + '일 전' : d.slice(0, 4) === today.slice(0, 4) ? d.slice(5) : d;
+}
+const SHARE_CONTENT_SET = new Set([...SHARE_CONTENT_TAGS, ...SHARE_STAGE_TAGS]);
+// 공유 카드 (2026-10-15 정리 — 사용자 '난잡하다'): 줄 고정(제목·특성·태그·정보 한 줄씩 → 카드 높이 같게),
+// 초상화 오른쪽 아래에 메인 스킬, 시즌 표시는 지난 시즌만, 콘텐츠 태그(금색) 앞·스킬 태그(옅게) 뒤, 단계 글은 '🪜 N단계' 하나
 function shareRowHtml(it) {
   let tags = [];
   try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
   const trTag = tags.find(t => traitInfo(t)), tr = trTag && traitInfo(trTag);
-  // 히어로 특성은 초상화·부제로 보이니 칩에선 뺀다
-  const chips = tags.filter(t => t !== trTag).map(t => `<span class="share-tag">${escapeHtml(t)}</span>`).join('') + shareItemsHtml(parseShareItems(it));
-  const se = it.season ? `<span class="share-se${it.season === ((typeof SEASON !== 'undefined' && SEASON.label) || '') ? ' cur' : ''}" title="${escapeHtml(it.season)} 시즌에 만든 프리셋">${escapeHtml(it.season)}</span>` : '';
+  const stg = it.stage_t ? String(it.stage_t).split(',').filter(Boolean) : [];
+  const rest = tags.filter(t => t !== trTag && !stg.includes(t)), items = parseShareItems(it);
+  const cont = rest.filter(t => SHARE_CONTENT_SET.has(t)), other = rest.filter(t => !SHARE_CONTENT_SET.has(t));
+  const chips = (stg.length ? `<span class="share-tag stg" title="단계별 프리셋 — ${escapeHtml(stg.join(' → '))}">🪜 ${stg.length}단계</span>` : '') +
+    cont.map(t => `<span class="share-tag cont">${escapeHtml(t)}</span>`).join('') + other.map(t => `<span class="share-tag">${escapeHtml(t)}</span>`).join('') + shareItemsHtml(items);
+  const tipAll = [stg.length ? '🪜 ' + stg.join(' → ') : '', ...cont, ...other, ...items].filter(Boolean).join(' · ');
+  const curSe = (typeof SEASON !== 'undefined' && SEASON.label) || '';
+  const se = it.season && it.season !== curSe ? `<span class="share-se" title="${escapeHtml(it.season)} 시즌에 만든 프리셋">${escapeHtml(it.season)}</span>` : '';
+  const title = shareTitleText(it), dFull = shareDateText(it);
   return `<div class="share-row share-card" data-shid="${escapeHtml(it.id)}">` +
     `<div class="shc-faces"><div class="shc-face">${tr ? `<img src="${tr.img}" alt="" loading="lazy" onerror="this.remove()">` : '<span>?</span>'}</div>` +
     `<img class="shc-sk" src="${skillIconOf(it.main)}" alt="" title="메인 스킬 · ${escapeHtml(it.main || '')}" loading="lazy" onerror="this.onerror=null;this.src=SK_FALLBACK"></div>` +
-    `<div class="shc-info"><div class="share-title" data-tt="${escapeHtml(shareTitleText(it))}">${se}${escapeHtml(shareTitleText(it))}</div>` +
-    `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}${it.main ? ' · ' + escapeHtml(it.main) : ''}</small>` +
-    (it.stage_t ? `<div class="shc-stages" title="단계별 프리셋 — 보기 화면에서 탭으로 바꿔 봅니다">🪜 ${String(it.stage_t).split(',').map(t => `<span>${escapeHtml(t)}</span>`).join('')}</div>` : '') +
-    (chips ? `<div class="share-tags" data-tt="${escapeHtml([...tags.filter(t => t !== trTag), ...parseShareItems(it)].join(' · '))}">${chips}</div>` : '') + '</div>' +
-    `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-date">${escapeHtml(shareDateText(it))}</span>${it.yt ? '<span class="shc-yt" title="가이드 영상이 있습니다">▶</span>' : ''}</div></div>`; // 영상 표시는 날짜 뒤 (2026-10-15 사용자)
+    `<div class="shc-info"><div class="share-title" data-tt="${escapeHtml(title)}">${se}${escapeHtml(title)}</div>` +
+    `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}</small>` +
+    `<div class="share-tags" data-tt="${escapeHtml(tipAll)}">${chips}</div></div>` +
+    `<div class="share-meta"><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-right">` +
+      (it.likes > 0 ? `<span class="share-like">👍 ${it.likes}</span>` : '') + `<span class="share-views">👁 ${it.views || 0}</span>` +
+      (it.yt ? '<span class="shc-yt" title="가이드 영상이 있습니다">▶</span>' : '') +
+      `<span class="shc-date" title="${escapeHtml(dFull)}">${escapeHtml(shareShortDate(it.created_at))}${it.updated_at ? '<i title="고친 적 있음">✎</i>' : ''}</span></span></div></div>`;
 }
 // 정렬 스위치 (최신순·추천순·조회순)
 function setShareSort(v) {
@@ -13180,6 +13196,7 @@ function setShareSort(v) {
 }
 // 히어로별 보기 줄 (2026-10-15 사용자) — 특성 초상화를 누르면 그 특성 태그로 거른다(히어로는 하나만). 맨 앞 = 이번 시즌 새 특성(유가3)
 const SHARE_HERO_FIRST = ['유가3'];
+var shareHeroOpen = null; // 특성 줄을 펼친 히어로 — null 이면 고른 특성의 히어로, '' 이면 접음 (var: 처음 그릴 때 TDZ 없게)
 function shareHeroOrder() {
   const all = [];
   SHARE_HEROES.forEach(([hero, traits]) => traits.forEach(tr => all.push({tag: tr[0], hero, full: tr[1], img: HERO_IMG_BASE + tr[2]})));
@@ -13187,17 +13204,37 @@ function shareHeroOrder() {
 }
 function renderShareHeroes() {
   const el = document.getElementById('shareHeroes'); if (!el) return;
+  if (!el.dataset.wheel) { // 한 줄 얼굴 — 마우스 휠(세로)로도 옆으로 넘긴다 (줄은 다시 그려지므로 바깥에 한 번)
+    el.dataset.wheel = 1;
+    el.addEventListener('wheel', e => { const r = e.target.closest('.shh-row, .shh-sub'); if (r && r.scrollWidth > r.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); r.scrollLeft += e.deltaY; } }, {passive: false});
+  }
   const cur = shareFilterTags.find(t => traitInfo(t));
-  const curKey = cur && traitInfo(cur).key;
-  el.innerHTML = `<button type="button" class="shh-all${cur ? '' : ' on'}" onclick="setShareHero('')">전체</button>` +
-    shareHeroOrder().map(x => `<button type="button" class="shh${curKey === traitInfo(x.tag).key ? ' on' : ''}${SHARE_HERO_FIRST.includes(x.tag) ? ' new' : ''}" onclick="setShareHero('${x.tag}')" title="${escapeHtml(x.hero + ' · ' + x.full)}">` +
-      `<img src="${x.img}" alt="${escapeHtml(x.tag)}" loading="lazy"><span>${escapeHtml(x.tag)}</span></button>`).join('');
+  const curKey = cur && traitInfo(cur).key, curHero = cur && traitInfo(cur).hero;
+  // 히어로별로 묶기 (2026-10-15 사용자): 첫 줄 = 히어로(특성 얼굴을 반반·1/3씩), 누르면 아래에 그 히어로 특성들 — 특성 하나뿐이면 바로 고름
+  const groups = [];
+  shareHeroOrder().forEach(x => { let g = groups.find(g => g.hero === x.hero); if (!g) groups.push(g = {hero: x.hero, list: []}); g.list.push(x); });
+  const open = shareHeroOpen !== null ? shareHeroOpen : curHero;
+  const face = g => `<span class="shh-face n${g.list.length}">${g.list.map((x, i) => `<img src="${x.img}" alt="" loading="lazy" style="--i:${i}">`).join('')}</span>`;
+  el.innerHTML = `<div class="shh-row"><button type="button" class="shh-all${cur ? '' : ' on'}" onclick="setShareHero('')">전체</button>` +
+    groups.map(g => {
+      const isNew = g.list.some(x => SHARE_HERO_FIRST.includes(x.tag)), on = curHero === g.hero, op = open === g.hero && g.list.length > 1;
+      const click = g.list.length > 1 ? `shareHeroToggle('${escapeHtml(g.hero)}')` : `setShareHero('${g.list[0].tag}')`;
+      return `<button type="button" class="shh${on ? ' on' : ''}${op ? ' open' : ''}${isNew ? ' new' : ''}" onclick="${click}" title="${escapeHtml(g.hero + (g.list.length > 1 ? ' — 눌러서 특성 고르기' : ' · ' + g.list[0].full))}">${face(g)}<span>${escapeHtml(g.hero)}</span></button>`;
+    }).join('') + '</div>' +
+    (() => { const g = groups.find(g => g.hero === open && g.list.length > 1); if (!g) return '';
+      return `<div class="shh-sub">${g.list.map(x => `<button type="button" class="shh-t${curKey === traitInfo(x.tag).key ? ' on' : ''}${SHARE_HERO_FIRST.includes(x.tag) ? ' new' : ''}" onclick="setShareHero('${x.tag}')"><img src="${x.img}" alt="" loading="lazy"><span><b>${escapeHtml(x.tag)}</b><small>${escapeHtml(x.full)}</small></span></button>`).join('')}</div>`; })();
+}
+function shareHeroToggle(hero) {
+  const cur = shareFilterTags.find(t => traitInfo(t)), curHero = cur && traitInfo(cur).hero;
+  shareHeroOpen = (shareHeroOpen !== null ? shareHeroOpen : curHero) === hero ? '' : hero;
+  renderShareHeroes();
 }
 function setShareHero(tag) {
   const cur = shareFilterTags.find(t => traitInfo(t));
   const same = cur && tag && traitInfo(cur).key === traitInfo(tag).key;
   shareFilterTags = shareFilterTags.filter(t => !traitInfo(t)); // 히어로 특성은 하나만
   if (tag && !same) shareFilterTags.push(tag);
+  shareHeroOpen = null; // 고른 특성의 히어로 줄을 펼친 채로
   if (document.getElementById('shareFilterPanel').innerHTML) renderShareFilter();
   syncSharePicked();
   renderShare(true);

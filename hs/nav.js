@@ -70,11 +70,7 @@
       { href: '/tli/tracker/ttd/',    label: 'PC (TTD)',        match: /^\/tli\/tracker\/ttd/ },
       { href: '/tli/tracker/mobile/', label: '모바일 (mTTD)',   match: /^\/tli\/tracker\/mobile/ },
     ] },
-    // 새 시즌 관련 (2026-10-10, 유출 번역 3쪽을 대신함) — 둘 다 tli/builder/update/build_preview.py 가 만든다
-    { label: 'SS14 관련', match: /^\/tli\/preview/, kids: [
-      { href: '/tli/preview/',          label: 'SS14 패치노트',      match: /^\/tli\/preview\/(index\.html)?$/ },
-      { href: '/tli/preview/changes/',  label: '패치노트에 없는 변경', match: /^\/tli\/preview\/changes/ },
-    ] },
+    // 'SS14 관련' 묶음(패치노트·없는 변경)은 시즌 시작(2026-10-16)으로 메뉴에서 뺐다 — 페이지는 남김
   ] : [
     // 페이지가 늘어 탭이 9개가 되자 헤더가 빡빡해져, 성격이 같은 것끼리 묶었다(2026-09-19).
     // kids 가 있으면 눌러서 펼치는 묶음 탭이 된다.
@@ -209,7 +205,7 @@
     .hubnav .wtoggle { padding:5px 7px; }
     .hubnav .langtoggle .tx, .hubnav .wtoggle .tx { display:none; }   /* 토글은 아이콘만 */
   }
-  @media(max-width:420px){   /* 아주 좁은 폰 — 마지막 탭('SS14 관련')이 끝에 붙어 잘리던 것 (2026-10-15) */
+  @media(max-width:420px){   /* 아주 좁은 폰 — 마지막 탭이 끝에 붙어 잘리던 것 (2026-10-15) */
     .hubnav a.tab { padding:0 5px; font-size:12.5px; } .hubnav .caret { padding:0 4px 0 0; }
     .hubnav .home { margin-right:3px; } .hubnav .spacer { flex:0 0 2px; }
   }`;

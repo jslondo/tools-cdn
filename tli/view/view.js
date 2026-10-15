@@ -5810,10 +5810,10 @@ function vwVidEdit() {
 }
 function vwVidPop() {
   const stOpt = cur => !VW.stages ? '' : `<select data-k="st">${['', ...VW.stages.map(x => x.t)].map(t => `<option value="${vwEsc(t)}"${t === cur ? ' selected' : ''}>${t ? vwEsc(t) + ' 단계만' : '모든 단계'}</option>`).join('')}</select>`;
-  vwPop('<h3>🎬 가이드 영상 관리</h3><div class="wb-msg">빌드 보기 맨 아래에 나옵니다. 유튜브 주소를 붙여 넣으세요 (시작 시각 <code>?t=90</code>·<code>&amp;t=1m30s</code> 포함 가능).' +
+  vwPop('<h3>🎬 가이드 영상 관리</h3><div class="wb-msg">빌드 보기 맨 아래에 나옵니다. 유튜브 주소만 붙여 넣으면 제목은 저장할 때 자동으로 채웁니다 (시작 시각 <code>?t=90</code>·<code>&amp;t=1m30s</code> 포함 가능).' +
     (VW.stages ? ' 묶음 글은 영상마다 <b>모든 단계</b> 또는 <b>특정 단계</b>에서만 보이게 고를 수 있습니다.' : '') + '</div>' +
     '<div class="vw-vrows">' + vwVidDraft.map((r, i) => `<div class="vw-vrow" data-i="${i}"><input data-k="url" placeholder="https://youtu.be/…" value="${vwEsc(r.url)}">` +
-      `<input data-k="title" maxlength="60" placeholder="제목 (선택)" value="${vwEsc(r.title)}">${stOpt(r.st)}<button type="button" class="wz-btn" onclick="vwVidDel(${i})" title="빼기">✕</button></div>`).join('') + '</div>' +
+      `<input data-k="title" maxlength="80" placeholder="제목 — 비우면 유튜브 제목 자동" value="${vwEsc(r.title)}">${stOpt(r.st)}<button type="button" class="wz-btn" onclick="vwVidDel(${i})" title="빼기">✕</button></div>`).join('') + '</div>' +
     '<div class="wb-btns" style="justify-content:flex-start"><button type="button" class="wz-btn" onclick="vwVidAdd()">+ 영상 추가</button></div>' +
     '<div class="wb-btns"><button type="button" class="wz-btn pri" id="vwVidGo" onclick="vwVidSave()">저장</button><button type="button" class="wz-btn" onclick="vwClose()">취소</button></div>');
 }

@@ -26,7 +26,8 @@
   const path = location.pathname;
   const isTli = path.indexOf('/tli') === 0;
   // 게임별 섹션 — 경로로 판별. 배지·탭이 바뀐다(브랜드/토글은 공통).
-  const GAME = isTli ? 'Torchlight Infinite' : 'Hero Siege';
+  // 배지 = 시리즈 이름 '미니토치DB'·'미니히시즈DB' (사용자들이 부르던 이름, 2026-10-15) — 마우스를 올리면 게임 이름
+  const GAME = isTli ? '미니토치DB' : '미니히시즈DB', GAME_FULL = isTli ? 'Torchlight: Infinite · 토치라이트 인피니트' : 'Hero Siege · 히어로시즈';
   const LINKS = isTli ? [
     // DB — 누르면 통합 검색, 하위 메뉴로 각 탭에 바로 (2026-10-10 사용자 요청). tab = DB 화면 ?tab= 값 (DB 화면 안에서는 새로 불러오지 않고 탭만 바꾼다)
     { label: 'DB', match: /^\/tli\/db/, kids: [
@@ -203,7 +204,7 @@
   nav.className = 'hubnav';
   nav.innerHTML =
     `<a class="home" href="/" title="Winterer's Tools 허브">${SWORD}<span class="brandwm">Winterer's Tools</span></a>` +
-    `<span class="game">${GAME}</span>` +
+    `<span class="game" title="${GAME_FULL}">${GAME}</span>` +
     `<div class="tabs">` + LINKS.map((l, i) => l.kids
       // 묶음 탭도 누르면 첫 항목으로 간다(하위를 고르지 않아도 되게). 펼침은 마우스를 올리거나 ▼ 를 누를 때.
       ? `<span class="tabwrap"${l.match.test(path) ? ' aria-current="page"' : ''} data-menu="${i}">` +

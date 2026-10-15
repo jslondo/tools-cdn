@@ -8,7 +8,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'
 
 const T = {
   ko: {
-    title: INC ? "히어로시즈 인카네이션 트리 플래너 · Winterer's Tools" : "히어로시즈 에테르 트리 플래너 · Winterer's Tools",
+    title: INC ? "히어로시즈 인카네이션 트리 플래너 · 미니히시즈DB" : "히어로시즈 에테르 트리 플래너 · 미니히시즈DB",
     h1: INC ? '인카네이션 트리' : '에테르 트리',
     sub: '노드를 누르면 <b>시작점에서 가장 짧은 길</b>이 함께 찍힙니다 · 찍힌 노드를 다시 누르면 그 뒤로 끊긴 가지도 같이 풀립니다',
     other: INC ? '에테르 트리' : '인카네이션 트리',
@@ -21,7 +21,7 @@ const T = {
     foot: 'Hero Siege (Panic Art Studios) 기반 · 노드 배치·수치는 <a href="https://github.com/HeroSiegePlanner/HSPlanner" target="_blank" rel="noopener">HSPlanner</a>(MIT), 이름·설명은 게임 내 번역 파일 · 패치에 따라 달라질 수 있습니다 · 비공식 팬 프로젝트 · 문의 디스코드 <b>win.terer</b>',
   },
   en: {
-    title: INC ? "Hero Siege Incarnation Tree Planner · Winterer's Tools" : "Hero Siege Ether Tree Planner · Winterer's Tools",
+    title: INC ? "Hero Siege Incarnation Tree Planner · Mini HS DB" : "Hero Siege Ether Tree Planner · Mini HS DB",
     h1: INC ? 'Incarnation Tree' : 'Ether Tree',
     sub: 'Clicking a node also allocates the <b>shortest path</b> from a start node · clicking an allocated node also frees whatever it orphans',
     other: INC ? 'Ether tree' : 'Incarnation tree',

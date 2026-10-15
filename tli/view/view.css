@@ -1312,3 +1312,5 @@
     .vw-se-choice.three { grid-template-columns: 1fr; } /* 세 갈래는 세로 목록 (가로 3칸은 글이 좁았다) */
     .vw-se-stg { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 10px; padding: 5px; border-radius: 10px; border: 1px solid #3a3220; background: #15130d; }
     .vw-se-stg > span { color: #b9a46a; font-size: 12px; padding: 0 8px 0 6px; } .vw-se-stg .vw-stb { padding: 5px 12px; font-size: 13px; }
+    .vw-vwait { margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px dashed #6b5a2a; background: #15130d; color: #e6d39c; font-size: 13px; } /* 영상 승인 대기 */
+    .wb-field select { padding: 6px 9px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 13px; }

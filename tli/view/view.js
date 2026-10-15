@@ -5282,6 +5282,7 @@ async function vwLoad() {
       }
       VW.share = j.item; VW.liked = !!j.liked; VW.admin = !!j.admin; code = j.item.code;
       try { const v = JSON.parse(j.item.videos || '[]'); VW.videos = Array.isArray(v) ? v : []; } catch (e) { VW.videos = []; }
+      VW.vwait = Array.isArray(j.vwait) ? j.vwait : []; // 승인 대기 중인 영상 요청의 단계들 ('' = 모든 단계)
       // 단계별 빌드 (2026-10-15) — 탭마다 코드 하나, 처음엔 ?st=단계 또는 첫 단계 (사용자 2026-10-15)
       try { const st = JSON.parse(j.item.stages || 'null'); if (Array.isArray(st) && st.length > 1) VW.stages = st; } catch (e) {}
       if (VW.stages) { const w = VW.stages.findIndex(x => x.t === q.get('st')); VW.st = w >= 0 ? w : 0; code = VW.stages[VW.st].code; }
@@ -5292,7 +5293,7 @@ async function vwLoad() {
     VW.season = r.season || 'SS13';
     const cur = (window.TLI_SEASON || {}).label;
     if (!window.TLI_SNAPSHOT && cur && VW.season !== cur && (window.TLI_SNAPS || []).includes(VW.season)) {
-      try { if (VW.share) sessionStorage.setItem('vwHand', JSON.stringify({item: VW.share, liked: VW.liked, admin: VW.admin})); } catch (e) {}
+      try { if (VW.share) sessionStorage.setItem('vwHand', JSON.stringify({item: VW.share, liked: VW.liked, admin: VW.admin, vwait: VW.vwait})); } catch (e) {}
       return vwGo('/tli/' + VW.season.toLowerCase() + '/view/' + (pl ? '?code=' + encodeURIComponent(code) : location.search) + location.hash); // 단축 링크는 보관본이 몰라서 코드로
     }
     preset = r.preset; VW.missing = r.missing; VW.code = code; VW.state = 'ok';
@@ -5362,7 +5363,8 @@ function vwHead() {
     (s ? `<div class="vw-acts2"><button type="button" class="wz-btn" id="vwLike" onclick="vwLike()"${VW.liked ? ' disabled' : ''}>👍 추천 ${s.likes || 0}${VW.liked ? ' (추천함)' : ''}</button>` +
       '<button type="button" class="wz-btn" onclick="vwCopy()">🔗 링크 복사</button></div>' +
       '<div class="vw-acts2"><button type="button" class="wz-btn" onclick="vwShareEdit(false)" title="올릴 때 등록한 비밀번호로 내 글을 고칩니다 (빌더에서 고친 뒤 저장)">✏ 내 글 수정</button>' +
-      '<button type="button" class="wz-btn" onclick="vwShareDel()" title="올릴 때 등록한 비밀번호로 내 글을 지웁니다">🗑 삭제</button></div>' : '') + '</div></div>' +
+      '<button type="button" class="wz-btn" onclick="vwShareDel()" title="올릴 때 등록한 비밀번호로 내 글을 지웁니다">🗑 삭제</button>' +
+      '<button type="button" class="wz-btn" onclick="vwVidReq()" title="이 빌드의 유튜브 가이드 영상 — 작성자 비밀번호로 올리고, 관리자 승인 뒤 맨 아래에 보입니다">🎬 영상 올리기</button></div>' : '') + '</div></div>' +
     vwStageBar() + '<nav class="vw-toc">' + VW_SECS.filter(([id]) => id !== 'vc' || vwHasCmt()).map(([id, nm]) => `<a href="#${id}">${nm}</a>`).join('') +
     (vwVidList().length ? '<a href="#vy" class="vw-toc-yt">▶ 영상</a>' : '') + '</nav>';
 }
@@ -5733,7 +5735,8 @@ const vwVKey = v => v.id + '|' + (v.start || 0) + '|' + (v.st || '');
 function vwVidsRender() {
   const host = document.getElementById('vwVids'); if (!host) return;
   const list = VW.state === 'ok' && VW.share ? vwVidList() : [];
-  if (!list.length && !(VW.admin && VW.share)) { VW_VBOX.forEach(w => w.remove()); VW_VBOX.clear(); host.innerHTML = ''; return; }
+  const waits = VW.share ? (VW.vwait || []).filter(t => !t || !VW.stages || t === (VW.stages[VW.st] || {}).t).length : 0;
+  if (!list.length && !waits && !(VW.admin && VW.share)) { VW_VBOX.forEach(w => w.remove()); VW_VBOX.clear(); host.innerHTML = ''; return; }
   let sec = host.querySelector('#vy');
   if (!sec) {
     host.innerHTML = '<section class="vw-sec" id="vy"><div class="vw-sech"><h2>▶ 가이드 영상</h2><span></span></div><div class="vw-vids"></div></section>';
@@ -5743,9 +5746,34 @@ function vwVidsRender() {
   const box = sec.querySelector('.vw-vids'), keys = new Set(list.map(vwVKey));
   VW_VBOX.forEach((w, k) => { if (!keys.has(k)) { w.remove(); VW_VBOX.delete(k); } }); // 다른 단계 영상은 빼면 재생도 멈춘다
   list.forEach(v => { const k = vwVKey(v); if (!VW_VBOX.has(k)) VW_VBOX.set(k, vwVidBox(v)); const w = VW_VBOX.get(k); if (w.parentNode !== box) box.appendChild(w); });
+  let wn = sec.querySelector('.vw-vwait');
+  if (waits) { if (!wn) { wn = document.createElement('div'); wn.className = 'vw-vwait'; sec.appendChild(wn); } wn.textContent = `⏳ 유튜브 영상 ${waits}개 — 관리자 승인 대기 중입니다. 승인되면 여기에 나옵니다.`; }
+  else if (wn) wn.remove();
   const empty = box.querySelector('.vw-vempty');
-  if (!list.length) { if (!empty) box.insertAdjacentHTML('beforeend', '<div class="vw-empty vw-vempty">붙인 영상이 없습니다 — [🎬 영상 관리]로 유튜브 주소를 붙이세요 (관리자에게만 보이는 안내)</div>'); }
+  if (!list.length && !waits) { if (!empty) box.insertAdjacentHTML('beforeend', '<div class="vw-empty vw-vempty">붙인 영상이 없습니다 — [🎬 영상 관리]로 유튜브 주소를 붙이세요 (관리자에게만 보이는 안내)</div>'); }
   else if (empty) empty.remove();
+}
+// 작성자 영상 올리기 — 링크만 (제목은 서버가 유튜브에서), 비밀번호 확인 → 관리자 승인 대기 (2026-10-15 사용자)
+function vwVidReq() {
+  let saved = ''; try { saved = localStorage.getItem('tlidb_share_pwd_v1') || ''; } catch (e) {}
+  const stSel = !VW.stages ? '' : `<div class="wb-field"><b>단계</b><select id="vwVrSt"><option value="">모든 단계</option>${VW.stages.map((x, i) => `<option value="${vwEsc(x.t)}"${i === VW.st ? ' selected' : ''}>${vwEsc(x.t)} 단계만</option>`).join('')}</select></div>`;
+  vwPop('<h3>🎬 영상 올리기</h3><div class="wb-msg">이 빌드를 설명하는 <b>유튜브 영상 링크</b>를 넣어 주세요. 제목은 유튜브에서 자동으로 가져옵니다.<br>관리자가 확인한 뒤 빌드 맨 아래에 붙고, 그 전까지는 <b>승인 대기 중</b>으로 보입니다.</div>' +
+    '<div class="wb-field"><b>링크</b><input id="vwVrUrl" placeholder="https://youtu.be/… (시작 시각 ?t= 포함 가능)"></div>' + stSel +
+    `<div class="wb-field"><b>비밀번호</b><input id="vwVrPw" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" style="-webkit-text-security:disc" maxlength="20" placeholder="글 올릴 때 등록한 비밀번호" value="${vwEsc(saved)}"></div>` +
+    '<div class="wb-btns"><button class="wz-btn pri" id="vwVrGo" onclick="vwVidReqGo()">올리기</button><button class="wz-btn" onclick="vwClose()">취소</button></div>');
+}
+async function vwVidReqGo() {
+  const p = vwYtParse(document.getElementById('vwVrUrl').value), pw = document.getElementById('vwVrPw').value, se = document.getElementById('vwVrSt');
+  if (!p) { vwToast('유튜브 링크를 알아보지 못했습니다'); return; }
+  if (!/^\S{4,20}$/.test(pw)) { vwToast('비밀번호는 공백 없는 4~20자입니다'); return; }
+  const b = document.getElementById('vwVrGo'); b.disabled = true; b.textContent = '올리는 중…';
+  try {
+    await vwApi('/share/video-req', {id: VW.share.id, pwd: pw, vid: p.id, start: p.start, st: se ? se.value : ''});
+    try { localStorage.setItem('tlidb_share_pwd_v1', pw); } catch (e) {}
+    (VW.vwait = VW.vwait || []).push(se ? se.value : '');
+    vwClose(); pageRender(); vwToast('🎬 올렸습니다 — 관리자 승인 대기 중');
+    document.getElementById('vy')?.scrollIntoView({behavior: 'smooth', block: 'center'});
+  } catch (e) { b.disabled = false; b.textContent = '올리기'; vwToast('올리지 못했습니다: ' + e.message); }
 }
 function vwVidBox(v) {
   const id = v.id, start = v.start || 0;

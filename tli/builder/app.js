@@ -13166,10 +13166,10 @@ function shareRowHtml(it) {
   return `<div class="share-row share-card" data-shid="${escapeHtml(it.id)}">` +
     `<div class="shc-faces"><div class="shc-face">${tr ? `<img src="${tr.img}" alt="" loading="lazy" onerror="this.remove()">` : '<span>?</span>'}</div>` +
     `<img class="shc-sk" src="${skillIconOf(it.main)}" alt="" title="메인 스킬 · ${escapeHtml(it.main || '')}" loading="lazy" onerror="this.onerror=null;this.src=SK_FALLBACK"></div>` +
-    `<div class="shc-info"><div class="share-title">${se}${escapeHtml(shareTitleText(it))}</div>` +
+    `<div class="shc-info"><div class="share-title" data-tt="${escapeHtml(shareTitleText(it))}">${se}${escapeHtml(shareTitleText(it))}</div>` +
     `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}${it.main ? ' · ' + escapeHtml(it.main) : ''}</small>` +
     (it.stage_t ? `<div class="shc-stages" title="단계별 프리셋 — 보기 화면에서 탭으로 바꿔 봅니다">🪜 ${String(it.stage_t).split(',').map(t => `<span>${escapeHtml(t)}</span>`).join('')}</div>` : '') +
-    (chips ? `<div class="share-tags">${chips}</div>` : '') + '</div>' +
+    (chips ? `<div class="share-tags" data-tt="${escapeHtml([...tags.filter(t => t !== trTag), ...parseShareItems(it)].join(' · '))}">${chips}</div>` : '') + '</div>' +
     `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-date">${escapeHtml(shareDateText(it))}</span>${it.yt ? '<span class="shc-yt" title="가이드 영상이 있습니다">▶</span>' : ''}</div></div>`; // 영상 표시는 날짜 뒤 (2026-10-15 사용자)
 }
 // 정렬 스위치 (최신순·추천순·조회순)
@@ -14171,5 +14171,40 @@ if (bootHash.includes('tab=')) { try { history.replaceState(null, '', '?' + boot
       } catch (e) { alert('가져오기 실패: ' + e.message); }
     });
   } catch (e) {}
+})();
+
+// 공유 카드 제목 — 한 줄로 자르고(…) 잘린 경우에만 마우스를 올리면 전체 제목 툴팁 (2026-10-15 사용자)
+(() => {
+  let tt = null;
+  const hide = () => { if (tt) tt.classList.remove('on'); };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('.share-card .share-title[data-tt], .share-card .share-tags.cut[data-tt]');
+    if (!el) { hide(); return; }
+    if (el.classList.contains('share-title') && el.scrollWidth <= el.clientWidth + 1) { hide(); return; } // 다 보이면 안 띄움
+    if (!tt) { tt = document.createElement('div'); tt.className = 'shc-tt'; document.body.appendChild(tt); }
+    tt.textContent = el.dataset.tt;
+    const r = el.getBoundingClientRect();
+    tt.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 8 - Math.min(420, window.innerWidth - 16))) + 'px';
+    tt.style.top = (r.bottom + 6) + 'px';
+    tt.classList.add('on');
+  });
+  window.addEventListener('scroll', hide, {passive: true});
+})();
+// 태그 줄도 한 줄 — 넘치면 들어가는 만큼만 보이고 끝에 '…' (마우스를 올리면 전체 태그 툴팁) (2026-10-15 사용자)
+function shareCutTags() {
+  document.querySelectorAll('.share-card .share-tags').forEach(row => {
+    row.classList.remove('cut'); row.querySelectorAll('.share-more').forEach(x => x.remove());
+    const chips = [...row.querySelectorAll('.share-tag')]; chips.forEach(c => { c.style.display = ''; });
+    if (row.scrollWidth <= row.clientWidth + 1) return;
+    row.classList.add('cut');
+    const more = document.createElement('span'); more.className = 'share-tag share-more'; more.textContent = '…'; row.appendChild(more);
+    for (let i = chips.length - 1; i > 0 && row.scrollWidth > row.clientWidth + 1; i--) chips[i].style.display = 'none';
+  });
+}
+(() => {
+  let t = 0; const later = () => { clearTimeout(t); t = setTimeout(shareCutTags, 30); };
+  const go = () => { const box = document.getElementById('shareList'); if (box) new MutationObserver(later).observe(box, {childList: true}); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+  window.addEventListener('resize', later);
 })();
 

@@ -13113,6 +13113,7 @@ function syncSharePicked() { // 고른 태그를 목록 위에 표시 (클릭하
     .map(t => `<button class="share-tag-btn on" data-sftag="${escapeHtml(t)}">${escapeHtml(t)} ✕</button>`).join('');
   const on = shareFilterTags.length || document.getElementById('shareSearch').value.trim();
   document.getElementById('shareResetBtn').style.display = on ? '' : 'none';
+  renderShareHeroes();
 }
 function toggleShareFilterTag(t) {
   const i = shareFilterTags.indexOf(t);
@@ -13151,16 +13152,51 @@ function shareDateText(it) { // 작성일 + 고친 적 있으면 수정일(MM-DD
   const c = it.created_at ? kstDate(it.created_at) : '', u = it.updated_at ? kstDate(it.updated_at) : '';
   return c + (u ? ' (수정 ' + u.slice(5) + ')' : '');
 }
+// 공유 카드 (2026-10-15 사용자: 빌더 '내 프리셋' 카드처럼) — 왼쪽 초상화 + 밑에 메인 스킬, 오른쪽 제목·특성·태그, 아래 추천·조회·작성자
 function shareRowHtml(it) {
   let tags = [];
   try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
-  const chips = tags.map(t => `<span class="share-tag">${escapeHtml(t)}</span>`).join('') + shareItemsHtml(parseShareItems(it));
-  return `<div class="share-row" data-shid="${escapeHtml(it.id)}">` +
-    `<div class="share-left">${shareIconsHtml(it.main, tags)}<div class="share-textcol">` +
-    // 시즌 배지 (2026-10-10) — 서버가 코드의 se 로 기록, 이전 글은 SS13. 이번 시즌은 금색, 지난 시즌은 회색
-    `<div class="share-title">${it.season ? `<span class="share-se${it.season === ((typeof SEASON !== 'undefined' && SEASON.label) || '') ? ' cur' : ''}" title="${escapeHtml(it.season)} 시즌에 만든 프리셋">${escapeHtml(it.season)}</span>` : ''}${escapeHtml(shareTitleText(it))}</div>` +
-    (chips ? `<div class="share-tags">${chips}</div>` : '') + `</div></div>` +
-    `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span>${escapeHtml(it.author)}</span><span>${escapeHtml(shareDateText(it))}</span></div></div>`;
+  const trTag = tags.find(t => traitInfo(t)), tr = trTag && traitInfo(trTag);
+  // 히어로 특성은 초상화·부제로 보이니 칩에선 뺀다
+  const chips = tags.filter(t => t !== trTag).map(t => `<span class="share-tag">${escapeHtml(t)}</span>`).join('') + shareItemsHtml(parseShareItems(it));
+  const se = it.season ? `<span class="share-se${it.season === ((typeof SEASON !== 'undefined' && SEASON.label) || '') ? ' cur' : ''}" title="${escapeHtml(it.season)} 시즌에 만든 프리셋">${escapeHtml(it.season)}</span>` : '';
+  return `<div class="share-row share-card" data-shid="${escapeHtml(it.id)}">` +
+    `<div class="shc-faces"><div class="shc-face">${tr ? `<img src="${tr.img}" alt="" loading="lazy" onerror="this.remove()">` : '<span>?</span>'}</div>` +
+    `<img class="shc-sk" src="${skillIconOf(it.main)}" alt="" title="메인 스킬 · ${escapeHtml(it.main || '')}" loading="lazy" onerror="this.onerror=null;this.src=SK_FALLBACK"></div>` +
+    `<div class="shc-info"><div class="share-title">${se}${escapeHtml(shareTitleText(it))}</div>` +
+    `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}${it.main ? ' · ' + escapeHtml(it.main) : ''}</small>` +
+    (chips ? `<div class="share-tags">${chips}</div>` : '') + '</div>' +
+    `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-date">${escapeHtml(shareDateText(it))}</span></div></div>`;
+}
+// 정렬 스위치 (최신순·추천순·조회순)
+function setShareSort(v) {
+  document.getElementById('shareSort').value = v;
+  document.querySelectorAll('#shareSortSw button').forEach(b => b.classList.toggle('on', b.dataset.sort === v));
+  renderShare(true);
+}
+// 히어로별 보기 줄 (2026-10-15 사용자) — 특성 초상화를 누르면 그 특성 태그로 거른다(히어로는 하나만). 맨 앞 = 이번 시즌 새 특성(유가3)
+const SHARE_HERO_FIRST = ['유가3'];
+function shareHeroOrder() {
+  const all = [];
+  SHARE_HEROES.forEach(([hero, traits]) => traits.forEach(tr => all.push({tag: tr[0], hero, full: tr[1], img: HERO_IMG_BASE + tr[2]})));
+  return [...SHARE_HERO_FIRST.map(t => all.find(x => x.tag === t)).filter(Boolean), ...all.filter(x => !SHARE_HERO_FIRST.includes(x.tag))];
+}
+function renderShareHeroes() {
+  const el = document.getElementById('shareHeroes'); if (!el) return;
+  const cur = shareFilterTags.find(t => traitInfo(t));
+  const curKey = cur && traitInfo(cur).key;
+  el.innerHTML = `<button type="button" class="shh-all${cur ? '' : ' on'}" onclick="setShareHero('')">전체</button>` +
+    shareHeroOrder().map(x => `<button type="button" class="shh${curKey === traitInfo(x.tag).key ? ' on' : ''}${SHARE_HERO_FIRST.includes(x.tag) ? ' new' : ''}" onclick="setShareHero('${x.tag}')" title="${escapeHtml(x.hero + ' · ' + x.full)}">` +
+      `<img src="${x.img}" alt="${escapeHtml(x.tag)}" loading="lazy"><span>${escapeHtml(x.tag)}</span></button>`).join('');
+}
+function setShareHero(tag) {
+  const cur = shareFilterTags.find(t => traitInfo(t));
+  const same = cur && tag && traitInfo(cur).key === traitInfo(tag).key;
+  shareFilterTags = shareFilterTags.filter(t => !traitInfo(t)); // 히어로 특성은 하나만
+  if (tag && !same) shareFilterTags.push(tag);
+  if (document.getElementById('shareFilterPanel').innerHTML) renderShareFilter();
+  syncSharePicked();
+  renderShare(true);
 }
 async function renderShare(refresh) {
   const box = document.getElementById('shareList');
@@ -13170,6 +13206,7 @@ async function renderShare(refresh) {
   if (!refresh && shareList.length) { box.innerHTML = shareList.map(shareRowHtml).join(''); return; } // 캐시 표시
   shareLoading = true;
   st.textContent = '';
+  renderShareHeroes();
   await shareSeasonInit();
   // 마지막으로 받은 같은 목록이 있으면 먼저 바로 보여 주고(새로고침해도 즉시), 받아 온 게 다를 때만 다시 그린다
   const qk = shareQueryStr(0), fresh = shareDirty();

@@ -670,6 +670,10 @@ const SHARE_TAG_TRAIT = new Map();
 SHARE_HEROES.forEach(([hero, traits]) => traits.forEach((tr, i) =>
   [tr[0], tr[1]].forEach(t => SHARE_TAG_TRAIT.set(t, {hero, key: hero + '#' + i, img: HERO_IMG_BASE + tr[2],
     full: tr[1], al: tr[3] || []}))));
+// 히어로 분할 얼굴 — 특성 얼굴들을 반반·Y자로 (hero.css .hsplit, 공유 목록·빌더 히어로 고르기 공용, 2026-10-15)
+function heroSplitHtml(imgs, cls) {
+  return `<span class="hsplit n${imgs.length}${cls ? ' ' + cls : ''}">${imgs.map(u => `<img src="${u}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`).join('')}</span>`;
+}
 function traitInfo(tag) { return SHARE_TAG_TRAIT.get(tag) || null; }
 // 공유 올리기 태그 (06_share 에서 옮김 2026-10-09 — 빌더 2 공유 올리기도 쓴다)
 const SHARE_SKILL_TAGS = ['보조', '범위', '물리', '주술', '지속', '화염', '공격', '번개', '부식', '냉기', '투사체', '근접전', '오라', '수평 사격', '자극', '소환', '원거리', '촉발체', '영약', '위치 이동', '채널링', '실드', '마령', '주입', '지면', '보초병', '광선', '회복', '기본 스킬', '강화 스킬', '궁극 스킬', '함성', '저주', '베기', '체인', '파괴', '스마트 웨폰', '포물선', '수직', '폭격', '그림자', '콤보'];
@@ -879,7 +883,7 @@ function hrRenderModal() {
   // ── 왼쪽: 히어로 12명
   let side = '<div class="gbm-cap">히어로</div><div class="hrm-heroes">' + SHARE_HEROES.map(([h, trs]) =>
     `<div class="hrm-hero${h === entry[0] ? ' on' : ''}${cur && cur.hero === h ? ' have' : ''}" onclick="hrPickHero(${JSON.stringify(h).replace(/"/g, '&quot;')})">` +
-    `<img src="${HERO_IMG_BASE + trs[0][2]}" loading="lazy" onerror="this.style.visibility='hidden'">` +
+    (a => heroSplitHtml(a.length ? a : [HERO_IMG_BASE + trs[0][2]]))(trs.filter(([, full]) => HERO.some(x => x.trait === full)).map(tr => HERO_IMG_BASE + tr[2])) + // 특성 얼굴 반반·Y자, 데이터에 있는 특성만 (2026-10-15 사용자)
     `<b>${escapeHtml(h)}</b><small>${cur && cur.hero === h ? '선택됨' : '특성 ' + trs.filter(([, full]) => HERO.some(x => x.trait === full)).length}</small></div>`).join('') + '</div>';
   // ── 가운데 위: 이 히어로의 특성 카드
   const jh = JSON.stringify(entry[0]).replace(/"/g, '&quot;');
@@ -13214,7 +13218,7 @@ function renderShareHeroes() {
   const groups = [];
   shareHeroOrder().forEach(x => { let g = groups.find(g => g.hero === x.hero); if (!g) groups.push(g = {hero: x.hero, list: []}); g.list.push(x); });
   const open = shareHeroOpen !== null ? shareHeroOpen : curHero;
-  const face = g => `<span class="shh-face n${g.list.length}">${g.list.map((x, i) => `<img src="${x.img}" alt="" loading="lazy" style="--i:${i}">`).join('')}</span>`;
+  const face = g => heroSplitHtml(g.list.map(x => x.img), 'shh-face');
   // 펼친 히어로는 그 자리 바로 옆에 특성 단추(2~3개)를 끼워 넣어 나머지를 밀어낸다 (2026-10-15 사용자 — 아래 칸 대신)
   el.innerHTML = `<div class="shh-row"><button type="button" class="shh-all${cur ? '' : ' on'}" onclick="setShareHero('')">전체</button>` +
     groups.map(g => {

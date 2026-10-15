@@ -229,6 +229,20 @@
     .hrt-sum summary span { color: #7d8794; font-weight: 400; } .hrt-sum summary:hover { color: #f3e3b5; }
     .hrt-sumg { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 14px; padding: 0 12px 10px; }
     .hrt-sih { display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; } .hrt-sih b { color: #f3e3b5; font-size: 12.5px; } .hrt-sih small { color: #7d8794; font-size: 10.5px; }
+    /* ── 히어로 분할 얼굴 .hsplit (공유 목록 히어로 줄·빌더 히어로 고르기 공용, 2026-10-15) ──
+       특성 둘 = 반반, 셋 = Y자(1 왼쪽 · 2 위 · 3 오른쪽). 조각마다 그 얼굴 가운데가 보이게 옮기고 조금 줄임 */
+    .hsplit { position: relative; display: block; border-radius: 50%; overflow: hidden; background: #0a0f17; box-sizing: border-box; }
+    .hsplit img { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; border: 0 !important; border-radius: 0 !important; object-fit: cover; margin: 0; }
+    .hsplit.n2 img:nth-child(1) { transform: translateX(-25%) scale(.85); clip-path: inset(0 20.6% 0 20.6%); }
+    .hsplit.n2 img:nth-child(2) { transform: translateX(25%) scale(.85); clip-path: inset(0 20.6% 0 20.6%); }
+    .hsplit.n3 img:nth-child(1) { transform: translate(-28%, 12%) scale(.8); clip-path: polygon(85% 32.5%, 85% 95%, 22.5% 95%, 22.5% -1.1%); }
+    .hsplit.n3 img:nth-child(2) { transform: translate(0, -33%) scale(.8); clip-path: polygon(50% 91.25%, -12.5% 55.1%, -12.5% 28.75%, 112.5% 28.75%, 112.5% 55.1%); }
+    .hsplit.n3 img:nth-child(3) { transform: translate(28%, 12%) scale(.8); clip-path: polygon(15% 32.5%, 77.5% -1.1%, 77.5% 95%, 15% 95%); }
+    .hsplit.n2::after, .hsplit.n3::after { content: ''; position: absolute; inset: 0; pointer-events: none; background-repeat: no-repeat; background-size: 100% 100%; }
+    .hsplit.n2::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M50 0V100' stroke='%230a0f17' stroke-width='4'/%3E%3C/svg%3E"); }
+    .hsplit.n3::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M50 50V100M50 50L0 21.1M50 50L100 21.1' stroke='%230a0f17' stroke-width='4' fill='none'/%3E%3C/svg%3E"); }
+    .hrm-hero .hsplit { width: 54px; height: 54px; border: 2px solid #263044; } .hrm-hero.on .hsplit { border-color: #d4a84a; }
+    @media (max-width: 760px) { .hrm-hero .hsplit { width: 40px; height: 40px; } }
     /* 재능 보드 — 빌더(app.css·hero.css 뒤에 붙임)와 따로 떨어진 /tli/talent 가 함께 쓴다 (2026-10-08). 팝업 틀(.gbm-dim 등)은 hero.css */
     /* 재능 보드 (로그에서 가져온 찍은 노드) */
     .gb-boards { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 12px 12px; }

@@ -5320,14 +5320,22 @@ function vwStageBar() {
   return `<div class="vw-stages" role="tablist"><span class="vw-stl">🪜 단계</span>` + VW.stages.map((x, i) =>
     `<button type="button" role="tab" class="vw-stb${i === VW.st ? ' on' : ''}" onclick="vwStage(${i})"${i === VW.stages.length - 1 ? ' title="목록 카드에 나오는 대표 빌드"' : ''}>${vwEsc(x.t)}</button>`).join('') + '</div>';
 }
-async function vwStage(i) { // 탭 바꾸기 — 같은 자리에서 빌드만 바꿔 그린다
+function vwStageNav() { // 맨 아래 이전·다음 단계 (2026-10-15 사용자)
+  if (!VW.stages) return '';
+  const pv = VW.stages[VW.st - 1], nx = VW.stages[VW.st + 1];
+  return '<div class="vw-stnav">' + (pv ? `<button type="button" class="wz-btn" onclick="vwStage(${VW.st - 1}, 1)">← 이전 단계 · ${vwEsc(pv.t)}</button>` : '<span></span>') +
+    (nx ? `<button type="button" class="wz-btn pri" onclick="vwStage(${VW.st + 1}, 1)">다음 단계 · ${vwEsc(nx.t)} →</button>` : '<span></span>') + '</div>';
+}
+async function vwStage(i, top) { // top = 아래 버튼에서 — 바꾼 뒤 단계 탭으로 올라간다 // 탭 바꾸기 — 같은 자리에서 빌드만 바꿔 그린다
   if (!VW.stages || i === VW.st || !VW.stages[i]) return;
   try {
     const r = await codeToPreset(VW.stages[i].code);
     preset = r.preset; VW.missing = r.missing; VW.code = VW.stages[i].code; VW.st = i; VW.gsel = null;
     const u = new URL(location.href); if (i === VW.stages.length - 1) u.searchParams.delete('st'); else u.searchParams.set('st', VW.stages[i].t);
     history.replaceState(null, '', u.toString());
-    const y = window.scrollY; pageRender(); window.scrollTo(0, y);
+    const y = window.scrollY; pageRender();
+    const bar = top && document.querySelector('.vw-stages');
+    if (bar) window.scrollTo(0, bar.getBoundingClientRect().top + window.scrollY - 60); else window.scrollTo(0, y);
   } catch (e) { vwToast('이 단계를 열지 못했습니다: ' + e.message); }
 }
 function vwHead() {
@@ -5592,7 +5600,7 @@ function pageRender() {
     vwSec('vm', '추억', '히어로 특성 레벨의 기준', vwMems()) +
     vwSec('vb', '신격 석판', '', vwSlate()) +
     vwSec('vp', '전투 정령 · 운명', '', vwPact()) +
-    (vwHasCmt() ? vwSec('vc', '작성자 코멘트', '', vwCmt()) : '');
+    (vwHasCmt() ? vwSec('vc', '작성자 코멘트', '', vwCmt()) : '') + vwStageNav();
   if (preset.hero) { hrView = preset.hero.hero; hrRenderModal(); }
   gbSlots4().forEach(p => { if (p) gbExtra.add(p); }); // 포인트 없는 보드(채워 넣은 신 보드 등)도 판을 그린다
   vwSlateFit();

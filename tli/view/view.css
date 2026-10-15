@@ -1244,3 +1244,5 @@
     .vw-stb:hover { color: #f3e3b5; border-color: #4a3f22; }
     .vw-stb.on { background: linear-gradient(180deg, #d4a84a, #a8822f); color: #1a1406; }
     @media (max-width: 600px) { .vw-stages { flex-wrap: nowrap; overflow-x: auto; } .vw-stb { padding: 7px 12px; white-space: nowrap; } }
+    .vw-stnav { display: flex; justify-content: space-between; gap: 10px; margin: 18px 0 8px; } .vw-stnav .wz-btn { padding: 10px 18px; font-size: 14px; }
+    @media (max-width: 600px) { .vw-stnav .wz-btn { flex: 1; padding: 10px 8px; font-size: 13px; } }

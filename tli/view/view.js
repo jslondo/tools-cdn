@@ -5280,7 +5280,8 @@ async function vwLoad() {
         j = await res.json().catch(() => ({}));
         if (!j.ok) throw new Error(j.error || '공유 빌드를 찾을 수 없습니다');
       }
-      VW.share = j.item; VW.liked = !!j.liked; code = j.item.code;
+      VW.share = j.item; VW.liked = !!j.liked; VW.admin = !!j.admin; code = j.item.code;
+      try { const v = JSON.parse(j.item.videos || '[]'); VW.videos = Array.isArray(v) ? v : []; } catch (e) { VW.videos = []; }
       // 단계별 빌드 (2026-10-15) — 탭마다 코드 하나, 처음엔 ?st=단계 또는 첫 단계 (사용자 2026-10-15)
       try { const st = JSON.parse(j.item.stages || 'null'); if (Array.isArray(st) && st.length > 1) VW.stages = st; } catch (e) {}
       if (VW.stages) { const w = VW.stages.findIndex(x => x.t === q.get('st')); VW.st = w >= 0 ? w : 0; code = VW.stages[VW.st].code; }
@@ -5291,7 +5292,7 @@ async function vwLoad() {
     VW.season = r.season || 'SS13';
     const cur = (window.TLI_SEASON || {}).label;
     if (!window.TLI_SNAPSHOT && cur && VW.season !== cur && (window.TLI_SNAPS || []).includes(VW.season)) {
-      try { if (VW.share) sessionStorage.setItem('vwHand', JSON.stringify({item: VW.share, liked: VW.liked})); } catch (e) {}
+      try { if (VW.share) sessionStorage.setItem('vwHand', JSON.stringify({item: VW.share, liked: VW.liked, admin: VW.admin})); } catch (e) {}
       return vwGo('/tli/' + VW.season.toLowerCase() + '/view/' + (pl ? '?code=' + encodeURIComponent(code) : location.search) + location.hash); // 단축 링크는 보관본이 몰라서 코드로
     }
     preset = r.preset; VW.missing = r.missing; VW.code = code; VW.state = 'ok';
@@ -5362,7 +5363,8 @@ function vwHead() {
       '<button type="button" class="wz-btn" onclick="vwCopy()">🔗 링크 복사</button></div>' +
       '<div class="vw-acts2"><button type="button" class="wz-btn" onclick="vwShareEdit(false)" title="올릴 때 등록한 비밀번호로 내 글을 고칩니다 (빌더에서 고친 뒤 저장)">✏ 내 글 수정</button>' +
       '<button type="button" class="wz-btn" onclick="vwShareDel()" title="올릴 때 등록한 비밀번호로 내 글을 지웁니다">🗑 삭제</button></div>' : '') + '</div></div>' +
-    vwStageBar() + '<nav class="vw-toc">' + VW_SECS.filter(([id]) => id !== 'vc' || vwHasCmt()).map(([id, nm]) => `<a href="#${id}">${nm}</a>`).join('') + '</nav>';
+    vwStageBar() + '<nav class="vw-toc">' + VW_SECS.filter(([id]) => id !== 'vc' || vwHasCmt()).map(([id, nm]) => `<a href="#${id}">${nm}</a>`).join('') +
+    (vwVidList().length ? '<a href="#vy" class="vw-toc-yt">▶ 영상</a>' : '') + '</nav>';
 }
 
 // 작성자 코멘트 (preset.memo, 1500자 — 공유 코드 m 에 실린다). 맨 아래 칸: 내 빌드는 바로 써서 저장, 공유 글은 있을 때만 읽기 (2026-10-10 사용자 — '메모' → '작성자 코멘트')
@@ -5605,6 +5607,7 @@ function pageRender() {
   gbSlots4().forEach(p => { if (p) gbExtra.add(p); }); // 포인트 없는 보드(채워 넣은 신 보드 등)도 판을 그린다
   vwSlateFit();
   document.querySelectorAll('#vwApp .vw-gb').forEach(el => renderTalentBoard({into: el, only: [el.dataset.pre], edit: false}));
+  vwVidsRender();
   document.title = ((VW.share && VW.share.title) || preset.name || '빌드') + ' · 빌드 보기 · Winterer\'s Tools';
 }
 // ── 공유 글: 추천 · 링크 · 내 글 수정/삭제 (빌더 06_share 와 같은 API, 2026-10-09 빌더 전환) ──
@@ -5711,3 +5714,114 @@ function vwShareDel() {
   });
 }
 vwLoad().then(() => { if (VW.share && new URLSearchParams(location.search).get('edit')) vwShareEdit(true); });
+
+// ── 가이드 영상 (2026-10-15 사용자) — 맨 아래, 관리자만 붙인다(서버가 관리 쿠키·출처로 확인). 히어로시즈 가이드 영상 상자를 옮겨 옴:
+// 썸네일 → 누르면 재생, 재생 중 화면 밖으로 나가면 우하단 미니 플레이어(S·M·L, ✕=정지). st='' 는 모든 단계, 아니면 그 단계 탭에서만.
+const vwVidList = () => (VW.videos || []).filter(v => !v.st || !VW.stages || v.st === (VW.stages[VW.st] || {}).t);
+const VW_VBOX = new Map(); // 영상 키 → 상자 (다시 그려도 같은 요소를 써서 재생이 이어진다)
+const vwVKey = v => v.id + '|' + (v.start || 0) + '|' + (v.st || '');
+function vwVidsRender() {
+  const host = document.getElementById('vwVids'); if (!host) return;
+  const list = VW.state === 'ok' && VW.share ? vwVidList() : [];
+  if (!list.length && !(VW.admin && VW.share)) { VW_VBOX.forEach(w => w.remove()); VW_VBOX.clear(); host.innerHTML = ''; return; }
+  let sec = host.querySelector('#vy');
+  if (!sec) {
+    host.innerHTML = '<section class="vw-sec" id="vy"><div class="vw-sech"><h2>▶ 가이드 영상</h2><span></span></div><div class="vw-vids"></div></section>';
+    sec = host.querySelector('#vy');
+  }
+  sec.querySelector('.vw-sech span').innerHTML = VW.admin ? '<button type="button" class="wz-btn vw-edit" onclick="vwVidEdit()" title="관리자에게만 보입니다">🎬 영상 관리</button>' : '';
+  const box = sec.querySelector('.vw-vids'), keys = new Set(list.map(vwVKey));
+  VW_VBOX.forEach((w, k) => { if (!keys.has(k)) { w.remove(); VW_VBOX.delete(k); } }); // 다른 단계 영상은 빼면 재생도 멈춘다
+  list.forEach(v => { const k = vwVKey(v); if (!VW_VBOX.has(k)) VW_VBOX.set(k, vwVidBox(v)); const w = VW_VBOX.get(k); if (w.parentNode !== box) box.appendChild(w); });
+  const empty = box.querySelector('.vw-vempty');
+  if (!list.length) { if (!empty) box.insertAdjacentHTML('beforeend', '<div class="vw-empty vw-vempty">붙인 영상이 없습니다 — [🎬 영상 관리]로 유튜브 주소를 붙이세요 (관리자에게만 보이는 안내)</div>'); }
+  else if (empty) empty.remove();
+}
+function vwVidBox(v) {
+  const id = v.id, start = v.start || 0;
+  const outer = document.createElement('div'); outer.className = 'vw-vid';
+  const wrap = document.createElement('div'); wrap.className = 'ytwrap';
+  const box = document.createElement('div'); box.className = 'yt';
+  box.innerHTML = `<img src="https://i.ytimg.com/vi/${id}/maxresdefault.jpg" alt="" loading="lazy" onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/${id}/hqdefault.jpg'"><div class="play"></div>`;
+  wrap.appendChild(box); outer.appendChild(wrap);
+  const cap = document.createElement('p'); cap.className = 'ytcap';
+  cap.innerHTML = `▶ ${v.title ? vwEsc(v.title) + ' · ' : ''}${v.st ? `<span class="vw-vst">${vwEsc(v.st)} 단계</span> · ` : ''}<a href="https://www.youtube.com/watch?v=${id}${start ? '&t=' + start + 's' : ''}" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>`;
+  outer.appendChild(cap);
+  const close = document.createElement('button'); close.className = 'ytclose'; close.type = 'button'; close.textContent = '×'; close.title = '미니 플레이어 닫기 (정지)';
+  box.appendChild(close);
+  const SIZES = [['S', 360], ['M', 560], ['L', 760]];
+  const miniSize = () => { try { return localStorage.getItem('yt.miniSize') || 'S'; } catch (_) { return 'S'; } };
+  const sizeBtn = document.createElement('div'); sizeBtn.className = 'ytsize'; sizeBtn.title = '미니 플레이어 크기';
+  const applySize = () => {
+    const i = Math.max(0, SIZES.findIndex(([k]) => k === miniSize()));
+    box.style.setProperty('--mini-w', SIZES[i][1] + 'px');
+    sizeBtn.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === SIZES[i][0]));
+  };
+  SIZES.forEach(([k]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = k; b.dataset.k = k;
+    b.addEventListener('click', e => { e.stopPropagation(); try { localStorage.setItem('yt.miniSize', k); } catch (_) {} document.querySelectorAll('#vwVids .yt').forEach(x => x.applySize && x.applySize()); });
+    sizeBtn.appendChild(b);
+  });
+  box.applySize = applySize; applySize(); box.appendChild(sizeBtn);
+  let loaded = false, userClosed = false;
+  const cmd = func => { const fr = box.querySelector('iframe'); if (fr) fr.contentWindow.postMessage(JSON.stringify({event: 'command', func, args: []}), '*'); };
+  box.addEventListener('click', e => {
+    if (loaded || e.target === close || sizeBtn.contains(e.target)) return;
+    loaded = true; box.style.cursor = 'default';
+    document.querySelectorAll('#vwVids .yt').forEach(x => { if (x !== box && x.pause) x.pause(); }); // 한 번에 하나만
+    const fr = document.createElement('iframe');
+    fr.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&enablejsapi=1&start=${start}&origin=${encodeURIComponent(location.origin)}`;
+    fr.title = v.title || '가이드 영상'; fr.allow = 'autoplay; encrypted-media; picture-in-picture'; fr.allowFullscreen = true;
+    box.querySelector('img')?.remove(); box.querySelector('.play')?.remove(); box.prepend(fr);
+  });
+  box.pause = () => { if (loaded) cmd('pauseVideo'); box.classList.remove('mini'); };
+  close.addEventListener('click', e => { e.stopPropagation(); box.classList.remove('mini'); userClosed = true; cmd('pauseVideo'); });
+  new IntersectionObserver(([en]) => {
+    if (en.isIntersecting) { box.classList.remove('mini'); userClosed = false; }
+    else if (loaded && !userClosed && wrap.isConnected) box.classList.add('mini');
+  }, {threshold: 0.05}).observe(wrap);
+  return outer;
+}
+// 유튜브 주소 → {id, start} (youtu.be/·watch?v=·shorts/·embed/·live/·id 11자, t=90·1m30s·1h2m3s)
+function vwYtParse(u) {
+  u = String(u || '').trim();
+  const m = u.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([A-Za-z0-9_-]{11})/) || u.match(/^([A-Za-z0-9_-]{11})$/);
+  if (!m) return null;
+  let start = 0; const t = u.match(/[?&#](?:t|start)=([0-9hms]+)/);
+  if (t) { const x = t[1]; if (/^\d+$/.test(x)) start = +x; else { const h = x.match(/(\d+)h/), mm = x.match(/(\d+)m/), sc = x.match(/(\d+)s/); start = (h ? +h[1] * 3600 : 0) + (mm ? +mm[1] * 60 : 0) + (sc ? +sc[1] : 0); } }
+  return {id: m[1], start};
+}
+let vwVidDraft = [];
+function vwVidEdit() {
+  if (!VW.admin) return;
+  vwVidDraft = (VW.videos || []).map(v => ({url: 'https://youtu.be/' + v.id + (v.start ? '?t=' + v.start : ''), title: v.title || '', st: v.st || ''}));
+  if (!vwVidDraft.length) vwVidDraft.push({url: '', title: '', st: VW.stages ? '' : ''});
+  vwVidPop();
+}
+function vwVidPop() {
+  const stOpt = cur => !VW.stages ? '' : `<select data-k="st">${['', ...VW.stages.map(x => x.t)].map(t => `<option value="${vwEsc(t)}"${t === cur ? ' selected' : ''}>${t ? vwEsc(t) + ' 단계만' : '모든 단계'}</option>`).join('')}</select>`;
+  vwPop('<h3>🎬 가이드 영상 관리</h3><div class="wb-msg">빌드 보기 맨 아래에 나옵니다. 유튜브 주소를 붙여 넣으세요 (시작 시각 <code>?t=90</code>·<code>&amp;t=1m30s</code> 포함 가능).' +
+    (VW.stages ? ' 묶음 글은 영상마다 <b>모든 단계</b> 또는 <b>특정 단계</b>에서만 보이게 고를 수 있습니다.' : '') + '</div>' +
+    '<div class="vw-vrows">' + vwVidDraft.map((r, i) => `<div class="vw-vrow" data-i="${i}"><input data-k="url" placeholder="https://youtu.be/…" value="${vwEsc(r.url)}">` +
+      `<input data-k="title" maxlength="60" placeholder="제목 (선택)" value="${vwEsc(r.title)}">${stOpt(r.st)}<button type="button" class="wz-btn" onclick="vwVidDel(${i})" title="빼기">✕</button></div>`).join('') + '</div>' +
+    '<div class="wb-btns" style="justify-content:flex-start"><button type="button" class="wz-btn" onclick="vwVidAdd()">+ 영상 추가</button></div>' +
+    '<div class="wb-btns"><button type="button" class="wz-btn pri" id="vwVidGo" onclick="vwVidSave()">저장</button><button type="button" class="wz-btn" onclick="vwClose()">취소</button></div>');
+}
+function vwVidSync() { document.querySelectorAll('.vw-vrow').forEach(row => { const r = vwVidDraft[+row.dataset.i]; row.querySelectorAll('[data-k]').forEach(el => { r[el.dataset.k] = el.value; }); }); }
+function vwVidAdd() { vwVidSync(); if (vwVidDraft.length >= 8) { vwToast('영상은 8개까지입니다'); return; } vwVidDraft.push({url: '', title: '', st: ''}); vwVidPop(); }
+function vwVidDel(i) { vwVidSync(); vwVidDraft.splice(i, 1); vwVidPop(); }
+async function vwVidSave() {
+  vwVidSync();
+  const vids = [];
+  for (const r of vwVidDraft) {
+    if (!r.url.trim()) continue;
+    const p = vwYtParse(r.url);
+    if (!p) { vwToast('유튜브 주소를 알아보지 못했습니다: ' + r.url.slice(0, 40)); return; }
+    vids.push({id: p.id, start: p.start, title: r.title.trim(), st: r.st || ''});
+  }
+  const b = document.getElementById('vwVidGo'); b.disabled = true;
+  try {
+    const d = await vwApi('/share/videos', {id: VW.share.id, videos: vids});
+    VW.videos = d.videos; vwClose(); pageRender(); vwToast(vids.length ? '🎬 영상을 저장했습니다' : '영상을 모두 뺐습니다');
+  } catch (e) { b.disabled = false; vwToast('저장하지 못했습니다: ' + e.message); }
+}

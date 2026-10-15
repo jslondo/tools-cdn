@@ -1269,3 +1269,25 @@
     @media (max-width: 600px) { .vw-stages { flex-wrap: nowrap; overflow-x: auto; } .vw-stb { padding: 7px 12px; white-space: nowrap; } }
     .vw-stnav { display: flex; justify-content: space-between; gap: 10px; margin: 18px 0 8px; } .vw-stnav .wz-btn { padding: 10px 18px; font-size: 14px; }
     @media (max-width: 600px) { .vw-stnav .wz-btn { flex: 1; padding: 10px 8px; font-size: 13px; } }
+    /* 가이드 영상 (2026-10-15) — 히어로시즈 가이드 영상 상자 이식 */
+    #vwVids { max-width: inherit; }
+    .vw-vids { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+    .vw-vid .ytwrap { aspect-ratio: 16/9; } .vw-vid .yt { position: relative; height: 100%; border-radius: 10px; overflow: hidden; background: #000; cursor: pointer; border: 1px solid #2a3344; }
+    .vw-vid .yt img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .85; transition: opacity .15s; } .vw-vid .yt:hover img { opacity: 1; }
+    .vw-vid .yt .play { position: absolute; left: 50%; top: 50%; width: 68px; height: 48px; margin: -24px 0 0 -34px; background: rgba(200,30,30,.9); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .vw-vid .yt .play::after { content: ''; border-style: solid; border-width: 10px 0 10px 18px; border-color: transparent transparent transparent #fff; margin-left: 4px; } .vw-vid .yt:hover .play { background: #f00; }
+    .vw-vid .yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .vw-vid .yt .ytclose, .vw-vid .yt .ytsize { display: none; position: absolute; top: 3px; z-index: 2; }
+    .vw-vid .yt .ytclose, .vw-vid .yt .ytsize button { border: 0; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; }
+    .vw-vid .yt .ytclose { right: 4px; width: 26px; height: 26px; font-size: 18px; line-height: 26px; border-radius: 6px; }
+    .vw-vid .yt .ytsize { right: 36px; gap: 3px; } .vw-vid .yt .ytsize button { width: 26px; height: 26px; border-radius: 50%; font-size: 11px; font-weight: 700; line-height: 26px; }
+    .vw-vid .yt .ytsize button.on, .vw-vid .yt .ytsize button:hover, .vw-vid .yt .ytclose:hover { background: #d4a84a; color: #1a1406; }
+    .vw-vid .yt.mini { position: fixed; right: 16px; bottom: 16px; width: min(var(--mini-w, 360px), calc(100vw - 32px)); height: auto; aspect-ratio: 16/9; box-sizing: content-box; padding-top: 32px; background: #121826; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,.6); border-color: #6b5a2a; }
+    .vw-vid .yt.mini::before { content: '▶ 가이드 영상'; position: absolute; left: 12px; top: 0; line-height: 32px; font-size: 11px; color: #d4a84a; }
+    .vw-vid .yt.mini iframe { top: 32px; height: calc(100% - 32px); } .vw-vid .yt.mini .ytclose { display: block; } .vw-vid .yt.mini .ytsize { display: flex; }
+    .ytcap { margin: 6px 2px 0; color: #9fb0c6; font-size: 12.5px; } .ytcap a { color: #d4a84a; } .vw-vst { color: #e6d39c; }
+    .vw-toc a.vw-toc-yt { border-color: #6b2a2a; color: #ffb4b4; }
+    .vw-vrows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; } .vw-vrow { display: flex; gap: 6px; flex-wrap: wrap; }
+    .vw-vrow input, .vw-vrow select { padding: 6px 9px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 13px; }
+    .vw-vrow input[data-k=url] { flex: 2 1 220px; } .vw-vrow input[data-k=title] { flex: 1 1 140px; } .vw-vrow select { flex: 0 0 auto; }
+    .vw-vrow { padding: 8px; border: 1px solid #1f2735; border-radius: 10px; background: #0b1019; } .vw-vrow input[data-k=url] { flex: 1 1 100%; } .vw-vrow input[data-k=title] { flex: 1 1 160px; min-width: 0; }

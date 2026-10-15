@@ -5281,9 +5281,9 @@ async function vwLoad() {
         if (!j.ok) throw new Error(j.error || '공유 빌드를 찾을 수 없습니다');
       }
       VW.share = j.item; VW.liked = !!j.liked; code = j.item.code;
-      // 단계별 빌드 (2026-10-15) — 탭마다 코드 하나, 처음엔 ?st=단계 또는 대표(마지막)
+      // 단계별 빌드 (2026-10-15) — 탭마다 코드 하나, 처음엔 ?st=단계 또는 첫 단계 (사용자 2026-10-15)
       try { const st = JSON.parse(j.item.stages || 'null'); if (Array.isArray(st) && st.length > 1) VW.stages = st; } catch (e) {}
-      if (VW.stages) { const w = VW.stages.findIndex(x => x.t === q.get('st')); VW.st = w >= 0 ? w : VW.stages.length - 1; code = VW.stages[VW.st].code; }
+      if (VW.stages) { const w = VW.stages.findIndex(x => x.t === q.get('st')); VW.st = w >= 0 ? w : 0; code = VW.stages[VW.st].code; }
     }
     if (!code) throw new Error('보여 줄 빌드가 없습니다 — 빌드 공유 링크(?preset=번호)로 열어 주세요');
     const r = await codeToPreset(code);
@@ -5331,7 +5331,7 @@ async function vwStage(i, top) { // top = 아래 버튼에서 — 바꾼 뒤 단
   try {
     const r = await codeToPreset(VW.stages[i].code);
     preset = r.preset; VW.missing = r.missing; VW.code = VW.stages[i].code; VW.st = i; VW.gsel = null;
-    const u = new URL(location.href); if (i === VW.stages.length - 1) u.searchParams.delete('st'); else u.searchParams.set('st', VW.stages[i].t);
+    const u = new URL(location.href); if (i === 0) u.searchParams.delete('st'); else u.searchParams.set('st', VW.stages[i].t);
     history.replaceState(null, '', u.toString());
     const y = window.scrollY; pageRender();
     const bar = top && document.querySelector('.vw-stages');
@@ -5636,7 +5636,7 @@ async function vwLike() {
 }
 async function vwCopy() {
   const link = location.origin + '/tli/view/?preset=' + encodeURIComponent(VW.share.id) +
-    (VW.stages && VW.st !== VW.stages.length - 1 ? '&st=' + encodeURIComponent(VW.stages[VW.st].t) : ''); // 대표가 아닌 탭이면 그 단계로
+    (VW.stages && VW.st !== 0 ? '&st=' + encodeURIComponent(VW.stages[VW.st].t) : ''); // 첫 탭이 아니면 그 단계로
   try { await navigator.clipboard.writeText(link); vwToast('🔗 링크를 복사했습니다'); }
   catch (e) { vwPop(`<h3>링크</h3><input class="wb-link" readonly value="${vwEsc(link)}" onclick="this.select()"><div class="wb-btns"><button class="wz-btn" onclick="vwClose()">닫기</button></div>`); }
 }

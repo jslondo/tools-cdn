@@ -5657,23 +5657,7 @@ function vwPwd(title, msg, go) { // 올릴 때 등록한 비밀번호 (이 브�
 // 빌더는 preset.shareEdit 가 있으면 [💾 공유 글 저장] 으로 같은 글을 갱신한다 (링크·추천·조회수 유지)
 async function vwShareEdit(admin) {
   // 확인이 끝나면 [✏ 내용 고치기](이 글을 빌더로) / [📥 내 빌드로 덮어쓰기](빌더 내 빌드 목록에서 고르기) 중 고른다 (2026-10-13 사용자)
-  const choose = se => {
-    const it = VW.share;
-    let tags = []; try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
-    const info = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se,
-      VW.stages ? {stages: VW.stages, stageT: VW.stages[VW.st].t} : {}); // 단계 글 — 지금 탭을 고치고 나머지 단계는 그대로 (공유 창에서 바꿀 수 있음)
-    vwClose();
-    vwPop(`<h3>✏ 공유 글 수정</h3><div class="wb-msg"><b>${vwEsc(it.title || it.id)}</b> — 어떻게 고칠까요? 어느 쪽이든 링크·추천·조회수는 그대로입니다.</div>` +
-      '<div class="vw-se-choice">' +
-      '<button type="button" class="vw-se-opt" id="vwSeEdit"><b>✏ 내용 고치기</b><small>이 글의 빌드를 빌더로 불러와 고칩니다</small></button>' +
-      '<button type="button" class="vw-se-opt" id="vwSeOver"><b>📥 내 빌드로 덮어쓰기</b><small>내 빌드 목록에서 하나를 골라 이 글을 그 빌드로 바꿉니다</small></button></div>' +
-      '<div class="wb-btns"><button class="wz-btn" onclick="vwClose()">취소</button></div>');
-    document.getElementById('vwSeEdit').onclick = () => vwSeGo(info);
-    document.getElementById('vwSeOver').onclick = () => {
-      try { localStorage.setItem('tli_share_over', JSON.stringify({se: info, memo: preset.memo || ''})); } catch (e) { vwToast('저장소를 쓸 수 없습니다'); return; }
-      location.href = '/tli/builder/#pick';
-    };
-  };
+  const choose = se => { VW.seAuth = se; vwSeChoose(); };
   if (admin) { // 관리 화면의 [수정] (?edit=1) — 관리 로그인 쿠키로 확인, 아니면 비밀번호로
     try { await vwApi('/share/edit', {id: VW.share.id, check: 1}); return choose({admin: 1}); } catch (e) {}
   }
@@ -5683,6 +5667,33 @@ async function vwShareEdit(admin) {
   });
 }
 // [✏ 내용 고치기] — 이 글의 빌드를 수정용 사본으로 담고 빌더의 고치는 단계로 (사본은 내 빌드 목록에 안 보이고, 저장하면 지워진다)
+// 수정 방법 고르기 — 묶음 글은 고칠 단계를 여기서 고르고(칩 = 뒤 화면 탭도 같이), 구성(단계 추가·빼기·순서)은 따로 (2026-10-15 사용자)
+function vwSeChoose() {
+  const it = VW.share, se = VW.seAuth;
+  let tags = []; try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
+  const info = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se,
+    VW.stages ? {stages: VW.stages, stageT: VW.stages[VW.st].t} : {}); // 단계 글 — 고르는 단계를 고치고 나머지 단계는 그대로
+  const T = VW.stages ? VW.stages[VW.st].t : '';
+  const opt = (id, b, sm) => `<button type="button" class="vw-se-opt" id="${id}"><b>${b}</b><small>${sm}</small></button>`;
+  vwPop(`<h3>✏ 공유 글 수정</h3><div class="wb-msg"><b>${vwEsc(it.title || it.id)}</b> — 어떻게 고칠까요? 어느 쪽이든 링크·추천·조회수는 그대로입니다.</div>` +
+    (VW.stages ? `<div class="vw-se-stg"><span>🪜 묶음 글 · 고칠 단계</span>${VW.stages.map((x, i) => `<button type="button" class="vw-stb${i === VW.st ? ' on' : ''}" onclick="vwSeStage(${i})">${vwEsc(x.t)}</button>`).join('')}</div>` : '') +
+    '<div class="vw-se-choice three">' +
+    (VW.stages
+      ? opt('vwSeEdit', `✏ [${vwEsc(T)}] 빌드 고치기`, `이 단계 빌드를 빌더로 불러와 고칩니다 — 다른 단계는 그대로`) +
+        opt('vwSeOver', `📥 [${vwEsc(T)}]를 내 빌드로 바꾸기`, '내 빌드 목록에서 하나를 골라 이 단계를 그 빌드로 바꿉니다') +
+        opt('vwSeSet', '🪜 묶음 구성 바꾸기', '단계 추가·빼기·순서·탭 이름 — 공유 창이 바로 열립니다')
+      : opt('vwSeEdit', '✏ 내용 고치기', '이 글의 빌드를 빌더로 불러와 고칩니다') +
+        opt('vwSeOver', '📥 내 빌드로 덮어쓰기', '내 빌드 목록에서 하나를 골라 이 글을 그 빌드로 바꿉니다') +
+        opt('vwSeSet', '🪜 여러 빌드로 묶기', '이 빌드에 내 빌드를 더 붙여 단계 탭 글로 — 공유 창이 바로 열립니다')) + '</div>' +
+    '<div class="wb-btns"><button class="wz-btn" onclick="vwClose()">취소</button></div>');
+  document.getElementById('vwSeEdit').onclick = () => vwSeGo(info);
+  document.getElementById('vwSeSet').onclick = () => vwSeGo(VW.stages ? info : Object.assign({bundle: 1}, info), 'share'); // bundle = 공유 창을 묶음 모드로 열기 (한 번만)
+  document.getElementById('vwSeOver').onclick = () => {
+    try { localStorage.setItem('tli_share_over', JSON.stringify({se: info, memo: preset.memo || ''})); } catch (e) { vwToast('저장소를 쓸 수 없습니다'); return; }
+    location.href = '/tli/builder/#pick';
+  };
+}
+async function vwSeStage(i) { await vwStage(i); vwSeChoose(); } // 창 안 단계 칩 → 뒤 화면도 그 단계로
 function vwSeStop() { // 수정 그만두기 — 사본을 지우고 공유 글 보기로
   if (!confirm('공유 글 수정을 그만둘까요? 고치던 내용은 지워지고, 공유 글은 바뀌지 않습니다.')) return;
   const sid = preset.shareEdit && preset.shareEdit.id;
@@ -5692,7 +5703,7 @@ function vwSeStop() { // 수정 그만두기 — 사본을 지우고 공유 글 
   } catch (e) {}
   location.href = sid ? '/tli/view/?preset=' + encodeURIComponent(sid) : '/tli/builder/';
 }
-function vwSeGo(info) {
+function vwSeGo(info, to) { // to = 'share' 면 빌더에서 공유 창부터 (묶음 구성 바꾸기)
   try {
     const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};
     const p = JSON.parse(JSON.stringify(preset));
@@ -5704,7 +5715,7 @@ function vwSeGo(info) {
     else { p.id = Math.max(0, ...ps.list.map(x => x.id)) + 1; ps.list.push(p); }
     ps.activeId = p.id;
     localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
-    location.href = '/tli/builder/#hero';
+    location.href = '/tli/builder/#' + (to || 'hero');
   } catch (e) { vwToast('불러오지 못했습니다: ' + e.message); }
 }
 function vwShareDel() {
@@ -5713,7 +5724,6 @@ function vwShareDel() {
     catch (e) { vwToast('지우지 못했습니다: ' + e.message); }
   });
 }
-vwLoad().then(() => { if (VW.share && new URLSearchParams(location.search).get('edit')) vwShareEdit(true); });
 
 // ── 가이드 영상 (2026-10-15 사용자) — 맨 아래, 관리자만 붙인다(서버가 관리 쿠키·출처로 확인). 히어로시즈 가이드 영상 상자를 옮겨 옴:
 // 썸네일 → 누르면 재생, 재생 중 화면 밖으로 나가면 우하단 미니 플레이어(S·M·L, ✕=정지). st='' 는 모든 단계, 아니면 그 단계 탭에서만.
@@ -5825,3 +5835,6 @@ async function vwVidSave() {
     VW.videos = d.videos; vwClose(); pageRender(); vwToast(vids.length ? '🎬 영상을 저장했습니다' : '영상을 모두 뺐습니다');
   } catch (e) { b.disabled = false; vwToast('저장하지 못했습니다: ' + e.message); }
 }
+
+// 시작 — 맨 끝에 둔다 (위의 const 들이 다 정해진 뒤에 그리게: 내 빌드 보기는 곧바로 pageRender 한다)
+vwLoad().then(() => { if (VW.share && new URLSearchParams(location.search).get('edit')) vwShareEdit(true); });

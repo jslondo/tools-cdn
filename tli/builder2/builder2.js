@@ -6724,25 +6724,29 @@ function wbStgRen() {
   const se = preset.shareEdit, keep = (se && se.stages) || [];
   keep.forEach((k, i) => { if (!wbStgKeep['k' + i] && !wbStgKeep['_k' + i]) { wbStgKeep['_k' + i] = 1; codeToPreset(k.code).then(r => { wbStgKeep['k' + i] = r.preset; wbStgRen(); }).catch(() => {}); } });
   const n = wbStages.length;
-  const card = (r, i) => {
-    const p = wbStgP(r.src);
-    return `<div class="wb-stc" draggable="true" data-i="${i}" ondragstart="wbStgDrag=${i};this.classList.add('drag')" ondragend="this.classList.remove('drag')" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();wbStgMove(wbStgDrag, ${i})">` +
-      `<div class="wb-stc-h"><span class="wb-stc-no">${i + 1}</span><select onchange="wbStgSet(${i}, 't', this.value)" title="탭 이름">${SHARE_STAGE_TAGS.map(t => `<option${t === r.t ? ' selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>` +
-      `<button type="button" class="wb-stc-x" onclick="wbStgDel(${i})" title="빼기">✕</button></div>` +
-      `<div class="wl-card wb-stc-b">${p ? wlCardBody(p) : '<div class="wl-info"><b>불러오는 중…</b></div>'}</div>` +
-      `<div class="wb-stc-f">${r.src === 'cur' ? '<em>지금 빌드</em>' : /^k/.test(r.src) ? '<em>지금 글 그대로</em>' : '<span></span>'}` +
-      `<span class="wb-stc-mv"><button type="button" onclick="wbStgMove(${i}, ${i - 1})"${i ? '' : ' disabled'} title="앞으로">◀</button><button type="button" onclick="wbStgMove(${i}, ${i + 1})"${i < n - 1 ? '' : ' disabled'} title="뒤로">▶</button></span></div></div>`;
+  // 한 줄형 (2026-10-15 사용자 — 카드는 좁은 창에서 이름이 잘렸다): ⠿ 번호 [탭 이름] 초상화·스킬 이름(특성 · 메인) ▲▼ ✕
+  const face = p => { const tr = p && p.hero && traitInfo(p.hero.trait), m = p && wbMainOf(p), ic = m && wlSkIcon(m.name);
+    return `<span class="wb-sl-face">${tr ? `<img src="${tr.img}" alt="">` : ''}</span>${ic ? `<img class="wb-sl-sk" src="${ic}" alt="" onerror="this.remove()">` : ''}`; };
+  const info = (p, tag) => `<span class="wb-sl-info"><b>${p ? escapeHtml(p.name || '빌드 ' + p.id) : '불러오는 중…'}</b><small>${p ? escapeHtml([p.hero && p.hero.trait, (wbMainOf(p) || {}).name].filter(Boolean).join(' · ')) : ''}${tag ? ` · <em>${escapeHtml(tag)}</em>` : ''}</small></span>`;
+  const row = (r, i) => {
+    const p = wbStgP(r.src), tag = r.src === 'cur' ? '지금 빌드' : /^k/.test(r.src) ? '지금 글 그대로' : '';
+    return `<div class="wb-sl" draggable="true" data-i="${i}" ondragstart="wbStgDrag=${i};this.classList.add('drag')" ondragend="this.classList.remove('drag')" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();wbStgMove(wbStgDrag, ${i})">` +
+      `<span class="wb-sl-grip" title="끌어서 순서 바꾸기">⠿</span><span class="wb-stc-no">${i + 1}</span>` +
+      `<select onchange="wbStgSet(${i}, 't', this.value)" title="탭 이름">${SHARE_STAGE_TAGS.map(t => `<option${t === r.t ? ' selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>` +
+      face(p) + info(p, tag) +
+      `<span class="wb-sl-mv"><button type="button" onclick="wbStgMove(${i}, ${i - 1})"${i ? '' : ' disabled'} title="위로">▲</button><button type="button" onclick="wbStgMove(${i}, ${i + 1})"${i < n - 1 ? '' : ' disabled'} title="아래로">▼</button></span>` +
+      `<button type="button" class="wb-stc-x" onclick="wbStgDel(${i})" title="빼기">✕</button></div>`;
   };
   const taken = new Set(wbStages.map(r => r.src));
   const cands = [!taken.has('cur') ? {src: 'cur', p: preset, tag: '지금 빌드'} : null,
     ...keep.map((k, i) => !taken.has('k' + i) && wbStgKeep['k' + i] ? {src: 'k' + i, p: wbStgKeep['k' + i], tag: '지금 글의 [' + k.t + ']'} : null),
     ...wbStgMine().filter(p => !taken.has('m' + p.id)).map(p => ({src: 'm' + p.id, p}))].filter(Boolean);
-  el.innerHTML = pick + '<div class="wb-stcs">' + wbStages.map(card).join('') +
-    (n < SHARE_STAGE_TAGS.length ? `<button type="button" class="wb-stc wb-stc-add${wbStgPickOn ? ' on' : ''}" onclick="wbStgPickToggle()"><b>+</b><span>빌드 추가</span></button>` : '') + '</div>' +
+  el.innerHTML = pick + '<div class="wb-sls">' + wbStages.map(row).join('') +
+    (n < SHARE_STAGE_TAGS.length ? `<button type="button" class="wb-sl-add${wbStgPickOn ? ' on' : ''}" onclick="wbStgPickToggle()">+ 빌드 추가</button>` : '') + '</div>' +
     (wbStgPickOn ? `<div class="wb-stc-pick"><small>추가할 빌드를 누르세요 — 같은 히어로 특성(${escapeHtml(preset.hero.trait)})인 내 빌드만 나옵니다</small>` +
-      (cands.length ? `<div class="wl-grid wb-grid">${cands.map(c => `<div class="wl-card" onclick="wbStgAdd('${c.src}')">${wlCardBody(c.p)}${c.tag ? `<em class="wb-stc-tag">${escapeHtml(c.tag)}</em>` : ''}</div>`).join('')}</div>`
+      (cands.length ? `<div class="wb-sls">${cands.map(c => `<button type="button" class="wb-sl pick" onclick="wbStgAdd('${c.src}')">${face(c.p)}${info(c.p, c.tag)}<span class="wb-sl-plus">+ 추가</span></button>`).join('')}</div>`
         : '<div class="wb-msg">더 고를 수 있는 빌드가 없습니다 — 빌더에서 같은 히어로 특성으로 빌드를 더 만들어 주세요.</div>') + '</div>' : '') +
-    `<small class="wb-stgh">카드 순서가 보기 화면의 <b>탭 순서</b>입니다 — 끌어서(모바일은 ◀▶) 바꾸세요. 탭 이름은 카드 위에서 고르고, 목록 카드에는 <b>마지막 카드</b>가 대표로 나옵니다.</small>`;
+    `<small class="wb-stgh">위에서부터 보기 화면의 <b>탭 순서</b>입니다 — ⠿ 를 끌거나 ▲▼ 로 바꾸세요. 목록 카드에는 <b>마지막 줄</b>이 대표로 나옵니다.</small>`;
   wbStgMain();
 }
 async function wbStgPreset(src) { // 카드의 빌드 → preset (기존 단계는 코드를 풀어서)
@@ -6801,6 +6805,7 @@ function wbShareOpen() {
     '<div class="wb-note">태그는 목록에서 찾을 때 쓰입니다 (1~10개). 작성자·비밀번호는 이 브라우저에 기억됩니다.</div>' +
     `<div class="wb-btns"><button class="wz-btn pri" id="wbShareGo" onclick="wbShareSubmit()">${se ? '수정 저장' : '올리기'}</button><button class="wz-btn" onclick="wbClose()">취소</button></div>`, 'wb-share');
   wbTitleSync(); wbStgRen();
+  if (se && se.bundle) { delete se.bundle; persistPreset(); wbStgOn(true); } // 보기 화면 [🪜 여러 빌드로 묶기] — 묶음 모드 + 고르기 목록부터
 }
 function wbVis(on) { // 공개 범위 — 링크 전용은 목록·검색에서 빠진다 (2026-10-12)
   wbUnlisted = on;

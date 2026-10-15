@@ -1130,6 +1130,23 @@
     .wb-stc-pick .wl-tags { display: none; } .wb-stc-pick .wl-info b { font-size: 13px; } .wb-stc-pick .wl-info small { font-size: 11px; }
     .wb-stc-pick .wl-card:hover { border-color: #d4a84a; }
     .wb-stc-tag { position: static; grid-column: 2; font-size: 10.5px; }
+    /* 여러 빌드 묶어서 — 한 줄형 (2026-10-15, 카드는 이름이 잘려서) */
+    .wb-sls { display: flex; flex-direction: column; gap: 5px; }
+    .wb-sl { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid #2a3446; border-radius: 10px; background: #0b1019; color: #e6edf3; font: inherit; text-align: left; width: 100%; box-sizing: border-box; }
+    .wb-sl[draggable] { cursor: grab; } .wb-sl.drag { opacity: .45; } .wb-sl.over { border-color: #d4a84a; box-shadow: 0 0 0 1px #d4a84a inset; }
+    .wb-sl-grip { color: #5d6b80; font-size: 15px; cursor: grab; flex: none; }
+    .wb-sl select { flex: none; width: 92px; padding: 4px 6px; border-radius: 8px; border: 1px solid #4a3f22; background: #15130d; color: #f3e3b5; font: inherit; font-size: 13px; font-weight: 600; }
+    .wb-sl-face { flex: none; width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: #111826; border: 1px solid #2a3446; } .wb-sl-face img { width: 100%; height: 100%; object-fit: cover; }
+    .wb-sl-sk { flex: none; width: 26px; height: 26px; border-radius: 6px; border: 1px solid #3a3020; }
+    .wb-sl-info { flex: 1; min-width: 0; display: flex; flex-direction: column; } .wb-sl-info b { font-size: 13px; overflow-wrap: anywhere; } .wb-sl-info small { color: #8b95a7; font-size: 11.5px; } .wb-sl-info em { font-style: normal; color: #b9a46a; }
+    .wb-sl-mv { flex: none; display: flex; gap: 3px; } .wb-sl-mv button { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #2a3446; background: transparent; color: #9fb0c6; cursor: pointer; font-size: 9px; } .wb-sl-mv button:disabled { opacity: .3; cursor: default; }
+    .wb-sl.pick { cursor: pointer; } .wb-sl.pick:hover { border-color: #d4a84a; background: #15130d; } .wb-sl-plus { flex: none; color: #d4a84a; font-size: 12px; font-weight: 600; }
+    .wb-sl-add { padding: 8px; border: 1px dashed #4a3f22; border-radius: 10px; background: transparent; color: #b9a46a; font: inherit; font-size: 13px; cursor: pointer; } .wb-sl-add:hover, .wb-sl-add.on { border-color: #d4a84a; color: #f3e3b5; }
+    .wb-stc-pick .wb-sls { max-height: 32vh; overflow-y: auto; }
+    @media (max-width: 520px) { .wb-sl { flex-wrap: wrap; } .wb-sl-info { flex-basis: calc(100% - 80px); order: 5; } .wb-sl.pick .wb-sl-info { order: 0; flex-basis: auto; } }
+    .wb-field .wb-sl-info b { width: auto; flex: initial; color: #e6edf3; font-size: 13px; } /* .wb-field b(라벨 64px) 가 이름에 걸리지 않게 */
+    @media (max-width: 520px) { .wb-sl-info { flex-basis: 100%; } }
+    @media (max-width: 520px) { .wb-sl:not(.pick) .wb-sl-face { display: none; } .wb-sl select { width: 80px; } .wb-sl { gap: 6px; } }
     /* ── /tli/view 공유 보기 화면 — 빌더 2 모양을 한 페이지에 위에서 아래로 ── */
     .vw-page #vwApp { width: min(1400px, 100%); margin: 0 auto; padding: 14px 16px 60px; box-sizing: border-box; }
     .vw-head { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; padding: 16px 18px; border: 1px solid #2a3344; border-radius: 14px; background: linear-gradient(180deg, #121826, #0b0f17); }
@@ -1291,3 +1308,6 @@
     .vw-vrow input, .vw-vrow select { padding: 6px 9px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 13px; }
     .vw-vrow input[data-k=url] { flex: 2 1 220px; } .vw-vrow input[data-k=title] { flex: 1 1 140px; } .vw-vrow select { flex: 0 0 auto; }
     .vw-vrow { padding: 8px; border: 1px solid #1f2735; border-radius: 10px; background: #0b1019; } .vw-vrow input[data-k=url] { flex: 1 1 100%; } .vw-vrow input[data-k=title] { flex: 1 1 160px; min-width: 0; }
+    .vw-se-choice.three { grid-template-columns: 1fr; } /* 세 갈래는 세로 목록 (가로 3칸은 글이 좁았다) */
+    .vw-se-stg { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 10px; padding: 5px; border-radius: 10px; border: 1px solid #3a3220; background: #15130d; }
+    .vw-se-stg > span { color: #b9a46a; font-size: 12px; padding: 0 8px 0 6px; } .vw-se-stg .vw-stb { padding: 5px 12px; font-size: 13px; }

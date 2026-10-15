@@ -31,6 +31,7 @@ function traitInfo(tag) { return SHARE_TAG_TRAIT.get(tag) || null; }
 const SHARE_SKILL_TAGS = ['보조', '범위', '물리', '주술', '지속', '화염', '공격', '번개', '부식', '냉기', '투사체', '근접전', '오라', '수평 사격', '자극', '소환', '원거리', '촉발체', '영약', '위치 이동', '채널링', '실드', '마령', '주입', '지면', '보초병', '광선', '회복', '기본 스킬', '강화 스킬', '궁극 스킬', '함성', '저주', '베기', '체인', '파괴', '스마트 웨폰', '포물선', '수직', '폭격', '그림자', '콤보'];
 const SHARE_EXTRA_TAGS = ['스태킹', '전의', '힘', '민첩', '지혜'];
 const SHARE_CONTENT_TAGS = ['엑트', '7만계', '8만계', '8T', '엔드', '아득', '딥스', '20층', '21층'];
+const SHARE_STAGE_TAGS = ['엑트', '1~7티어', '7만계', '8티어', '아득', '엔드', '20층']; // 단계별 빌드 탭 이름 (진행 순서, 서버 STAGE_TAGS 와 같게 — 2026-10-15)
 function heroLabel(h) {
   if (!h || !h.trait) return '';
   const tr = traitInfo(h.trait);
@@ -1559,12 +1560,14 @@ function supRule(s) { // → null(거르지 않음) | {name} | {alts: [[태그�
   SUP_RULES.set(key, r);
   return r;
 }
+// 정밀판 메인(정밀 화염의 주입 등)은 원래 스킬과 같은 메인으로 본다 — 부귀·숭고·'○○ 스킬을 보조한다'가 원래 이름으로 걸려 있어서 (2026-10-15 제보)
+const skBase = n => String(n || '').replace(/^정밀 /, '');
 // 이 보조를 이 메인에 끼울 수 있나 — 메인이 없거나 태그가 없으면 true(못 거름)
 function supFits(sup, main) {
   if (!main) return true;
   const r = supRule(sup);
   if (!r) return true;
-  if (r.name) return main.name === r.name;
+  if (r.name) return skBase(main.name) === r.name;
   const mi = SKILLS.find(k => k.name === main.name && k.kind === main.kind);
   if (!mi || !(mi.tags || []).length) return true;
   // 마령·주입 패시브와 소환류(소환 태그)는 대상 제한을 아예 두지 않는다 — 소환체가 쓰는 스킬 성격이 제각각이라
@@ -3554,7 +3557,7 @@ function wsPool() { // 지금 자리에 들어갈 수 있는 스킬 (빌더 skil
   const out = [];
   SKILLS.forEach((s, i) => {
     if (socket === null ? !mainAllows(s, grp) : !socketKinds(socket).includes(s.kind)) return;
-    if (special && s.kind === special && (!mainName || s.name.split(':')[0].trim() !== mainName)) return; // 부귀·숭고는 그 메인 전용
+    if (special && s.kind === special && (!mainName || s.name.split(':')[0].trim() !== skBase(mainName))) return; // 부귀·숭고는 그 메인 전용
     // "실드 스킬을 보조한다" 같은 대상 제한 — 메인 태그에 없으면 뺀다 (이미 끼운 건 뺄 수 있게 남김)
     if (socket !== null && !(sk && sk.sup.some(sp => sp && sp.name === s.name && sp.kind === s.kind)) && !supFits(s, sk && sk.main)) return;
     out.push(i);
@@ -5278,6 +5281,9 @@ async function vwLoad() {
         if (!j.ok) throw new Error(j.error || '공유 빌드를 찾을 수 없습니다');
       }
       VW.share = j.item; VW.liked = !!j.liked; code = j.item.code;
+      // 단계별 빌드 (2026-10-15) — 탭마다 코드 하나, 처음엔 ?st=단계 또는 대표(마지막)
+      try { const st = JSON.parse(j.item.stages || 'null'); if (Array.isArray(st) && st.length > 1) VW.stages = st; } catch (e) {}
+      if (VW.stages) { const w = VW.stages.findIndex(x => x.t === q.get('st')); VW.st = w >= 0 ? w : VW.stages.length - 1; code = VW.stages[VW.st].code; }
     }
     if (!code) throw new Error('보여 줄 빌드가 없습니다 — 빌드 공유 링크(?preset=번호)로 열어 주세요');
     const r = await codeToPreset(code);
@@ -5309,6 +5315,21 @@ function vwEdit(to) { // 이 빌드를 활성으로 두고 빌더 2 의 그 단�
   location.href = '/tli/builder/#' + (to || 'hero'); // 단계 없이 가면 '내 빌드' 목록이 뜬다
 }
 
+function vwStageBar() {
+  if (!VW.stages) return '';
+  return `<div class="vw-stages" role="tablist"><span class="vw-stl">🪜 단계</span>` + VW.stages.map((x, i) =>
+    `<button type="button" role="tab" class="vw-stb${i === VW.st ? ' on' : ''}" onclick="vwStage(${i})"${i === VW.stages.length - 1 ? ' title="목록 카드에 나오는 대표 빌드"' : ''}>${vwEsc(x.t)}</button>`).join('') + '</div>';
+}
+async function vwStage(i) { // 탭 바꾸기 — 같은 자리에서 빌드만 바꿔 그린다
+  if (!VW.stages || i === VW.st || !VW.stages[i]) return;
+  try {
+    const r = await codeToPreset(VW.stages[i].code);
+    preset = r.preset; VW.missing = r.missing; VW.code = VW.stages[i].code; VW.st = i; VW.gsel = null;
+    const u = new URL(location.href); if (i === VW.stages.length - 1) u.searchParams.delete('st'); else u.searchParams.set('st', VW.stages[i].t);
+    history.replaceState(null, '', u.toString());
+    const y = window.scrollY; pageRender(); window.scrollTo(0, y);
+  } catch (e) { vwToast('이 단계를 열지 못했습니다: ' + e.message); }
+}
 function vwHead() {
   const s = VW.share, h = preset.hero;
   const title = (s && s.title) || preset.name || '공유 빌드';
@@ -5333,7 +5354,7 @@ function vwHead() {
       '<button type="button" class="wz-btn" onclick="vwCopy()">🔗 링크 복사</button></div>' +
       '<div class="vw-acts2"><button type="button" class="wz-btn" onclick="vwShareEdit(false)" title="올릴 때 등록한 비밀번호로 내 글을 고칩니다 (빌더에서 고친 뒤 저장)">✏ 내 글 수정</button>' +
       '<button type="button" class="wz-btn" onclick="vwShareDel()" title="올릴 때 등록한 비밀번호로 내 글을 지웁니다">🗑 삭제</button></div>' : '') + '</div></div>' +
-    '<nav class="vw-toc">' + VW_SECS.filter(([id]) => id !== 'vc' || vwHasCmt()).map(([id, nm]) => `<a href="#${id}">${nm}</a>`).join('') + '</nav>';
+    vwStageBar() + '<nav class="vw-toc">' + VW_SECS.filter(([id]) => id !== 'vc' || vwHasCmt()).map(([id, nm]) => `<a href="#${id}">${nm}</a>`).join('') + '</nav>';
 }
 
 // 작성자 코멘트 (preset.memo, 1500자 — 공유 코드 m 에 실린다). 맨 아래 칸: 내 빌드는 바로 써서 저장, 공유 글은 있을 때만 읽기 (2026-10-10 사용자 — '메모' → '작성자 코멘트')
@@ -5361,14 +5382,41 @@ function vwMyDelDo() {
 
 // 내 빌드로 가져오기 — 이 브라우저 저장소에 새 빌드로 넣고 빌더 2 로 (보기 화면은 저장소를 안 건드리므로 여기서만 직접 쓴다)
 function vwTake() {
+  if (VW.stages && !vwTake.pick) { // 단계 글 — 이 단계만 / 전부
+    const n = VW.stages.length;
+    vwPop(`<h3>내 빌드로 가져오기</h3><div class="wb-msg">이 글은 단계 ${n}개로 나뉜 빌드입니다.</div>` +
+      '<div class="vw-se-choice">' +
+      `<button type="button" class="vw-se-opt" onclick="vwTakeGo(false)"><b>[${vwEsc(VW.stages[VW.st].t)}] 단계만</b><small>지금 보고 있는 빌드 하나</small></button>` +
+      `<button type="button" class="vw-se-opt" onclick="vwTakeGo(true)"><b>단계 전부 (${n}개)</b><small>단계마다 내 빌드 하나씩 — 이름 뒤에 단계가 붙습니다</small></button></div>` +
+      '<div class="wb-btns"><button class="wz-btn" onclick="vwClose()">취소</button></div>');
+    return;
+  }
   try {
     const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};
     const p = JSON.parse(JSON.stringify(preset));
     p.id = Math.max(0, ...ps.list.map(x => x.id)) + 1;
     p.name = ((VW.share && VW.share.title) || p.name || '가져온 빌드').slice(0, 30);
+    if (VW.stages) p.name = p.name.slice(0, 30 - VW.stages[VW.st].t.length - 3) + ' · ' + VW.stages[VW.st].t;
     ps.list.push(p); ps.activeId = p.id;
     localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
     if (VW.share) fetch('/api/take', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({id: VW.share.id}), keepalive: true}).catch(() => {}); // 담아가기 집계 (관리 통계)
+    location.href = '/tli/builder/';
+  } catch (e) { alert('가져오지 못했습니다: ' + e.message); }
+}
+
+async function vwTakeGo(all) {
+  if (!all) { vwTake.pick = 1; return vwTake(); }
+  try {
+    const ps = JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null') || {list: [], activeId: 0};
+    const base = ((VW.share && VW.share.title) || preset.name || '가져온 빌드');
+    for (const x of VW.stages) {
+      const p = JSON.parse(JSON.stringify((await codeToPreset(x.code)).preset));
+      p.id = Math.max(0, ...ps.list.map(y => y.id)) + 1;
+      p.name = base.slice(0, 30 - x.t.length - 3) + ' · ' + x.t;
+      ps.list.push(p); ps.activeId = p.id;
+    }
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(ps));
+    if (VW.share) fetch('/api/take', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({id: VW.share.id}), keepalive: true}).catch(() => {});
     location.href = '/tli/builder/';
   } catch (e) { alert('가져오지 못했습니다: ' + e.message); }
 }
@@ -5579,7 +5627,8 @@ async function vwLike() {
   catch (e) { b.disabled = false; vwToast('추천하지 못했습니다: ' + e.message); }
 }
 async function vwCopy() {
-  const link = location.origin + '/tli/view/?preset=' + encodeURIComponent(VW.share.id);
+  const link = location.origin + '/tli/view/?preset=' + encodeURIComponent(VW.share.id) +
+    (VW.stages && VW.st !== VW.stages.length - 1 ? '&st=' + encodeURIComponent(VW.stages[VW.st].t) : ''); // 대표가 아닌 탭이면 그 단계로
   try { await navigator.clipboard.writeText(link); vwToast('🔗 링크를 복사했습니다'); }
   catch (e) { vwPop(`<h3>링크</h3><input class="wb-link" readonly value="${vwEsc(link)}" onclick="this.select()"><div class="wb-btns"><button class="wz-btn" onclick="vwClose()">닫기</button></div>`); }
 }
@@ -5600,7 +5649,8 @@ async function vwShareEdit(admin) {
   const choose = se => {
     const it = VW.share;
     let tags = []; try { tags = JSON.parse(it.tags || '[]'); } catch (e) {}
-    const info = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se);
+    const info = Object.assign({id: it.id, title: it.title || '', tags, author: it.author || '', unlisted: !!it.unlisted}, se,
+      VW.stages ? {stages: VW.stages, stageT: VW.stages[VW.st].t} : {}); // 단계 글 — 지금 탭을 고치고 나머지 단계는 그대로 (공유 창에서 바꿀 수 있음)
     vwClose();
     vwPop(`<h3>✏ 공유 글 수정</h3><div class="wb-msg"><b>${vwEsc(it.title || it.id)}</b> — 어떻게 고칠까요? 어느 쪽이든 링크·추천·조회수는 그대로입니다.</div>` +
       '<div class="vw-se-choice">' +

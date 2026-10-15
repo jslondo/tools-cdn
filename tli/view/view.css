@@ -1097,6 +1097,16 @@
 .seal-tr.hp { background: rgba(230,80,80,.10); color: #f0a8a8; } .seal-tr.hp b { color: #ffd6d6; }
 .seal-box.over .seal-tr.mp b:first-of-type, .seal-box.over .seal-tr.mp b:last-of-type { color: #ff8a8a; }
 .seal-warn { margin-top: 4px; color: #ff9a9a; font-size: 12px; }
+    /* 단계별 빌드 (공유 창, 2026-10-15) */
+    .wb-field:has(.wb-stg) { align-items: flex-start; } .wb-field:has(.wb-stg) > b { padding-top: 5px; }
+    .wb-stg { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .wb-stgs { display: flex; flex-direction: column; gap: 5px; }
+    .wb-stgr { display: flex; gap: 6px; align-items: center; }
+    .wb-stgr select { padding: 5px 8px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 13px; }
+    .wb-stgr select:first-child { flex: 0 0 96px; } .wb-stgr select:nth-child(2) { flex: 1; min-width: 0; }
+    .wb-stgr .wz-btn { padding: 4px 9px; }
+    .wb-stgb { display: flex; gap: 6px; flex-wrap: wrap; }
+    .wb-stgh { color: #7d8794; font-size: 11.5px; line-height: 1.5; }
     /* ── /tli/view 공유 보기 화면 — 빌더 2 모양을 한 페이지에 위에서 아래로 ── */
     .vw-page #vwApp { width: min(1400px, 100%); margin: 0 auto; padding: 14px 16px 60px; box-sizing: border-box; }
     .vw-head { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; padding: 16px 18px; border: 1px solid #2a3344; border-radius: 14px; background: linear-gradient(180deg, #121826, #0b0f17); }
@@ -1227,3 +1237,10 @@
     .vw-skills .seal-box { margin: 0; border-radius: 12px; min-width: 0; border-color: #1f2735; }
     .vw-skills .seal-box.over { border-color: #7a2e2e; }
     .vw-skills .seal-r span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    /* 단계별 빌드 탭 (2026-10-15) */
+    .vw-stages { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin: 12px 0 0; padding: 5px; border-radius: 12px; border: 1px solid #3a3220; background: #15130d; }
+    .vw-stl { color: #b9a46a; font-size: 12px; padding: 0 8px 0 6px; }
+    .vw-stb { padding: 7px 16px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: #c9d1d9; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .vw-stb:hover { color: #f3e3b5; border-color: #4a3f22; }
+    .vw-stb.on { background: linear-gradient(180deg, #d4a84a, #a8822f); color: #1a1406; }
+    @media (max-width: 600px) { .vw-stages { flex-wrap: nowrap; overflow-x: auto; } .vw-stb { padding: 7px 12px; white-space: nowrap; } }

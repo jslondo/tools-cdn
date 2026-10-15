@@ -31,6 +31,7 @@ function traitInfo(tag) { return SHARE_TAG_TRAIT.get(tag) || null; }
 const SHARE_SKILL_TAGS = ['보조', '범위', '물리', '주술', '지속', '화염', '공격', '번개', '부식', '냉기', '투사체', '근접전', '오라', '수평 사격', '자극', '소환', '원거리', '촉발체', '영약', '위치 이동', '채널링', '실드', '마령', '주입', '지면', '보초병', '광선', '회복', '기본 스킬', '강화 스킬', '궁극 스킬', '함성', '저주', '베기', '체인', '파괴', '스마트 웨폰', '포물선', '수직', '폭격', '그림자', '콤보'];
 const SHARE_EXTRA_TAGS = ['스태킹', '전의', '힘', '민첩', '지혜'];
 const SHARE_CONTENT_TAGS = ['엑트', '7만계', '8만계', '8T', '엔드', '아득', '딥스', '20층', '21층'];
+const SHARE_STAGE_TAGS = ['엑트', '1~7티어', '7만계', '8티어', '아득', '엔드', '20층']; // 단계별 빌드 탭 이름 (진행 순서, 서버 STAGE_TAGS 와 같게 — 2026-10-15)
 function heroLabel(h) {
   if (!h || !h.trait) return '';
   const tr = traitInfo(h.trait);

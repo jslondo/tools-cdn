@@ -32,6 +32,7 @@ function traitInfo(tag) { return SHARE_TAG_TRAIT.get(tag) || null; }
 const SHARE_SKILL_TAGS = ['보조', '범위', '물리', '주술', '지속', '화염', '공격', '번개', '부식', '냉기', '투사체', '근접전', '오라', '수평 사격', '자극', '소환', '원거리', '촉발체', '영약', '위치 이동', '채널링', '실드', '마령', '주입', '지면', '보초병', '광선', '회복', '기본 스킬', '강화 스킬', '궁극 스킬', '함성', '저주', '베기', '체인', '파괴', '스마트 웨폰', '포물선', '수직', '폭격', '그림자', '콤보'];
 const SHARE_EXTRA_TAGS = ['스태킹', '전의', '힘', '민첩', '지혜'];
 const SHARE_CONTENT_TAGS = ['엑트', '7만계', '8만계', '8T', '엔드', '아득', '딥스', '20층', '21층'];
+const SHARE_STAGE_TAGS = ['엑트', '1~7티어', '7만계', '8티어', '아득', '엔드', '20층']; // 단계별 빌드 탭 이름 (진행 순서, 서버 STAGE_TAGS 와 같게 — 2026-10-15)
 function heroLabel(h) {
   if (!h || !h.trait) return '';
   const tr = traitInfo(h.trait);
@@ -1560,12 +1561,14 @@ function supRule(s) { // → null(거르지 않음) | {name} | {alts: [[태그�
   SUP_RULES.set(key, r);
   return r;
 }
+// 정밀판 메인(정밀 화염의 주입 등)은 원래 스킬과 같은 메인으로 본다 — 부귀·숭고·'○○ 스킬을 보조한다'가 원래 이름으로 걸려 있어서 (2026-10-15 제보)
+const skBase = n => String(n || '').replace(/^정밀 /, '');
 // 이 보조를 이 메인에 끼울 수 있나 — 메인이 없거나 태그가 없으면 true(못 거름)
 function supFits(sup, main) {
   if (!main) return true;
   const r = supRule(sup);
   if (!r) return true;
-  if (r.name) return main.name === r.name;
+  if (r.name) return skBase(main.name) === r.name;
   const mi = SKILLS.find(k => k.name === main.name && k.kind === main.kind);
   if (!mi || !(mi.tags || []).length) return true;
   // 마령·주입 패시브와 소환류(소환 태그)는 대상 제한을 아예 두지 않는다 — 소환체가 쓰는 스킬 성격이 제각각이라
@@ -2990,7 +2993,7 @@ function wsPool() { // 지금 자리에 들어갈 수 있는 스킬 (빌더 skil
   const out = [];
   SKILLS.forEach((s, i) => {
     if (socket === null ? !mainAllows(s, grp) : !socketKinds(socket).includes(s.kind)) return;
-    if (special && s.kind === special && (!mainName || s.name.split(':')[0].trim() !== mainName)) return; // 부귀·숭고는 그 메인 전용
+    if (special && s.kind === special && (!mainName || s.name.split(':')[0].trim() !== skBase(mainName))) return; // 부귀·숭고는 그 메인 전용
     // "실드 스킬을 보조한다" 같은 대상 제한 — 메인 태그에 없으면 뺀다 (이미 끼운 건 뺄 수 있게 남김)
     if (socket !== null && !(sk && sk.sup.some(sp => sp && sp.name === s.name && sp.kind === s.kind)) && !supFits(s, sk && sk.main)) return;
     out.push(i);
@@ -6676,6 +6679,79 @@ function wbLogFile() {
 
 // ── 공유 올리기 — 빌더 06_share 의 올리기와 같은 규칙·같은 API ──
 let wbShareTags = [], wbShareMain = '', wbTitleEdited = false, wbUnlisted = false;
+const wbMainOf = p => ['a1', 'a2', 'a3', 'a4', 'a5', 'p1', 'p2', 'p3', 'p4'].map(id => p && p.skills && p.skills[id] && p.skills[id].main).find(Boolean);
+// ── 단계별 빌드 (2026-10-15 사용자) — 한 글에 진행 단계마다 빌드 하나, 보기 화면에서 탭으로 ──
+// 줄 {t: 단계 이름, src: 'cur'(지금 빌드) | 'm<id>'(내 빌드) | 'k<i>'(수정 중인 글의 기존 단계 그대로)} · null = 단계 없음(빌드 하나)
+// 대표(목록 카드·히어로·메인 스킬) = 진행 순서상 마지막 단계. 같은 히어로 특성 빌드만.
+let wbStages = null;
+const wbStgOrd = rows => rows.slice().sort((a, b) => SHARE_STAGE_TAGS.indexOf(a.t) - SHARE_STAGE_TAGS.indexOf(b.t));
+const wbStgMine = () => presets.list.filter(p => p.id !== preset.id && !p.shareEdit && wzFilled(p) && p.hero && p.hero.trait === preset.hero.trait).sort((a, b) => b.id - a.id);
+function wbStgOn(on) {
+  if (!on) wbStages = null;
+  else {
+    const m = wbStgMine();
+    wbStages = [{t: '엔드', src: 'cur'}];
+    if (m.length) wbStages.unshift({t: '8티어', src: 'm' + m[0].id});
+  }
+  wbStgRen();
+}
+function wbStgAdd() {
+  if (!wbStages) return;
+  const used = new Set(wbStages.map(r => r.t)), t = SHARE_STAGE_TAGS.find(x => !used.has(x));
+  if (!t) { showToast('단계는 ' + SHARE_STAGE_TAGS.length + '개까지입니다'); return; }
+  const m = wbStgMine(), taken = new Set(wbStages.map(r => r.src)), mm = m.find(p => !taken.has('m' + p.id));
+  wbStages.push({t, src: mm ? 'm' + mm.id : ''});
+  wbStgRen();
+}
+function wbStgSet(i, k, v) { if (wbStages && wbStages[i]) { wbStages[i][k] = v; wbStgRen(); } }
+function wbStgDel(i) { if (!wbStages) return; wbStages.splice(i, 1); if (wbStages.length < 1) wbStages = null; wbStgRen(); }
+function wbStgRen() {
+  const el = document.getElementById('wbStg'); if (!el) return;
+  if (!wbStages) {
+    el.innerHTML = '<button class="wb-tag" onclick="wbStgOn(true)">🪜 단계별로 나누기</button><small class="wb-stgh">엑트부터 엔드까지 여러 빌드를 탭으로 묶어 올립니다 (선택)</small>';
+  } else {
+    wbStages = wbStgOrd(wbStages); // 줄도 진행 순서로
+    const se = preset.shareEdit, keep = (se && se.stages) || [], mine = wbStgMine();
+    const srcOpts = cur => '<option value="">— 빌드 고르기 —</option>' +
+      `<option value="cur"${cur === 'cur' ? ' selected' : ''}>지금 이 빌드 · ${escapeHtml(preset.name || '')}</option>` +
+      keep.map((k, i) => `<option value="k${i}"${cur === 'k' + i ? ' selected' : ''}>지금 글의 [${escapeHtml(k.t)}] 그대로</option>`).join('') +
+      mine.map(p => `<option value="m${p.id}"${cur === 'm' + p.id ? ' selected' : ''}>${escapeHtml(p.name || '빌드 ' + p.id)}</option>`).join('');
+    const used = t => new Set(wbStages.map(r => r.t).filter(x => x !== t));
+    el.innerHTML = '<div class="wb-stgs">' + wbStages.map((r, i) => `<div class="wb-stgr">` +
+      `<select onchange="wbStgSet(${i}, 't', this.value)">${SHARE_STAGE_TAGS.filter(t => !used(r.t).has(t)).map(t => `<option${t === r.t ? ' selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>` +
+      `<select onchange="wbStgSet(${i}, 'src', this.value)">${srcOpts(r.src)}</select>` +
+      `<button class="wz-btn" onclick="wbStgDel(${i})" title="이 단계 빼기">✕</button></div>`).join('') + '</div>' +
+      `<div class="wb-stgb"><button class="wb-tag" onclick="wbStgAdd()">+ 단계 추가</button><button class="wb-tag" onclick="wbStgOn(false)">단계 없이 올리기</button></div>` +
+      `<small class="wb-stgh">탭은 진행 순서(${SHARE_STAGE_TAGS.join(' → ')})로 놓이고, 목록 카드에는 <b>마지막 단계</b>가 대표로 나옵니다. ` +
+      `고를 수 있는 빌드는 같은 히어로 특성(${escapeHtml(preset.hero.trait)})인 내 빌드입니다.</small>`;
+  }
+  wbStgMain();
+}
+async function wbStgPreset(src) { // 줄의 빌드 → preset (기존 단계는 코드를 풀어서)
+  if (src === 'cur') return preset;
+  if (/^m\d+$/.test(src)) return presets.list.find(p => p.id === +src.slice(1)) || null;
+  if (/^k\d+$/.test(src)) { const k = ((preset.shareEdit || {}).stages || [])[+src.slice(1)]; return k ? (await codeToPreset(k.code)).preset : null; }
+  return null;
+}
+async function wbStgMain() { // 대표 단계의 메인 스킬 → 자동 제목
+  let p = preset;
+  if (wbStages && wbStages.length) { await wbLoad().catch(() => {}); p = await wbStgPreset(wbStgOrd(wbStages).pop().src).catch(() => null) || preset; }
+  const m = wbMainOf(p); if (m) { wbShareMain = m.name; wbTitleSync(); }
+}
+async function wbStgCodes() { // 올릴 단계 [{t, code}] (진행 순서) — 틀리면 오류
+  const rows = wbStgOrd(wbStages), out = [];
+  if (rows.length < 2) throw new Error('단계는 2개 이상이어야 합니다 — 하나뿐이면 [단계 없이 올리기]');
+  const se = preset.shareEdit;
+  for (const r of rows) {
+    const p = await wbStgPreset(r.src);
+    if (!p) throw new Error(`[${r.t}] 단계의 빌드를 골라 주세요`);
+    if (!(p.hero && p.hero.trait === preset.hero.trait)) throw new Error(`[${r.t}] 단계 빌드의 히어로 특성이 다릅니다 — 같은 특성만 묶을 수 있어요`);
+    if (!wbMainOf(p)) throw new Error(`[${r.t}] 단계 빌드에 메인 스킬이 없습니다`);
+    const k = /^k\d+$/.test(r.src) ? ((se || {}).stages || [])[+r.src.slice(1)] : null;
+    out.push({t: r.t, code: k ? k.code : await presetToCode(Object.assign({}, p, {name: String(p.name || '').replace(/^✏\s*/, '') || p.name}))});
+  }
+  return out;
+}
 function wbShareOpen() {
   window.wtEv && wtEv('share_open'); if (!SHARE_ONLINE) { alert('온라인 주소(https)에서만 공유할 수 있습니다.'); return; }
   const mainSk = ['a1', 'a2', 'a3', 'a4', 'a5', 'p1', 'p2', 'p3', 'p4'].map(id => preset.skills && preset.skills[id] && preset.skills[id].main).find(Boolean);
@@ -6689,6 +6765,7 @@ function wbShareOpen() {
   try { au = localStorage.getItem('tlidb_author_v1') || ''; pw = localStorage.getItem('tlidb_share_pwd_v1') || ''; } catch (e) {}
   if (se) { au = se.author || au; wbTitleEdited = !!se.title; }
   wbUnlisted = !!(se && se.unlisted);
+  wbStages = se && se.stages && se.stages.length ? se.stages.map((k, i) => ({t: k.t, src: k.t === se.stageT ? 'cur' : 'k' + i})) : null;
   const grp = (nm, tags) => `<div class="wb-tgrp"><small>${nm}</small><div>${tags.map(t =>
     `<button class="wb-tag${wbShareTags.includes(t) ? ' on' : ''}" data-t="${escapeHtml(t)}" onclick="wbTag(this)">${escapeHtml(t)}</button>`).join('')}</div></div>`;
   wbPop(`<h3>${se ? '공유 글 수정 저장' : '빌드 공유 올리기'}</h3>` +
@@ -6696,6 +6773,7 @@ function wbShareOpen() {
       `<button class="wb-tag${wbUnlisted ? '' : ' on'}" data-v="0" onclick="wbVis(false)" title="빌드 공유 목록·검색에 올라갑니다">🌐 목록에 공개</button>` +
       `<button class="wb-tag${wbUnlisted ? ' on' : ''}" data-v="1" onclick="wbVis(true)" title="목록·검색에는 나오지 않고, 링크를 받은 사람만 볼 수 있습니다 — ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다">🔒 링크로만 공유</button></div></div>` +
       `<div class="wb-unlw" id="wbUnlW"${wbUnlisted ? '' : ' hidden'}>⚠ 링크로만 공유한 글은 <b>${UNLISTED_DAYS}일 동안 아무도 열지 않으면 자동으로 지워집니다.</b> 링크는 빌드 목록의 [🔗 내 공유]에 남습니다(이 브라우저에서만).</div>` +
+    `<div class="wb-field"><b>단계</b><div class="wb-stg" id="wbStg"></div></div>` +
     `<div class="wb-field"><b>제목</b><input id="wbTitle" maxlength="40" placeholder="2~40자 (비워 두면 메인 스킬 + 태그)" value="${escapeHtml(se && se.title || '')}" oninput="wbTitleEdited=true"></div>` +
     `<div class="wb-tgrp"><small>히어로</small><div><button class="wb-tag on lock" title="빌드에서 고른 히어로라 여기서는 못 바꿉니다">🔒 ${escapeHtml(preset.hero.trait)}</button></div></div>` +
     grp('성향·능력치', SHARE_EXTRA_TAGS) + grp('콘텐츠', SHARE_CONTENT_TAGS) + grp('스킬 태그', SHARE_SKILL_TAGS) +
@@ -6703,7 +6781,7 @@ function wbShareOpen() {
     (se ? '' : `<div class="wb-field"><b>비밀번호</b><input id="wbPwd" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" style="-webkit-text-security:disc" maxlength="20" placeholder="4~20자 — 내 글을 고치거나 지울 때" value="${escapeHtml(pw)}"></div>`) +
     '<div class="wb-note">태그는 목록에서 찾을 때 쓰입니다 (1~10개). 작성자·비밀번호는 이 브라우저에 기억됩니다.</div>' +
     `<div class="wb-btns"><button class="wz-btn pri" id="wbShareGo" onclick="wbShareSubmit()">${se ? '수정 저장' : '올리기'}</button><button class="wz-btn" onclick="wbClose()">취소</button></div>`, 'wb-share');
-  wbTitleSync();
+  wbTitleSync(); wbStgRen();
 }
 function wbVis(on) { // 공개 범위 — 링크 전용은 목록·검색에서 빠진다 (2026-10-12)
   wbUnlisted = on;
@@ -6736,6 +6814,11 @@ async function wbShareSubmit() {
     // 예전 수정 사본 이름의 '✏ ' 는 코드에 싣지 않는다 (2026-10-13 이전에 [수정]으로 불러둔 빌드)
     const code = await presetToCode(Object.assign({}, preset, {name: String(preset.name || '').replace(/^✏\s*/, '') || preset.name}));
     const body = {code, main: wbShareMain, title, tags: wbShareTags, author, unlisted: wbUnlisted};
+    if (wbStages) {
+      body.stages = await wbStgCodes(); body.code = body.stages[body.stages.length - 1].code;
+      body.main = wbMainOf(await wbStgPreset(wbStgOrd(wbStages).pop().src)).name; // 대표 = 마지막 단계
+    }
+    else if (se && se.stages) body.stages = null; // 단계 글을 빌드 하나로 되돌림
     const res = await fetch(se ? '/api/share/edit' : '/api/share', {method: 'POST', headers: {'content-type': 'application/json'},
       body: JSON.stringify(se ? Object.assign({id: se.id}, se.admin ? {} : {pwd}, body) : Object.assign({pwd}, body))}); // 관리 수정은 로그인 쿠키로
     const d = await res.json().catch(() => ({ok: false, error: '서버 응답을 해석할 수 없습니다'}));

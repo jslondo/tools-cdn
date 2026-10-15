@@ -675,6 +675,7 @@ function traitInfo(tag) { return SHARE_TAG_TRAIT.get(tag) || null; }
 const SHARE_SKILL_TAGS = ['보조', '범위', '물리', '주술', '지속', '화염', '공격', '번개', '부식', '냉기', '투사체', '근접전', '오라', '수평 사격', '자극', '소환', '원거리', '촉발체', '영약', '위치 이동', '채널링', '실드', '마령', '주입', '지면', '보초병', '광선', '회복', '기본 스킬', '강화 스킬', '궁극 스킬', '함성', '저주', '베기', '체인', '파괴', '스마트 웨폰', '포물선', '수직', '폭격', '그림자', '콤보'];
 const SHARE_EXTRA_TAGS = ['스태킹', '전의', '힘', '민첩', '지혜'];
 const SHARE_CONTENT_TAGS = ['엑트', '7만계', '8만계', '8T', '엔드', '아득', '딥스', '20층', '21층'];
+const SHARE_STAGE_TAGS = ['엑트', '1~7티어', '7만계', '8티어', '아득', '엔드', '20층']; // 단계별 빌드 탭 이름 (진행 순서, 서버 STAGE_TAGS 와 같게 — 2026-10-15)
 function heroLabel(h) {
   if (!h || !h.trait) return '';
   const tr = traitInfo(h.trait);
@@ -1684,12 +1685,14 @@ function supRule(s) { // → null(거르지 않음) | {name} | {alts: [[태그�
   SUP_RULES.set(key, r);
   return r;
 }
+// 정밀판 메인(정밀 화염의 주입 등)은 원래 스킬과 같은 메인으로 본다 — 부귀·숭고·'○○ 스킬을 보조한다'가 원래 이름으로 걸려 있어서 (2026-10-15 제보)
+const skBase = n => String(n || '').replace(/^정밀 /, '');
 // 이 보조를 이 메인에 끼울 수 있나 — 메인이 없거나 태그가 없으면 true(못 거름)
 function supFits(sup, main) {
   if (!main) return true;
   const r = supRule(sup);
   if (!r) return true;
-  if (r.name) return main.name === r.name;
+  if (r.name) return skBase(main.name) === r.name;
   const mi = SKILLS.find(k => k.name === main.name && k.kind === main.kind);
   if (!mi || !(mi.tags || []).length) return true;
   // 마령·주입 패시브와 소환류(소환 태그)는 대상 제한을 아예 두지 않는다 — 소환체가 쓰는 스킬 성격이 제각각이라
@@ -11347,7 +11350,7 @@ function renderSkills() {
   SKILLS.forEach((s, i) => {
     if (!kinds.has(s.kind)) return;
     // 메인과 짝이 안 맞는 부귀/숭고는 숨김
-    if (specialKind && s.kind === specialKind && (!mainName || s.name.split(':')[0].trim() !== mainName)) return;
+    if (specialKind && s.kind === specialKind && (!mainName || s.name.split(':')[0].trim() !== skBase(mainName))) return;
     // 태그 필터: 체크된 태그를 하나라도 가지면 표시 (태그 없는 스킬은 항상 표시)
     if (tagFilterOn && !tagArr.every(t => (s.tags || []).includes(t))) return;
     // 메인 속성 필터: 체크된 속성을 하나라도 가지면 표시 (메인 속성 없는 스킬은 항상 표시)
@@ -11551,7 +11554,7 @@ function skillPickPool() { // 현재 칸에 맞는 스킬 목록 — 부귀/숭�
   let list = [];
   SKILLS.forEach((s, i) => {
     if (!allows(s)) return;
-    if (specialKind && s.kind === specialKind && (!mainName || s.name.split(':')[0].trim() !== mainName)) return;
+    if (specialKind && s.kind === specialKind && (!mainName || s.name.split(':')[0].trim() !== skBase(mainName))) return;
     // 보조 대상 제한 (supFits) — 이미 끼운 건 뺄 수 있게 남긴다
     if (pk.socket !== null && !onSet.has(s.name + '\u001f' + s.kind) && !supFits(s, sk && sk.main)) return;
     list.push(i);
@@ -13165,6 +13168,7 @@ function shareRowHtml(it) {
     `<img class="shc-sk" src="${skillIconOf(it.main)}" alt="" title="메인 스킬 · ${escapeHtml(it.main || '')}" loading="lazy" onerror="this.onerror=null;this.src=SK_FALLBACK"></div>` +
     `<div class="shc-info"><div class="share-title">${se}${escapeHtml(shareTitleText(it))}</div>` +
     `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}${it.main ? ' · ' + escapeHtml(it.main) : ''}</small>` +
+    (it.stage_t ? `<div class="shc-stages" title="단계별 빌드 — 보기 화면에서 탭으로 바꿔 봅니다">🪜 ${String(it.stage_t).split(',').map(t => `<span>${escapeHtml(t)}</span>`).join('')}</div>` : '') +
     (chips ? `<div class="share-tags">${chips}</div>` : '') + '</div>' +
     `<div class="share-meta"><span class="share-like">👍 ${it.likes}</span><span class="share-views">👁 ${it.views || 0}</span><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-date">${escapeHtml(shareDateText(it))}</span></div></div>`;
 }

@@ -1097,3 +1097,13 @@
 .seal-tr.hp { background: rgba(230,80,80,.10); color: #f0a8a8; } .seal-tr.hp b { color: #ffd6d6; }
 .seal-box.over .seal-tr.mp b:first-of-type, .seal-box.over .seal-tr.mp b:last-of-type { color: #ff8a8a; }
 .seal-warn { margin-top: 4px; color: #ff9a9a; font-size: 12px; }
+    /* 단계별 빌드 (공유 창, 2026-10-15) */
+    .wb-field:has(.wb-stg) { align-items: flex-start; } .wb-field:has(.wb-stg) > b { padding-top: 5px; }
+    .wb-stg { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .wb-stgs { display: flex; flex-direction: column; gap: 5px; }
+    .wb-stgr { display: flex; gap: 6px; align-items: center; }
+    .wb-stgr select { padding: 5px 8px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 13px; }
+    .wb-stgr select:first-child { flex: 0 0 96px; } .wb-stgr select:nth-child(2) { flex: 1; min-width: 0; }
+    .wb-stgr .wz-btn { padding: 4px 9px; }
+    .wb-stgb { display: flex; gap: 6px; flex-wrap: wrap; }
+    .wb-stgh { color: #7d8794; font-size: 11.5px; line-height: 1.5; }

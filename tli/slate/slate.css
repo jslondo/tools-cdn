@@ -632,7 +632,7 @@
     .wb-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .wb-head h3 { margin: 0; }
     .wb-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); max-height: 42vh; overflow-y: auto; padding: 2px; }
     .wb-grid .wl-card { position: relative; grid-template-columns: 44px 1fr; grid-template-rows: auto; padding: 10px; }
-    .wb-grid .wl-face { grid-row: 1; width: 44px; height: 44px; }
+    .wb-grid .wl-faces { grid-row: 1; } .wb-grid .wl-face { width: 44px; height: 44px; } .wb-grid .wl-sk { display: none; }
     .wb-grid .wl-card.on { border-color: #d4a84a; background: linear-gradient(180deg, #221b0e, #0f0e14); }
     .wb-pop h3 { margin: 0 0 10px; font-size: 16px; color: #ffd98a; }
     .wb-msg { white-space: pre-wrap; font-size: 13px; line-height: 1.6; color: #c9d1d9; }
@@ -671,7 +671,9 @@
     .wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 10px; }
     .wl-card { display: grid; grid-template-columns: 56px 1fr; grid-template-rows: auto auto; gap: 8px 12px; padding: 12px; border: 1px solid #1f2735; border-radius: 12px; background: #0e131c; cursor: pointer; transition: .12s; }
     .wl-card:hover { border-color: #4a5a78; background: #111a2a; } .wl-card.on { border-color: #6b5a2a; }
-    .wl-face { grid-row: 1 / 3; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; border: 2px solid #2a3446; background: #0a0f17; display: grid; place-items: center; color: #5d6878; font-weight: 700; }
+    .wl-faces { grid-row: 1 / 3; display: flex; flex-direction: column; align-items: center; gap: 6px; } /* 초상화 + 밑에 메인 스킬 (2026-10-14) */
+    .wl-sk { width: 34px; height: 34px; border-radius: 8px; border: 1px solid #3a3020; background: #0a0f17; box-sizing: border-box; }
+    .wl-face { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; border: 2px solid #2a3446; background: #0a0f17; display: grid; place-items: center; color: #5d6878; font-weight: 700; }
     .wl-face img { width: 100%; height: 100%; object-fit: cover; }
     .wl-info { min-width: 0; } .wl-info b { display: block; color: #e6edf3; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-info small { display: block; color: #9fb0c6; font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

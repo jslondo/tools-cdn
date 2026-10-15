@@ -3675,7 +3675,9 @@ function wsCard(s) { // 오른쪽 아래 스킬 카드 — tlidb 문구(HTML)는
     (s.stats && s.stats.length ? `<div class="icard-attrs">${s.stats.map(p => `<div>${escapeHtml(p[0])} <b class="m">${escapeHtml(p[1])}</b></div>`).join('')}</div>` : '') +
     (dsc.length ? `<div class="icard-opts">${dsc.map(l => `<div class="icard-opt">${l}</div>`).join('')}</div>` : '') +
     (det.length ? '<div class="ccard-sec">세부 수치</div>' + det.map(l => `<div class="icard-opt">${l}</div>`).join('') : '') +
-    skillLvHtml(s.name) + '</div>';
+    skillLvHtml(s.name) +
+    (typeof itemPriceHtml === 'function' ? itemPriceHtml(s) : '') + // 부귀·숭고 지난 시즌 시세 (2026-10-15)
+    '</div>';
 }
 function wsFocusOn(i) { // 마우스를 올린 스킬 카드 — 격자는 다시 그리지 않고 카드만 바꾼다
   const box = document.getElementById('wsCard');

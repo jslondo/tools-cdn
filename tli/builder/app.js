@@ -11476,6 +11476,8 @@ function skillCardHtml(s) {
     if (extra) h += `<div class="ccard-sec sk-atlv">Lv.${escapeHtml(lvUp.text)} 기준</div>` + extra;
   }
   h += skillLvHtml(s.name);
+  // 부귀·숭고 보조: 지난 시즌 초반 시세 (ETor, 레전드 카드와 같은 표 — 2026-10-15 사용자 요청)
+  h += itemPriceHtml(s);
   return h + '</div>';
 }
 

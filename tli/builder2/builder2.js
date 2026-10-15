@@ -6707,8 +6707,11 @@ function wbStgSet(i, k, v) { if (wbStages && wbStages[i]) { wbStages[i][k] = v; 
 function wbStgDel(i) { if (!wbStages) return; wbStages.splice(i, 1); if (wbStages.length < 1) wbStages = null; wbStgRen(); }
 function wbStgRen() {
   const el = document.getElementById('wbStg'); if (!el) return;
+  // 올리기 방식 — 빌드 하나(지금과 같음) / 여러 빌드 묶어서(보기 화면에서 단계 탭) — 빌더 화면은 그대로 (2026-10-15 사용자)
+  const pick = `<div class="wb-vis"><button class="wb-tag${wbStages ? '' : ' on'}" onclick="wbStgOn(false)">📄 이 빌드 하나</button>` +
+    `<button class="wb-tag${wbStages ? ' on' : ''}" onclick="wbStgOn(true)" title="엑트부터 엔드까지 진행 단계별 빌드를 한 글에 묶습니다 — 보기 화면에서 탭으로 바꿔 봅니다">🪜 여러 빌드 묶어서</button></div>`;
   if (!wbStages) {
-    el.innerHTML = '<button class="wb-tag" onclick="wbStgOn(true)">🪜 단계별로 나누기</button><small class="wb-stgh">엑트부터 엔드까지 여러 빌드를 탭으로 묶어 올립니다 (선택)</small>';
+    el.innerHTML = pick;
   } else {
     wbStages = wbStgOrd(wbStages); // 줄도 진행 순서로
     const se = preset.shareEdit, keep = (se && se.stages) || [], mine = wbStgMine();
@@ -6717,11 +6720,11 @@ function wbStgRen() {
       keep.map((k, i) => `<option value="k${i}"${cur === 'k' + i ? ' selected' : ''}>지금 글의 [${escapeHtml(k.t)}] 그대로</option>`).join('') +
       mine.map(p => `<option value="m${p.id}"${cur === 'm' + p.id ? ' selected' : ''}>${escapeHtml(p.name || '빌드 ' + p.id)}</option>`).join('');
     const used = t => new Set(wbStages.map(r => r.t).filter(x => x !== t));
-    el.innerHTML = '<div class="wb-stgs">' + wbStages.map((r, i) => `<div class="wb-stgr">` +
+    el.innerHTML = pick + '<div class="wb-stgs">' + wbStages.map((r, i) => `<div class="wb-stgr">` +
       `<select onchange="wbStgSet(${i}, 't', this.value)">${SHARE_STAGE_TAGS.filter(t => !used(r.t).has(t)).map(t => `<option${t === r.t ? ' selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>` +
       `<select onchange="wbStgSet(${i}, 'src', this.value)">${srcOpts(r.src)}</select>` +
       `<button class="wz-btn" onclick="wbStgDel(${i})" title="이 단계 빼기">✕</button></div>`).join('') + '</div>' +
-      `<div class="wb-stgb"><button class="wb-tag" onclick="wbStgAdd()">+ 단계 추가</button><button class="wb-tag" onclick="wbStgOn(false)">단계 없이 올리기</button></div>` +
+      `<div class="wb-stgb"><button class="wb-tag" onclick="wbStgAdd()">+ 단계 추가</button></div>` +
       `<small class="wb-stgh">탭은 진행 순서(${SHARE_STAGE_TAGS.join(' → ')})로 놓이고, 목록 카드에는 <b>마지막 단계</b>가 대표로 나옵니다. ` +
       `고를 수 있는 빌드는 같은 히어로 특성(${escapeHtml(preset.hero.trait)})인 내 빌드입니다.</small>`;
   }
@@ -6735,12 +6738,12 @@ async function wbStgPreset(src) { // 줄의 빌드 → preset (기존 단계는 
 }
 async function wbStgMain() { // 대표 단계의 메인 스킬 → 자동 제목
   let p = preset;
-  if (wbStages && wbStages.length) { await wbLoad().catch(() => {}); p = await wbStgPreset(wbStgOrd(wbStages).pop().src).catch(() => null) || preset; }
+  if (wbStages && wbStages.length) { await wbLoad().catch(() => {}); if (wbStages && wbStages.length) p = await wbStgPreset(wbStgOrd(wbStages).pop().src).catch(() => null) || preset; } // 기다리는 사이 [이 빌드 하나]로 바뀔 수 있음
   const m = wbMainOf(p); if (m) { wbShareMain = m.name; wbTitleSync(); }
 }
 async function wbStgCodes() { // 올릴 단계 [{t, code}] (진행 순서) — 틀리면 오류
   const rows = wbStgOrd(wbStages), out = [];
-  if (rows.length < 2) throw new Error('단계는 2개 이상이어야 합니다 — 하나뿐이면 [단계 없이 올리기]');
+  if (rows.length < 2) throw new Error('묶으려면 빌드가 2개 이상이어야 합니다 — 하나뿐이면 [📄 이 빌드 하나]');
   const se = preset.shareEdit;
   for (const r of rows) {
     const p = await wbStgPreset(r.src);
@@ -6773,7 +6776,7 @@ function wbShareOpen() {
       `<button class="wb-tag${wbUnlisted ? '' : ' on'}" data-v="0" onclick="wbVis(false)" title="빌드 공유 목록·검색에 올라갑니다">🌐 목록에 공개</button>` +
       `<button class="wb-tag${wbUnlisted ? ' on' : ''}" data-v="1" onclick="wbVis(true)" title="목록·검색에는 나오지 않고, 링크를 받은 사람만 볼 수 있습니다 — ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다">🔒 링크로만 공유</button></div></div>` +
       `<div class="wb-unlw" id="wbUnlW"${wbUnlisted ? '' : ' hidden'}>⚠ 링크로만 공유한 글은 <b>${UNLISTED_DAYS}일 동안 아무도 열지 않으면 자동으로 지워집니다.</b> 링크는 빌드 목록의 [🔗 내 공유]에 남습니다(이 브라우저에서만).</div>` +
-    `<div class="wb-field"><b>단계</b><div class="wb-stg" id="wbStg"></div></div>` +
+    `<div class="wb-field"><b>올리기</b><div class="wb-stg" id="wbStg"></div></div>` +
     `<div class="wb-field"><b>제목</b><input id="wbTitle" maxlength="40" placeholder="2~40자 (비워 두면 메인 스킬 + 태그)" value="${escapeHtml(se && se.title || '')}" oninput="wbTitleEdited=true"></div>` +
     `<div class="wb-tgrp"><small>히어로</small><div><button class="wb-tag on lock" title="빌드에서 고른 히어로라 여기서는 못 바꿉니다">🔒 ${escapeHtml(preset.hero.trait)}</button></div></div>` +
     grp('성향·능력치', SHARE_EXTRA_TAGS) + grp('콘텐츠', SHARE_CONTENT_TAGS) + grp('스킬 태그', SHARE_SKILL_TAGS) +

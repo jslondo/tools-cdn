@@ -877,7 +877,7 @@ function gbPzOpt(i) {
 }
 function gbPzSearch(v) { if (!gbPzEd) return; gbPzEd.q = v; const b = document.getElementById('gbPzList'); if (b) b.innerHTML = gbPzRows(); }
 function gbPzRows() {
-  const e = gbPzEd, q = (e.q || '').trim().toLowerCase(), hit = t => !q || String(t || '').toLowerCase().includes(q);
+  const e = gbPzEd, q = (e.q || '').trim().toLowerCase(), hit = t => typeof qHit === 'function' ? qHit(q, t) : (!q || String(t || '').toLowerCase().includes(q)); // qHit = 00_gear (재능 단독 화면엔 없을 수 있음)
   if (e.stage === 0) return PRISM.items.map((it, i) => hit(it.name + ' ' + (it.effect || '')) ?
     `<div class="gbz-row${e.item === it.name ? ' on' : ''}" onclick="gbPzItem(${i})">${it.icon ? `<img src="${it.icon}" alt="" loading="lazy">` : ''}<div><b>${escapeHtml(it.name)}</b>${it.effect ? `<small>${escapeHtml(it.effect)}</small>` : ''}</div></div>` : '').join('');
   const curIt = PRISM.items.find(x => x.name === e.item) || {}, seen = new Set(), rows = [];
@@ -1641,6 +1641,13 @@ function skillLvHtml(name) {
 // ── 장비 규칙 공용 조각 (2026-10-08) ──
 // 빌더와 빌더 2(마법사)의 장비 단계가 함께 쓴다: 칸 목록·옵션 분류·등급 한도·무기 줄 배치·옵션 키.
 // 기대하는 바깥 것: 없음 (PARTS 는 함수 인자로 받는다 — 빌더는 01_core 의 PARTS, 마법사는 gear_data.js)
+// 영어판 검색 (2026-10-16) — 영어 화면(window.I18N, /tli/i18n/i18n.js)이면 조각마다 영어 번역에서도 찾는다. q 는 소문자
+function qHit(q, ...parts) {
+  if (!q) return true;
+  if (parts.map(p => p == null ? '' : String(p)).join(' ').toLowerCase().includes(q)) return true;
+  const T = typeof window !== 'undefined' && window.I18N;
+  return !!T && parts.some(p => { const e = p && T.tr(String(p)); return !!e && e.toLowerCase().includes(q); });
+}
 const OPT_LIMITS = {basic: 2, main: 3, sub: 3};
 
 const CAT_LABEL = {basic: '기본옵', main: '메인옵', sub: '서브옵'};
@@ -3758,7 +3765,7 @@ function wsRender() {
   const shown = pool.filter(i => {
     const s = SKILLS[i];
     if (wsTag && !(s.tags || []).includes(wsTag)) return false;
-    return !q || (s.name + ' ' + (s.tags || []).join(' ') + ' ' + s.kind).toLowerCase().includes(q);
+    return qHit(q, s.name, s.kind, ...(s.tags || []));
   });
   const onSet = new Set();
   if (sk) (wsTarget.socket === null ? [sk.main] : sk.sup).forEach(x => { if (x) onSet.add(x.name + '\u001f' + x.kind); });
@@ -3804,7 +3811,7 @@ function wsRenderGrid() { // 검색어 입력 중에는 격자만 다시 그린�
   const shown = wsPool().filter(i => {
     const s = SKILLS[i];
     if (wsTag && !(s.tags || []).includes(wsTag)) return false;
-    return !q || (s.name + ' ' + (s.tags || []).join(' ') + ' ' + s.kind).toLowerCase().includes(q);
+    return qHit(q, s.name, s.kind, ...(s.tags || []));
   });
   g.innerHTML = wsGridHtml(shown, onSet);
   const cn = document.getElementById('wsCnt'); if (cn) cn.textContent = shown.length + '개';
@@ -3901,7 +3908,7 @@ function wgItemGridHtml() {
   // '… 침식화' 레전드는 원본이 있으면 목록에서 뺀다 — 침식은 장착 뒤 옵션 줄을 눌러 고른다 (사용자 요청 2026-10-14). 이미 장착한 것은 그대로 보인다
   const pool = wgItemPool(), names = new Set(pool.map(g => g.name));
   const list = pool.filter(g => !(/ 침식화$/.test(g.name) && names.has(g.name.replace(/ 침식화$/, '')) && !(cur && cur.kind === 'item' && cur.name === g.name)))
-    .filter(g => !q || g.txt.toLowerCase().includes(q));
+    .filter(g => !q || g.txt.toLowerCase().includes(q) || qHit(q, g.name));
   wgCount = list.length;
   if (!list.length) return '<div class="hrm-empty">조건에 맞는 레전드가 없습니다</div>';
   return list.map(g => {
@@ -4001,7 +4008,7 @@ function wgOptListHtml() {
   const pool = wgCraftPool();
   let n = 0;
   const h = pool.map((r, i) => {
-    if (q && !(r.effect + ' ' + r.type).toLowerCase().includes(q)) return '';
+    if (!qHit(q, r.effect, r.type)) return '';
     n++;
     const k = rowKey(r), on = ['basic', 'main', 'sub'].some(c => opts[c].some(o => o.k === k));
     const g = optGrade(r.type), dis = !on && GRADE_LIMITS[g] && wgGradeCount(opts, g) >= GRADE_LIMITS[g];
@@ -4104,7 +4111,7 @@ function wgBDel(key, i) {
 }
 function wgBListHtml() {
   const q = wgQuery.trim().toLowerCase(), o = wgBOpts(), pool = wgBPool(wgBAberr());
-  const hit = t => !q || t.toLowerCase().includes(q);
+  const hit = (...p) => qHit(q, ...p);
   let n = 0, h = '';
   if (wgBStage === 'bases') {
     if (!pool) return '<div class="hrm-empty">블러드 풀 데이터가 없습니다</div>';
@@ -4118,7 +4125,7 @@ function wgBListHtml() {
     const order = [...groups.keys()].sort((a, b) => (b === lock) - (a === lock)); // 추출 중인 장비를 맨 위로
     order.forEach(item => {
       const g = groups.get(item);
-      const vis = g.rows.filter(x => hit(x.r.effect + ' ' + item));
+      const vis = g.rows.filter(x => hit(x.r.effect, item));
       if (!vis.length) return;
       const dg = lock && item !== lock;
       n += vis.length;
@@ -4129,7 +4136,7 @@ function wgBListHtml() {
     if (!pool) return '<div class="hrm-empty">블러드 풀 데이터가 없습니다</div>';
     const gc = gr => o.extra.filter(e => optGrade(e.type) === gr).length;
     pool.opts.forEach((p, i) => {
-      if (!hit(p.effect + ' ' + p.type)) return; n++;
+      if (!hit(p.effect, p.type)) return; n++;
       const on = o.extra.some(e => e.effect === p.effect), g = optGrade(p.type), dis = !on && GRADE_LIMITS[g] && gc(g) >= GRADE_LIMITS[g];
       h += `<div class="wg-opt ${WG_GR_ROW[g] || ''}${on ? ' on' : ''}${dis ? ' dis' : ''}"${dis ? '' : ` onclick="wgBToggle('extras',${i})"`}><span>${wgOptHtml(tierEffect({effect: p.effect, tiers: {t0: p.t0, t0p: p.t0p, t2: p.t2}}), p.tips)}</span><em class="${GRADE_CLASS[g] || ''}">${escapeHtml(p.type)}</em></div>`;
     });
@@ -4210,17 +4217,17 @@ function wgToggleEro(i) {
   wgMsg = ''; persistPreset(); pageRender();
 }
 function wgAddListHtml() {
-  const v = wgCur(wgSlot), q = wgQuery.trim().toLowerCase(), hit = t => !q || t.toLowerCase().includes(q);
+  const v = wgCur(wgSlot), q = wgQuery.trim().toLowerCase(), hit = (...p) => qHit(q, ...p);
   let n = 0, h = '';
   if (wgTab === 'blend') {
     BLENDS.forEach((b, i) => {
-      if (!hit(b.effect + ' ' + (b.req || ''))) return; n++;
+      if (!hit(b.effect, b.req)) return; n++;
       const on = v.blend && v.blend.effect === b.effect;
       h += `<div class="wg-opt${on ? ' on' : ''}" onclick="wgPickBlend(${i})"><span>${escapeHtml(b.effect)}</span><em>${escapeHtml([b.req, b.mats].filter(Boolean).join(' · '))}</em></div>`;
     });
   } else if (wgTab === 'tower') {
     TOWERS.forEach((t, i) => {
-      if (t.source !== v.part || !hit(t.effect + ' ' + (t.seq || ''))) return; n++;
+      if (t.source !== v.part || !hit(t.effect, t.seq)) return; n++;
       const on = v.tower && v.tower.effect === t.effect;
       h += `<div class="wg-opt${on ? ' on' : ''}" onclick="wgPickTower(${i})"><span>${escapeHtml(t.effect)}</span><em>${escapeHtml(t.seq || '')}</em></div>`;
     });
@@ -4305,7 +4312,7 @@ function wgAddRows() {
   const h = src.map((x, i) => {
     if (kind === 'tower' && x.source !== v.part) return '';
     const sub = kind === 'blend' ? [x.req, x.mats].filter(Boolean).join(' · ') : (x.seq || '');
-    if (q && !(x.effect + ' ' + sub).toLowerCase().includes(q)) return '';
+    if (!qHit(q, x.effect, sub)) return '';
     const on = v[kind] && v[kind].effect === x.effect;
     return `<div class="wg-opt${on ? ' on' : ''}" onclick="wgAddPick('${kind}',${i})"><span>${wgOptHtml(x.effect, x.tips)}</span><em>${escapeHtml(sub)}</em></div>`;
   }).join('');
@@ -4606,7 +4613,7 @@ function wmRvRows() {
   const rv = preset.revival, q = wmRvQ.trim().toLowerCase();
   const h = REVIVALS.map((o, i) => {
     const sub = [o.group, o.tier ? 'T' + o.tier : ''].filter(Boolean).join(' · ');
-    if (q && !(o.effect + ' ' + sub).toLowerCase().includes(q)) return '';
+    if (!qHit(q, o.effect, sub)) return '';
     const on = rv && rv.part === wmPart && rv.effect === o.effect && rv.group === o.group;
     return `<div class="wg-opt${on ? ' on' : ''}" onclick="wmPickRv(${i})"><span>${wgOptHtml(o.effect, o.tips)}</span><em>${escapeHtml(sub)}</em></div>`;
   }).join('');
@@ -4615,7 +4622,7 @@ function wmRvRows() {
 function wmListHtml() {
   const q = wmQuery.trim().toLowerCase(), o = wmOpts(wmPart);
   const h = wmPool().map((r, i) => {
-    if (q && !r.effect.toLowerCase().includes(q)) return '';
+    if (!qHit(q, r.effect)) return '';
     const on = ['basic', 'unique', 'random'].some(c => o[c].some(e => e.k === rowKey(r)));
     return `<div class="wg-opt${on ? ' on' : ''}" onclick="wmToggle(${i})"><span>${wgOptHtml(r.effect, r.tips)}</span></div>`;
   }).join('');
@@ -4788,7 +4795,7 @@ function wsbSockRows() { // 이 소켓 등급에 맞는 석판 옵션
   const sl = wsbBd()[wsbSel], info = SLATES[sl.u], ranks = info.sl[wsbSock], q = wsbQ.trim().toLowerCase();
   const h = SLATE_DB.map((r, ri) => { // 석판 행만 (ALL_DATA 는 로그 가져오기 뒤 전체 행 — 석판 행이 앞자리라 ri 는 같다)
     if (!(r.nids && r.nids.length) || !slateSockOk(info, r, ranks)) return '';
-    if (q && !(r.effect + ' ' + (r.type || '')).toLowerCase().includes(q)) return '';
+    if (!qHit(q, r.effect, r.type)) return '';
     const on = String((sl.t || [])[wsbSock]) === String(r.nids[0]);
     return `<div class="wg-opt${on ? ' on' : ''}" onclick="wsbAssign(${ri})"><span>${wsbOptHtml(r)}</span><em>${slateSockLabel(info, [slateRank(r)])}</em></div>`;
   }).join('');
@@ -4960,7 +4967,7 @@ function wpPickRows(i) {
   const cur = (wpCur(i) || {}).name, q = wpQ.trim().toLowerCase();
   const used = new Set((preset.pacts || []).filter((x, k) => x && k !== i).map(x => x.name));
   const h = PACT.filter(sp => sp.grade === '레전드' && sp.kind !== '드롭' && (!wpKind || sp.kind === wpKind) && // 드롭 정령은 DB 에만
-      (!q || wpSearchText(sp).includes(q))).map(sp =>
+      (!q || wpSearchText(sp).includes(q) || qHit(q, sp.name))).map(sp =>
     `<div class="wp-card${cur === sp.name ? ' on' : ''}${used.has(sp.name) ? ' dis' : ''}" onclick="wpChoose(${i}, ${JSON.stringify(sp.name).replace(/"/g, '&quot;')})">` +
     wpFace(sp, 'wp-face') + `<div class="wp-cb"><div class="wp-ch"><b>${escapeHtml(sp.name)}</b><i>${escapeHtml(sp.kind)}</i></div><small>${escapeHtml(sp.summary || '')}</small>${used.has(sp.name) ? '<em>다른 칸에 있음</em>' : ''}</div></div>`).join('');
   return h || '<div class="hrm-empty">조건에 맞는 정령이 없습니다</div>';
@@ -5135,7 +5142,7 @@ function wdSearch(v) { wdQ = v; const b = document.getElementById('wdList'); if 
 function wdRows() { // 팝업 목록 — 이 자리에 맞는 운명만
   if (!wcbSel) return '';
   const {i, pos} = wcbSel, pc = wpCur(i), q = wdQ.trim().toLowerCase(), cur = (pc.dstD || {})[pos];
-  const rows = DST_ROWS.filter(r => wcbFits(pos, r.did, pc) && (!q || r.effect.toLowerCase().includes(q)));
+  const rows = DST_ROWS.filter(r => wcbFits(pos, r.did, pc) && qHit(q, r.effect));
   return rows.map(r => `<div class="wg-opt${cur === r.did ? ' here' : ''}" onclick="wcbPut('${r.did}')"><span>${wgOptHtml(r.effect, r.tips)}</span><em>${cur === r.did ? '꽂힘 — 누르면 빼기' : escapeHtml(r.type)}</em></div>`).join('')
     || '<div class="hrm-empty">조건에 맞는 운명이 없습니다</div>';
 }
@@ -5388,7 +5395,7 @@ function vwHead() {
   const title = (s && s.title) || preset.name || '공유 빌드';
   const meta = [h ? vwEsc(h.hero) + ' · ' + vwEsc(((typeof traitInfo === 'function' && traitInfo(h.trait)) || {}).full || h.trait) : null, // 축약('유가3') 대신 특성 이름 (2026-10-15) s && s.author ? '만든 사람 ' + vwEsc(s.author) : null,
     s ? '추천 ' + (s.likes || 0) + ' · 조회 ' + (s.views || 0) : null, s && s.updated_at ? vwEsc(String(s.updated_at).slice(0, 10)) : null].filter(Boolean);
-  return `<div class="vw-head"><div class="vw-ht"><small>${VW.mine ? '내 빌드 보기' : '빌드 보기'}</small><h1>${vwEsc(title)}</h1>` +
+  return `<div class="vw-head"><div class="vw-ht"><small>${VW.mine ? '내 빌드 보기' : '빌드 보기'}</small><h1 data-noi18n>${vwEsc(title)}</h1>` +
     `<div class="vw-meta">${meta.join(' <span class="gbm-sep">·</span> ')}</div>` +
     (window.TLI_SNAPSHOT ? `<div class="vw-warn">📦 지난 시즌 <b>${vwEsc((window.TLI_SEASON || {}).label || '')}</b> 데이터로 보여 주는 빌드입니다 — 만들 때 그대로의 옵션·아이템입니다</div>` : '') +
     (s && s.unlisted ? `<div class="vw-unl" title="공유 목록·검색에는 나오지 않습니다">🔒 링크로만 공유된 빌드 — ${UNLISTED_DAYS}일 동안 아무도 열지 않으면 지워집니다</div>` : '') +
@@ -5417,7 +5424,7 @@ function vwHead() {
 // 작성자 코멘트 (preset.memo, 1500자 — 공유 코드 m 에 실린다). 맨 아래 칸: 내 빌드는 바로 써서 저장, 공유 글은 있을 때만 읽기 (2026-10-10 사용자 — '메모' → '작성자 코멘트')
 const vwHasCmt = () => VW.mine || !!(preset.memo || '').trim();
 function vwCmt() { // 코멘트는 빌더 6단계에서 쓴다 (2026-10-13 사용자) — 보기 화면은 읽기만, 내 빌드는 섹션 [수정] 으로 그 단계
-  return (preset.memo || '').trim() ? `<div class="vw-memo">${vwEsc(preset.memo)}</div>` : '<div class="vw-memo empty">아직 없습니다 — 오른쪽 [수정]으로 빌더 6단계에서 씁니다</div>';
+  return (preset.memo || '').trim() ? `<div class="vw-memo" data-noi18n>${vwEsc(preset.memo)}</div>` : '<div class="vw-memo empty">아직 없습니다 — 오른쪽 [수정]으로 빌더 6단계에서 씁니다</div>';
 }
 function vwMyDel() {
   vwPop(`<h3>🗑 빌드 삭제</h3><div class="wb-msg">[${vwEsc(preset.name || '빌드')}] 빌드를 이 브라우저에서 지웁니다. 되돌릴 수 없습니다.` +
@@ -5828,7 +5835,7 @@ function vwVidBox(v) {
   box.innerHTML = `<img src="https://i.ytimg.com/vi/${id}/maxresdefault.jpg" alt="" loading="lazy" onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/${id}/hqdefault.jpg'"><div class="play"></div>`;
   wrap.appendChild(box); outer.appendChild(wrap);
   const cap = document.createElement('p'); cap.className = 'ytcap';
-  cap.innerHTML = `▶ ${v.title ? vwEsc(v.title) + ' · ' : ''}${v.st ? `<span class="vw-vst">${vwEsc(v.st)} 단계</span> · ` : ''}<a href="https://www.youtube.com/watch?v=${id}${start ? '&t=' + start + 's' : ''}" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>`;
+  cap.innerHTML = `▶ ${v.title ? '<span data-noi18n>' + vwEsc(v.title) + '</span> · ' : ''}${v.st ? `<span class="vw-vst">${vwEsc(v.st)} 단계</span> · ` : ''}<a href="https://www.youtube.com/watch?v=${id}${start ? '&t=' + start + 's' : ''}" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>`;
   outer.appendChild(cap);
   const close = document.createElement('button'); close.className = 'ytclose'; close.type = 'button'; close.textContent = '×'; close.title = '미니 플레이어 닫기 (정지)';
   box.appendChild(close);

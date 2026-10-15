@@ -25,9 +25,26 @@
 (() => {
   const path = location.pathname;
   const isTli = path.indexOf('/tli') === 0;
+  // 토치 영어판 (2026-10-16) — 패치노트(한국어 정리본)·지난 시즌 보관본 빼고 토치 화면 전부. 영어 모드면 번역기(/tli/i18n/i18n.js)가
+  // 그려진 글자를 사전으로 바꾼다. 번역이 끝날 때까지 본문을 감춰 한국어가 번쩍이지 않게(최대 4초).
+  const tliI18n = isTli && !/^\/tli\/(preview|ss\d+)\b/.test(path);
+  let tliEn = false;
+  try { // ?lang=en|ko 로 들어오면 그 언어를 기억(영어 링크 공유용)
+    const ql = new URLSearchParams(location.search).get('lang');
+    if (tliI18n && (ql === 'en' || ql === 'ko')) localStorage.setItem('wt-lang', ql);
+    tliEn = tliI18n && localStorage.getItem('wt-lang') === 'en';
+  } catch (e) {}
+  if (tliI18n) document.documentElement.setAttribute('data-i18n', '');
+  if (tliEn) {
+    const EN_I18N_V = '0971c6559f';
+    document.documentElement.classList.add('wt-i18n-wait');
+    const st = document.createElement('style'); st.textContent = 'html.wt-i18n-wait body{visibility:hidden!important}'; document.head.appendChild(st);
+    setTimeout(() => document.documentElement.classList.remove('wt-i18n-wait'), 4000);
+    const sc = document.createElement('script'); sc.src = '/tli/i18n/i18n.js?v=' + EN_I18N_V; document.head.appendChild(sc);
+  }
   // 게임별 섹션 — 경로로 판별. 배지·탭이 바뀐다(브랜드/토글은 공통).
   // 배지 = 시리즈 이름 '미니토치DB'·'미니히시즈DB' (사용자들이 부르던 이름, 2026-10-15) — 마우스를 올리면 게임 이름
-  const GAME = isTli ? '미니토치DB' : '미니히시즈DB', GAME_FULL = isTli ? 'Torchlight: Infinite · 토치라이트 인피니트' : 'Hero Siege · 히어로시즈';
+  const GAME = isTli ? (tliEn ? 'Mini Torch DB' : '미니토치DB') : '미니히시즈DB', GAME_FULL = isTli ? 'Torchlight: Infinite · 토치라이트 인피니트' : 'Hero Siege · 히어로시즈';
   const LINKS = isTli ? [
     // DB — 누르면 통합 검색, 하위 메뉴로 각 탭에 바로 (2026-10-10 사용자 요청). tab = DB 화면 ?tab= 값 (DB 화면 안에서는 새로 불러오지 않고 탭만 바꾼다)
     { label: 'DB', match: /^\/tli\/db/, kids: [
@@ -394,6 +411,7 @@
         try { localStorage.setItem('wt-lang', next); } catch (e) {}
         paintLang();
         window.dispatchEvent(new CustomEvent('wt-langchange', { detail: next }));
+        if (tliI18n) { const u = new URL(location.href); u.searchParams.delete('lang'); location.replace(u.toString()); } // 토치 화면은 다시 불러와 번역기를 켜고 끈다
       });
       paintLang();
     }

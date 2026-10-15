@@ -460,6 +460,13 @@ async function presetToCode(p) {
 // ── 장비 규칙 공용 조각 (2026-10-08) ──
 // 빌더와 빌더 2(마법사)의 장비 단계가 함께 쓴다: 칸 목록·옵션 분류·등급 한도·무기 줄 배치·옵션 키.
 // 기대하는 바깥 것: 없음 (PARTS 는 함수 인자로 받는다 — 빌더는 01_core 의 PARTS, 마법사는 gear_data.js)
+// 영어판 검색 (2026-10-16) — 영어 화면(window.I18N, /tli/i18n/i18n.js)이면 조각마다 영어 번역에서도 찾는다. q 는 소문자
+function qHit(q, ...parts) {
+  if (!q) return true;
+  if (parts.map(p => p == null ? '' : String(p)).join(' ').toLowerCase().includes(q)) return true;
+  const T = typeof window !== 'undefined' && window.I18N;
+  return !!T && parts.some(p => { const e = p && T.tr(String(p)); return !!e && e.toLowerCase().includes(q); });
+}
 const OPT_LIMITS = {basic: 2, main: 3, sub: 3};
 
 const CAT_LABEL = {basic: '기본옵', main: '메인옵', sub: '서브옵'};
@@ -2581,7 +2588,7 @@ function gbPzOpt(i) {
 }
 function gbPzSearch(v) { if (!gbPzEd) return; gbPzEd.q = v; const b = document.getElementById('gbPzList'); if (b) b.innerHTML = gbPzRows(); }
 function gbPzRows() {
-  const e = gbPzEd, q = (e.q || '').trim().toLowerCase(), hit = t => !q || String(t || '').toLowerCase().includes(q);
+  const e = gbPzEd, q = (e.q || '').trim().toLowerCase(), hit = t => typeof qHit === 'function' ? qHit(q, t) : (!q || String(t || '').toLowerCase().includes(q)); // qHit = 00_gear (재능 단독 화면엔 없을 수 있음)
   if (e.stage === 0) return PRISM.items.map((it, i) => hit(it.name + ' ' + (it.effect || '')) ?
     `<div class="gbz-row${e.item === it.name ? ' on' : ''}" onclick="gbPzItem(${i})">${it.icon ? `<img src="${it.icon}" alt="" loading="lazy">` : ''}<div><b>${escapeHtml(it.name)}</b>${it.effect ? `<small>${escapeHtml(it.effect)}</small>` : ''}</div></div>` : '').join('');
   const curIt = PRISM.items.find(x => x.name === e.item) || {}, seen = new Set(), rows = [];
@@ -12123,7 +12130,8 @@ function rowMatches(r, ctx) {
   }
   if (ctx.coreOnly && CORE_ONLY_EXCL.some(kw => r.effect.includes(kw) || r.source.includes(kw) || r.type.includes(kw))) return false;
   if (ctx.tokens.length && !ctx.tokens.every(group => {
-    const hit = group.kws.some(kw => r.effect.includes(kw) || (!ctx.effOnly && (r.source.includes(kw) || r.type.includes(kw))));
+    const hit = group.kws.some(kw => r.effect.includes(kw) || (!ctx.effOnly && (r.source.includes(kw) || r.type.includes(kw))) ||
+      (typeof window !== 'undefined' && window.I18N && /[a-z]/i.test(kw) && (ctx.effOnly ? qHit(kw.toLowerCase(), r.effect) : qHit(kw.toLowerCase(), r.effect, r.source, r.type)))); // 영어판: 영어 낱말로도
     return group.neg ? !hit : hit;
   })) return false;
   return true;
@@ -13213,10 +13221,10 @@ function shareRowHtml(it) {
   return `<div class="share-row share-card" data-shid="${escapeHtml(it.id)}">` +
     `<div class="shc-faces"><div class="shc-face">${tr ? `<img src="${tr.img}" alt="" loading="lazy" onerror="this.remove()">` : '<span>?</span>'}</div>` +
     `<img class="shc-sk" src="${skillIconOf(it.main)}" alt="" title="메인 스킬 · ${escapeHtml(it.main || '')}" loading="lazy" onerror="this.onerror=null;this.src=SK_FALLBACK"></div>` +
-    `<div class="shc-info"><div class="share-title" data-tt="${escapeHtml(title)}">${se}${escapeHtml(title)}</div>` +
+    `<div class="shc-info"><div class="share-title" data-tt="${escapeHtml(title)}">${se}<span data-noi18n>${escapeHtml(title)}</span></div>` +
     `<small class="shc-sub">${tr ? escapeHtml(tr.hero + ' · ' + tr.full) : '히어로 없음'}</small>` +
     `<div class="share-tags" data-tt="${escapeHtml(tipAll)}">${chips}</div></div>` +
-    `<div class="share-meta"><span class="shc-au">${escapeHtml(it.author)}</span><span class="shc-right">` +
+    `<div class="share-meta"><span class="shc-au" data-noi18n>${escapeHtml(it.author)}</span><span class="shc-right">` +
       (it.likes > 0 ? `<span class="share-like">👍 ${it.likes}</span>` : '') + `<span class="share-views">👁 ${it.views || 0}</span>` +
       (it.yt ? '<span class="shc-yt" title="가이드 영상이 있습니다">▶</span>' : '') +
       `<span class="shc-date" title="${escapeHtml(dFull)}">${escapeHtml(shareShortDate(it.created_at))}${it.updated_at ? '<i title="고친 적 있음">✎</i>' : ''}</span></span></div></div>`;

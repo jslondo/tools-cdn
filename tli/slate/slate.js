@@ -2,6 +2,13 @@
 // ── 장비 규칙 공용 조각 (2026-10-08) ──
 // 빌더와 빌더 2(마법사)의 장비 단계가 함께 쓴다: 칸 목록·옵션 분류·등급 한도·무기 줄 배치·옵션 키.
 // 기대하는 바깥 것: 없음 (PARTS 는 함수 인자로 받는다 — 빌더는 01_core 의 PARTS, 마법사는 gear_data.js)
+// 영어판 검색 (2026-10-16) — 영어 화면(window.I18N, /tli/i18n/i18n.js)이면 조각마다 영어 번역에서도 찾는다. q 는 소문자
+function qHit(q, ...parts) {
+  if (!q) return true;
+  if (parts.map(p => p == null ? '' : String(p)).join(' ').toLowerCase().includes(q)) return true;
+  const T = typeof window !== 'undefined' && window.I18N;
+  return !!T && parts.some(p => { const e = p && T.tr(String(p)); return !!e && e.toLowerCase().includes(q); });
+}
 const OPT_LIMITS = {basic: 2, main: 3, sub: 3};
 
 const CAT_LABEL = {basic: '기본옵', main: '메인옵', sub: '서브옵'};
@@ -996,7 +1003,7 @@ function wsbSockRows() { // 이 소켓 등급에 맞는 석판 옵션
   const sl = wsbBd()[wsbSel], info = SLATES[sl.u], ranks = info.sl[wsbSock], q = wsbQ.trim().toLowerCase();
   const h = SLATE_DB.map((r, ri) => { // 석판 행만 (ALL_DATA 는 로그 가져오기 뒤 전체 행 — 석판 행이 앞자리라 ri 는 같다)
     if (!(r.nids && r.nids.length) || !slateSockOk(info, r, ranks)) return '';
-    if (q && !(r.effect + ' ' + (r.type || '')).toLowerCase().includes(q)) return '';
+    if (!qHit(q, r.effect, r.type)) return '';
     const on = String((sl.t || [])[wsbSock]) === String(r.nids[0]);
     return `<div class="wg-opt${on ? ' on' : ''}" onclick="wsbAssign(${ri})"><span>${wsbOptHtml(r)}</span><em>${slateSockLabel(info, [slateRank(r)])}</em></div>`;
   }).join('');

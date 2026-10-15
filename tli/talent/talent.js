@@ -409,7 +409,7 @@ function gbPzOpt(i) {
 }
 function gbPzSearch(v) { if (!gbPzEd) return; gbPzEd.q = v; const b = document.getElementById('gbPzList'); if (b) b.innerHTML = gbPzRows(); }
 function gbPzRows() {
-  const e = gbPzEd, q = (e.q || '').trim().toLowerCase(), hit = t => !q || String(t || '').toLowerCase().includes(q);
+  const e = gbPzEd, q = (e.q || '').trim().toLowerCase(), hit = t => typeof qHit === 'function' ? qHit(q, t) : (!q || String(t || '').toLowerCase().includes(q)); // qHit = 00_gear (재능 단독 화면엔 없을 수 있음)
   if (e.stage === 0) return PRISM.items.map((it, i) => hit(it.name + ' ' + (it.effect || '')) ?
     `<div class="gbz-row${e.item === it.name ? ' on' : ''}" onclick="gbPzItem(${i})">${it.icon ? `<img src="${it.icon}" alt="" loading="lazy">` : ''}<div><b>${escapeHtml(it.name)}</b>${it.effect ? `<small>${escapeHtml(it.effect)}</small>` : ''}</div></div>` : '').join('');
   const curIt = PRISM.items.find(x => x.name === e.item) || {}, seen = new Set(), rows = [];

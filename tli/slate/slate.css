@@ -744,6 +744,29 @@
     .wb-stgr .wz-btn { padding: 4px 9px; }
     .wb-stgb { display: flex; gap: 6px; flex-wrap: wrap; }
     .wb-stgh { color: #7d8794; font-size: 11.5px; line-height: 1.5; }
+    /* 여러 빌드 묶어서 — 카드 (2026-10-15 개편) */
+    .wb-stcs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 8px; }
+    .wb-stc { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid #2a3446; border-radius: 12px; background: #0b1019; cursor: grab; transition: border-color .12s, opacity .12s; }
+    .wb-stc.drag { opacity: .45; } .wb-stc.over { border-color: #d4a84a; box-shadow: 0 0 0 1px #d4a84a inset; }
+    .wb-stc-h { display: flex; gap: 6px; align-items: center; }
+    .wb-stc-no { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #d4a84a; color: #1a1406; font-size: 12px; font-weight: 700; }
+    .wb-stc-h select { flex: 1; min-width: 0; padding: 4px 8px; border-radius: 8px; border: 1px solid #4a3f22; background: #15130d; color: #f3e3b5; font: inherit; font-size: 13px; font-weight: 600; }
+    .wb-stc-x { flex: none; width: 26px; height: 26px; border-radius: 8px; border: 1px solid #2a3446; background: transparent; color: #9fb0c6; cursor: pointer; } .wb-stc-x:hover { border-color: #b4555a; color: #ffb4b4; }
+    .wb-stc-b.wl-card { cursor: grab; grid-template-columns: 40px 1fr; padding: 8px; gap: 4px 8px; background: #0e131c; }
+    .wb-stc-b .wl-face { width: 40px; height: 40px; } .wb-stc-b .wl-sk { width: 26px; height: 26px; } .wb-stc-b .wl-tags { display: none; }
+    .wb-stc-b .wl-info b { font-size: 13px; } .wb-stc-b .wl-info small { font-size: 11px; }
+    .wb-stc-f { display: flex; justify-content: space-between; align-items: center; min-height: 22px; } .wb-stc-f em { font-style: normal; font-size: 11px; color: #b9a46a; }
+    .wb-stc-mv { display: flex; gap: 4px; } .wb-stc-mv button { width: 26px; height: 22px; border-radius: 6px; border: 1px solid #2a3446; background: transparent; color: #9fb0c6; cursor: pointer; font-size: 10px; } .wb-stc-mv button:disabled { opacity: .3; cursor: default; }
+    .wb-stc-add { align-items: center; justify-content: center; min-height: 118px; border-style: dashed; color: #9fb0c6; cursor: pointer; font: inherit; } .wb-stc-add b { font-size: 26px; line-height: 1; } .wb-stc-add span { font-size: 12.5px; }
+    .wb-stc-add:hover, .wb-stc-add.on { border-color: #d4a84a; color: #f3e3b5; }
+    .wb-stc-pick { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid #4a3f22; border-radius: 12px; background: #13110c; } .wb-stc-pick > small { color: #b9a46a; font-size: 11.5px; }
+    .wb-stc-pick .wb-grid { max-height: 30vh; } .wb-stc-tag { position: absolute; top: 6px; right: 8px; font-style: normal; font-size: 10.5px; color: #b9a46a; }
+    .wb-pop.wb-share { width: min(720px, 100%); } /* 묶음 카드가 3장씩 들어가게 */
+    .wb-stc-pick .wl-grid.wb-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 6px; }
+    .wb-stc-pick .wl-card { grid-template-columns: 40px 1fr; padding: 8px; gap: 4px 8px; } .wb-stc-pick .wl-face { width: 40px; height: 40px; } .wb-stc-pick .wl-sk { display: block; width: 26px; height: 26px; }
+    .wb-stc-pick .wl-tags { display: none; } .wb-stc-pick .wl-info b { font-size: 13px; } .wb-stc-pick .wl-info small { font-size: 11px; }
+    .wb-stc-pick .wl-card:hover { border-color: #d4a84a; }
+    .wb-stc-tag { position: static; grid-column: 2; font-size: 10.5px; }
     /* /tli/slate 단독 화면 — 틀(frame.css)·석판 칸(builder2.css 의 wsb-·wg-) 위에 페이지 배치만 */
     .sp-body #slateApp { width: min(var(--page-w, 1320px), calc(100% - 32px)); margin: 16px auto 32px; }
     .sp-body #slateApp .gbm { width: 100%; height: auto; }

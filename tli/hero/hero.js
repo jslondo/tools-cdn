@@ -451,6 +451,14 @@ function revivalExtraCap(effect) {
 }
 
 const MEM_PARTS = ['근원의 추억', '자기 수호의 추억', '진격의 추억'];
+// 추억 랜덤 옵션 티어 (2026-10-15 사용자 제보: 0티어만 고를 수 있다) — 옵션 e.mt = '1'|'2' (없으면 T0, 데이터 행 문구 그대로)
+// MEM_TIERS = {부위: {T0 문구: {t1, t2, t3}}} (mem_data.js, update/build_memtier.py). 없는 화면에선 T0 문구로
+const MEM_TIER_PICK = ['0', '1', '2'];
+function memEff(e) {
+  if (!e || !e.mt || e.mt === '0' || typeof MEM_TIERS === 'undefined') return e ? e.effect : '';
+  const t = (MEM_TIERS[e.source] || {})[e.effect];
+  return (t && t['t' + e.mt]) || e.effect;
+}
 // ── 추억 (근원·자기 수호·진격, 각 1개 제작) ──
 // 단계식 선택: 기본 속성(1) → 고유 옵션(최대 2) → 랜덤 옵션(최대 2), [다음]으로 건너뛰기 가능
 const MEM_STAGES = [

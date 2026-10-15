@@ -451,6 +451,14 @@ function revivalExtraCap(effect) {
 }
 
 const MEM_PARTS = ['근원의 추억', '자기 수호의 추억', '진격의 추억'];
+// 추억 랜덤 옵션 티어 (2026-10-15 사용자 제보: 0티어만 고를 수 있다) — 옵션 e.mt = '1'|'2' (없으면 T0, 데이터 행 문구 그대로)
+// MEM_TIERS = {부위: {T0 문구: {t1, t2, t3}}} (mem_data.js, update/build_memtier.py). 없는 화면에선 T0 문구로
+const MEM_TIER_PICK = ['0', '1', '2'];
+function memEff(e) {
+  if (!e || !e.mt || e.mt === '0' || typeof MEM_TIERS === 'undefined') return e ? e.effect : '';
+  const t = (MEM_TIERS[e.source] || {})[e.effect];
+  return (t && t['t' + e.mt]) || e.effect;
+}
 // ── 추억 (근원·자기 수호·진격, 각 1개 제작) ──
 // 단계식 선택: 기본 속성(1) → 고유 옵션(최대 2) → 랜덤 옵션(최대 2), [다음]으로 건너뛰기 가능
 const MEM_STAGES = [
@@ -1857,18 +1865,21 @@ const SLATES = {
   394005: {lg: 'nether', n: '명왕의 신격: 인펙션', c: [[0,0],[1,0],[-1,0]], v: 1, god: 1, spread: {v: -50}, pc: 1, sl: [[1,2,3],[1,2,3],[1,2,3]]}, // 원점=가운데 칸, c 순서=게임 옵션 순(가운데→아래→위: 1번=가운데·2번=아래·3번=위 칸), 전염 -50% (세이지 실보드·아이템 카드 확정)
   394006: {lg: 'nether', n: '명왕의 신격: 추방', c: [[0,0],[1,1],[2,2]], v: 0, god: 1, pc: 1, sl: [[1,2,3],[1,2,3],[1,2,3]]},
 };
-// 신격의 석판 = 신 6종 × 모양 6변형 (id 26xx01~06, 모양 코드는 tlidb 아이콘 실측 순서: Z1·Z2·L1·L2·O·T)
+// 신격의 석판 = 신 6종 × 모양 6변형 (id 26xx01~06, tlidb 아이콘 코드 순서는 Z1·Z2·L1·L2·O·T) + 빌더 전용 ㅗ(26xx07)
 // 색은 신마다 고정, 모양은 변형별 테트로미노. 소켓 = 5칸(하위~레전드 중위, 핵심 불가 — 핵심은 계보 전용)
-const GOD_SHAPES = [
-  ['Z1', [[0,0],[-1,0],[0,-1],[0,-2]]], // 변형1 실측(리스틸 기만 실보드) — 위1+왼쪽2 J형
+const GOD_SHAPES = [ // [표시 이름(그림 기준, 2026-10-15 정리 — 예전 Z1·L1·T 는 tlidb 아이콘 코드라 그림과 달랐다), 칸]
+  ['L', [[0,0],[-1,0],[0,-1],[0,-2]]], // 변형1 실측(리스틸 기만 실보드) — 위1+왼쪽2 = ┘ L형
   ['Z2', [[0,1],[1,0],[1,1],[2,0]]],
-  ['L1', [[0,0],[1,0],[0,1],[-1,1]]], // 변형3 실측(세이지 전쟁의 신, ShapeId 1023·Direction 1) — S/Z형
+  ['Z', [[0,0],[1,0],[0,1],[-1,1]]], // 변형3 실측(세이지 전쟁의 신, ShapeId 1023·Direction 1) — S/Z형
   ['L2', [[0,2],[1,0],[1,1],[1,2]]],
   ['O', [[0,0],[0,1],[1,0],[1,1]]],
-  ['T', [[0,0],[-1,0],[0,1],[0,2]]], // 변형6 실측(호자 지식 실보드) — 위1+오른쪽2, 변형1의 거울 (아이콘 코드와 불일치 — 코드명은 자리표시)
+  ['J', [[0,0],[-1,0],[0,1],[0,2]]], // 변형6 실측(호자 지식 실보드) — 위1+오른쪽2 = └ J형, 변형1의 거울
+  // 변형7 = ㅗ(T) — 사용자 2026-10-15 "ㅗ 모양이 없다". tlidb 아이콘 UI_TalantNG_T1 이 진짜 T 모양인데 실측 변형1~6 엔 T 가 없어
+  // 빌더 전용 번호(26xx07)로 둔다 — 로그 ShapeId 로 T 가 확인되면 그 번호로 옮길 것
+  ['T', [[0,0],[0,-1],[0,1],[-1,0]]],
 ];
 const GOD_BASES = {260000: '사냥의 여신', 260100: '기만의 여신', 260200: '지식의 여신', 260300: '전쟁의 신', 260400: '기계의 신', 260500: '힘의 신'};
-const GOD_PAL = [[1, 'Z'], [3, 'L'], [5, 'O'], [6, 'T']]; // 팔레트·[모양] 순환에 노출하는 변형 (variant, 라벨)
+const GOD_PAL = [[3, 'Z'], [1, 'L'], [5, 'O'], [7, 'T']]; // 팔레트·[모양] 순환에 노출하는 변형 (variant, 라벨) — J(변형6)는 L 의 [좌우 반전]으로
 // 로그 ShapeId → 신격 변형 번호 (실측 누적 — 로그의 BaseId는 기본형으로만 기록되고 실제 모양은 ShapeId에 있다)
 const GOD_SHAPE_IDS = {'1011': 2, '1023': 3, '1031': 6}; // ShapeId → 신격 모양 변형 (실측: 15번 기만=Z2 · 리스틸 1023=L1 · 1031=T) // 1023=전쟁의 신 S자(세이지), 1031=기만의 여신 T형(리스틸)
 Object.keys(GOD_BASES).forEach(b => GOD_SHAPES.forEach((g, vi) => {
@@ -2322,6 +2333,9 @@ function ensureHashMaps() {
   PRISM.items.forEach(x => { const h = fnv36(x.name); if (pi.has(h)) piBad.add(h); else pi.set(h, x); });
   const rv = new Map(), rvBad = new Set(); // 추억 부활 옵션 (effect+group)
   REVIVALS.forEach(o => { const h = fnv36(o.effect + '\u001f' + o.group); if (rv.has(h)) rvBad.add(h); else rv.set(h, o); });
+  // 재수집으로 문구가 바뀐 행·스킬·레전드 — 옛 해시(oh, update/key_alias.py)로도 찾는다. 지금 해시와 겹치면 지금 것이 우선
+  const alias = (list, m, bad) => list.forEach(x => (x.oh || []).forEach(h => { if (!m.has(h) && !bad.has(h)) m.set(h, x); }));
+  alias(ALL_DATA, row, rowBad); alias(SKILLS, sk, skBad); alias(ITEMS, it, itBad);
   HASHES = {row, rowBad, sk, skBad, it, itBad, po, poBad, pi, piBad, rv, rvBad};
   return HASHES;
 }
@@ -2382,6 +2396,7 @@ async function codeToPreset(code) {
       if (!r) { missing++; return {k: '', effect: '(받는 쪽 데이터에 없는 옵션)', source: '', type: ''}; }
       const o = {k: rowKey(r), effect: r.effect, source: r.source, type: talentLabel(r)};
       if (Array.isArray(x.v)) o.v = x.v.slice(0, 6).map(Number).filter(isFinite);
+      if (x.mt === '1' || x.mt === '2') o.mt = x.mt; // 추억 랜덤 옵션 티어
       return o;
     }
     if (x && typeof x === 'object') {
@@ -2393,6 +2408,7 @@ async function codeToPreset(code) {
         if (typeof x.h === 'string' && x.h[0] === '#') { const r2 = H.row.get(x.h.slice(1)); if (r2) o.k = rowKey(r2); }
       }
       if (Array.isArray(x.v)) o.v = x.v.slice(0, 6).map(Number).filter(isFinite);
+      if (x.mt === '1' || x.mt === '2') o.mt = x.mt;
       return o;
     }
     return null;
@@ -2624,6 +2640,8 @@ function buildCodePayload(p) {
     if (o.v) return ok ? {h: '#' + h, v: o.v} : {e: o.effect, s: o.source, t: o.type, v: o.v};
     return ok ? '#' + h : {e: o.effect, s: o.source, t: o.type};
   };
+  // 추억 랜덤 옵션 티어(mt, 2026-10-15) — 해시만이면 {h, mt}, 문구째면 객체에 mt
+  const encMt = o => { const x = encEntry(o); return o.mt ? (typeof x === 'string' ? {h: x, mt: o.mt} : {...x, mt: o.mt}) : x; };
   const encSkill = o => {
     if (!o) return 0;
     const h = fnv36(o.name + '\u001f' + o.kind);
@@ -2665,7 +2683,7 @@ function buildCodePayload(p) {
   const mem = {};
   MEM_PARTS.forEach(pt => {
     const m = p.mems && p.mems[pt];
-    if (m) mem[pt] = {b: m.basic.map(encEntry), u: m.unique.map(encEntry), r: m.random.map(encEntry)};
+    if (m) mem[pt] = {b: m.basic.map(encEntry), u: m.unique.map(encEntry), r: m.random.map(encMt)};
   });
   let pr;
   if (p.prism) { // 프리즘: 종류·옵션 모두 데이터에 있으면 해시로, 없으면 텍스트로
@@ -2681,7 +2699,7 @@ function buildCodePayload(p) {
   if (p.revival) { // 부활 옵션: 데이터에 있으면 해시, 없으면 텍스트 (추가 추억은 옵션 엔트리로)
     const h = fnv36(p.revival.effect + '\u001f' + p.revival.group);
     rv = {p: p.revival.part, e: H.rv.has(h) && !H.rvBad.has(h) ? '#' + h : {e: p.revival.effect, g: p.revival.group}};
-    if (p.revival.mem) rv.m = {b: p.revival.mem.basic.map(encEntry), u: p.revival.mem.unique.map(encEntry), r: p.revival.mem.random.map(encEntry)};
+    if (p.revival.mem) rv.m = {b: p.revival.mem.basic.map(encEntry), u: p.revival.mem.unique.map(encEntry), r: p.revival.mem.random.map(encMt)};
   }
   const iv = p.inverse ? [p.inverse.pos, p.inverse.opts.low ? 1 : 0, p.inverse.opts.mid ? 1 : 0, p.inverse.opts.abs ? 1 : 0] : undefined;
   const sb = p.slateBd && p.slateBd.length
@@ -2982,7 +3000,7 @@ function presetOptionLines() {
     const eff = t.mul ? scaleEffect(t.effect, t.mul) : t.effect; // 전염 옵션은 줄어든 수치로
     for (let i = 0; i < n; i++) add(src + (t.mul ? ' 전염' : ''), eff);
   });
-  Object.values(preset.mems || {}).forEach(m => ['basic', 'unique', 'random'].forEach(k => (m[k] || []).forEach(o => add('추억', optEff(o)))));
+  Object.values(preset.mems || {}).forEach(m => ['basic', 'unique', 'random'].forEach(k => (m[k] || []).forEach(o => add('추억', o.mt && typeof memEff === 'function' ? memEff(o) : optEff(o)))));
   if (preset.prism) {
     // 제노 프리즘: 환영 — 고유 옵션이 "해당 프리즘의 랜덤 옵션의 효과 +75%" (사용자 확인).
     // 효과 수치형 옵션에만 ×1.75 — 범위 확장(3×4 직사각형)·횟수(2회 포인트) 문구는 곱하면 안 된다
@@ -4533,6 +4551,14 @@ function wmToggle(i) {
   wmSave(wmPart, o);
   pageRender();
 }
+const wmHasTiers = e => typeof MEM_TIERS !== 'undefined' && !!(MEM_TIERS[e.source] || {})[e.effect];
+function wmSetMt(i, t) { // 랜덤 옵션 티어 T0/T1/T2 (장비 제작 옵션 티어처럼 — 옵션마다)
+  if (guardShareView()) return;
+  const o = wmOpts(wmPart), e = o.random[i];
+  if (!e) return;
+  if (t === '0') delete e.mt; else e.mt = t;
+  wmSave(wmPart, o); pageRender();
+}
 function wmDel(cat, i) { if (guardShareView()) return; const o = wmOpts(wmPart); o[cat].splice(i, 1); wmSave(wmPart, o); pageRender(); }
 const wmCap = () => preset.revival ? revivalExtraCap(preset.revival.effect) : null; // 추가 추억 등급 상한
 const wmGradeOk = (p, g) => { // 이 칸에 고를 수 있는 등급인가 (HERO_GRADES 는 높은 등급부터)
@@ -4655,7 +4681,9 @@ function wmRender() {
   // 기본·고유·랜덤 + (맨 아래 작게) 부활 옵션 — 인게임처럼 세로 (사용자 요청: 부활은 자주 안 쓰니 아래로)
   const picked = MEM_STAGES.map((s2, i) => `<div class="wg-pk${wmStage === i ? ' on' : ''}" onclick="wmStage=${i};wmQuery='';pageRender()">` +
     `<div class="wg-pkh"><b>${s2.type}</b><span>${o[s2.cat].length} / ${s2.max}</span></div>` +
-    (o[s2.cat].length ? o[s2.cat].map((e, j) => `<div class="wg-pko"><span class="wg-pkt">${wgOptHtml(e.effect, wmTips(e))}</span><button onclick="event.stopPropagation();wmDel('${s2.cat}',${j})" title="빼기">✕</button></div>`).join('') : '<div class="wg-pke">눌러서 고르기</div>') + '</div>').join('') +
+    (o[s2.cat].length ? o[s2.cat].map((e, j) => `<div class="wg-pko"><span class="wg-pkt">${wgOptHtml(memEff(e), wmTips(e))}</span>` +
+      (s2.cat === 'random' && wmHasTiers(e) ? `<span class="wm-mt">${MEM_TIER_PICK.map(t => `<i class="${(e.mt || '0') === t ? 'on' : ''}" onclick="event.stopPropagation();wmSetMt(${j},'${t}')" title="랜덤 옵션 티어 T${t}">T${t}</i>`).join('')}</span>` : '') +
+      `<button onclick="event.stopPropagation();wmDel('${s2.cat}',${j})" title="빼기">✕</button></div>`).join('') : '<div class="wg-pke">눌러서 고르기</div>') + '</div>').join('') +
     (wmIsX(wmPart) ? '' : `<div class="wg-pk wm-rvk${isRv ? ' on' : ''}" onclick="wmStage=3;wmRvQ='';pageRender()"><div class="wg-pkh"><b>부활 옵션</b><span>${rvHere ? 1 : 0} / 1</span></div>` +
       (rvHere ? `<div class="wg-pko"><span class="wg-pkt">${wgOptHtml(rv.effect, rvTips)}</span><button onclick="event.stopPropagation();wmPickRv(${REVIVALS.findIndex(x => x.effect === rv.effect && x.group === rv.group)})" title="빼기">✕</button></div>`
         : rvElse ? `<div class="wg-pke">${escapeHtml(rv.part)}에 있음 — 추억 하나에만</div>` : '<div class="wg-pke">눌러서 고르기 (추억 하나에만 1개)</div>') + '</div>');
@@ -5547,7 +5575,7 @@ function vwGAll() {
 function vwMems() {
   const parts = [...(wmXPart() ? ['x'] : []), ...MEM_PARTS];
   if (!parts.some(p => wmMem(p))) return vwEmpty('추억을 넣지 않은 빌드입니다');
-  const sec = (nm, list) => list.length ? `<div class="wg-vsec">${nm}</div>` + list.map(e => `<div class="wg-vo"><span>${wgOptHtml(e.effect, wmTips(e))}</span></div>`).join('') : '';
+  const sec = (nm, list) => list.length ? `<div class="wg-vsec">${nm}</div>` + list.map(e => `<div class="wg-vo"><span>${wgOptHtml(memEff(e), wmTips(e))}</span>${e.mt ? `<i class="tier-chip vw-mt">T${e.mt}</i>` : ''}</div>`).join('') : '';
   return '<div class="vw-mems">' + parts.map(p => {
     const m = wmMem(p), key = wmKey(p), g = HERO_GRADES.find(x => x[0] === memGrade(key)) || HERO_GRADES[HERO_GRADES.length - 1];
     const label = wmIsX(p) ? '부활 추가 · ' + wmXPart() : p, rv = preset.revival && preset.revival.part === p ? preset.revival : null;

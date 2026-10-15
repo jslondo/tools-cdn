@@ -333,6 +333,17 @@ function hrRenderModal() {
     `<div class="gbm-body"><div class="gbm-side">${side}</div><div class="gbm-main">${main}</div></div></div>`;
   if (!page) el.style.display = 'flex';
   heroClampMark(el);
+  hrScrollHint(el);
+}
+// 좁은 화면에서 트리가 넘치면 '옆으로 밀어서 보기' 표시 + 오른쪽 끝 흐림 (잘린 줄 알았다 — 2026-10-15)
+function hrScrollHint(root) {
+  (window.requestAnimationFrame || (f => setTimeout(f, 0)))(() => (root || document).querySelectorAll('.hrt-wrap').forEach(w => {
+    const over = w.scrollWidth > w.clientWidth + 4;
+    w.classList.toggle('scrollx', over);
+    const upd = () => w.classList.toggle('atend', w.scrollLeft + w.clientWidth >= w.scrollWidth - 4);
+    if (over && !w.dataset.hint) { w.dataset.hint = 1; w.addEventListener('scroll', upd, {passive: true}); w.insertAdjacentHTML('beforebegin', '<div class="hrt-hint">옆으로 밀어서 보기 ⇢</div>'); }
+    upd();
+  }));
 }
 // ── 갈래형 특성 = 인게임식 아이콘 트리 (2026-10-10, 사용자 결정 — 카드로 펼치면 유가3처럼 과하게 길어진다)
 // 열 = 깊이(기본 → 1·2·3번째), 잎 노드마다 한 줄, 앞 노드는 이어지는 노드들의 가운데. 연결선은 SVG 곡선(찍은 경로는 금색).
@@ -5347,7 +5358,7 @@ async function vwStage(i, top) { // top = 아래 버튼에서 — 바꾼 뒤 단
 function vwHead() {
   const s = VW.share, h = preset.hero;
   const title = (s && s.title) || preset.name || '공유 빌드';
-  const meta = [h ? vwEsc(h.hero) + ' · ' + vwEsc(h.trait) : null, s && s.author ? '만든 사람 ' + vwEsc(s.author) : null,
+  const meta = [h ? vwEsc(h.hero) + ' · ' + vwEsc(((typeof traitInfo === 'function' && traitInfo(h.trait)) || {}).full || h.trait) : null, // 축약('유가3') 대신 특성 이름 (2026-10-15) s && s.author ? '만든 사람 ' + vwEsc(s.author) : null,
     s ? '추천 ' + (s.likes || 0) + ' · 조회 ' + (s.views || 0) : null, s && s.updated_at ? vwEsc(String(s.updated_at).slice(0, 10)) : null].filter(Boolean);
   return `<div class="vw-head"><div class="vw-ht"><small>${VW.mine ? '내 빌드 보기' : '빌드 보기'}</small><h1>${vwEsc(title)}</h1>` +
     `<div class="vw-meta">${meta.join(' <span class="gbm-sep">·</span> ')}</div>` +
@@ -5365,10 +5376,12 @@ function vwHead() {
       (preset.shareEdit ? '' : '<div class="vw-acts2"><button type="button" class="wz-btn vw-del" onclick="vwMyDel()" title="이 브라우저에서 이 빌드를 지웁니다">🗑 빌드 삭제</button></div>')
       : '<button class="wz-btn pri" onclick="vwTake()">내 빌드로 가져오기</button>'}` +
     (s ? `<div class="vw-acts2"><button type="button" class="wz-btn" id="vwLike" onclick="vwLike()"${VW.liked ? ' disabled' : ''}>👍 추천 ${s.likes || 0}${VW.liked ? ' (추천함)' : ''}</button>` +
-      '<button type="button" class="wz-btn" onclick="vwCopy()">🔗 링크 복사</button></div>' +
-      '<div class="vw-acts2"><button type="button" class="wz-btn" onclick="vwShareEdit(false)" title="올릴 때 등록한 비밀번호로 내 글을 고칩니다 (빌더에서 고친 뒤 저장)">✏ 내 글 수정</button>' +
-      '<button type="button" class="wz-btn" onclick="vwShareDel()" title="올릴 때 등록한 비밀번호로 내 글을 지웁니다">🗑 삭제</button>' +
-      '<button type="button" class="wz-btn" onclick="vwVidReq()" title="이 빌드의 유튜브 가이드 영상 — 작성자 비밀번호로 올리고, 관리자 승인 뒤 맨 아래에 보입니다">🎬 영상 올리기</button></div>' : '') + '</div></div>' +
+      '<button type="button" class="wz-btn" onclick="vwCopy()">🔗 링크 복사</button>' +
+      // 작성자만 쓰는 것(수정·삭제·영상)은 접어 둔다 — 방문자에게 버튼 6개가 쌓여 보였다 (2026-10-15)
+      '<details class="vw-amenu"><summary class="wz-btn" title="글을 올린 사람용 — 올릴 때 등록한 비밀번호로">⋯ 작성자</summary><div class="vw-amenu-pop">' +
+      '<button type="button" class="wz-btn" onclick="vwShareEdit(false)" title="올릴 때 등록한 비밀번호로 내 글을 고칩니다 (빌더에서 고친 뒤 저장)">✏ 내 글 수정</button>' +
+      '<button type="button" class="wz-btn" onclick="vwVidReq()" title="이 빌드의 유튜브 가이드 영상 — 작성자 비밀번호로 올리고, 관리자 승인 뒤 맨 아래에 보입니다">🎬 영상 올리기</button>' +
+      '<button type="button" class="wz-btn vw-del" onclick="vwShareDel()" title="올릴 때 등록한 비밀번호로 내 글을 지웁니다">🗑 삭제</button></div></details></div>' : '') + '</div></div>' +
     vwStageBar() + '<nav class="vw-toc">' + VW_SECS.filter(([id]) => id !== 'vc' || vwHasCmt()).map(([id, nm]) => `<a href="#${id}">${nm}</a>`).join('') +
     (vwVidList().length ? '<a href="#vy" class="vw-toc-yt">▶ 영상</a>' : '') + '</nav>';
 }
@@ -5867,6 +5880,9 @@ async function vwVidSave() {
     VW.videos = d.videos; vwClose(); pageRender(); vwToast(vids.length ? '🎬 영상을 저장했습니다' : '영상을 모두 뺐습니다');
   } catch (e) { b.disabled = false; vwToast('저장하지 못했습니다: ' + e.message); }
 }
+
+// 작성자 메뉴 — 바깥을 누르거나 메뉴 안 단추를 누르면 닫는다
+document.addEventListener('click', e => document.querySelectorAll('.vw-amenu[open]').forEach(d => { if (!d.contains(e.target) || e.target.closest('.vw-amenu-pop button')) d.open = false; }));
 
 // 시작 — 맨 끝에 둔다 (위의 const 들이 다 정해진 뒤에 그리게: 내 빌드 보기는 곧바로 pageRender 한다)
 vwLoad().then(() => { if (VW.share && new URLSearchParams(location.search).get('edit')) vwShareEdit(true); });

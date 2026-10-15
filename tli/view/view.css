@@ -243,6 +243,9 @@
     .hsplit.n3::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M50 50V100M50 50L0 21.1M50 50L100 21.1' stroke='%230a0f17' stroke-width='4' fill='none'/%3E%3C/svg%3E"); }
     .hrm-hero .hsplit { width: 54px; height: 54px; border: 2px solid #263044; } .hrm-hero.on .hsplit { border-color: #d4a84a; }
     @media (max-width: 760px) { .hrm-hero .hsplit { width: 40px; height: 40px; } }
+    .hrt-hint { display: none; } .hrt-hint + .hrt-wrap.scrollx { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+    .hrt-hint + .hrt-wrap.scrollx.atend { -webkit-mask-image: none; mask-image: none; }
+    @media (max-width: 900px) { .hrt-hint { display: block; text-align: right; color: #b9a46a; font-size: 11.5px; margin: 2px 4px -2px; } }
     /* 재능 보드 — 빌더(app.css·hero.css 뒤에 붙임)와 따로 떨어진 /tli/talent 가 함께 쓴다 (2026-10-08). 팝업 틀(.gbm-dim 등)은 hero.css */
     /* 재능 보드 (로그에서 가져온 찍은 노드) */
     .gb-boards { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 12px 12px; }
@@ -1328,3 +1331,8 @@
     .vw-se-stg > span { color: #b9a46a; font-size: 12px; padding: 0 8px 0 6px; } .vw-se-stg .vw-stb { padding: 5px 12px; font-size: 13px; }
     .vw-vwait { margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px dashed #6b5a2a; background: #15130d; color: #e6d39c; font-size: 13px; } /* 영상 승인 대기 */
     .wb-field select { padding: 6px 9px; border-radius: 8px; border: 1px solid #2a3446; background: #0a0f17; color: #e6edf3; font: inherit; font-size: 13px; }
+    /* 작성자 메뉴 (2026-10-15) — 수정·영상·삭제를 접어 둠 */
+    .vw-amenu { position: relative; } .vw-amenu > summary { list-style: none; cursor: pointer; } .vw-amenu > summary::-webkit-details-marker { display: none; }
+    .vw-amenu[open] > summary { border-color: #d4a84a; color: #f3e3b5; }
+    .vw-amenu-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; display: flex; flex-direction: column; gap: 6px; padding: 8px; min-width: 150px; border-radius: 10px; border: 1px solid #2a3446; background: #0e131c; box-shadow: 0 8px 24px #0009; }
+    .vw-amenu-pop .wz-btn { justify-content: flex-start; text-align: left; }

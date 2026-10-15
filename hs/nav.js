@@ -189,6 +189,10 @@
     .hubnav .langtoggle { margin-right:4px; padding:5px 7px; }
     .hubnav .wtoggle { padding:5px 7px; }
     .hubnav .langtoggle .tx, .hubnav .wtoggle .tx { display:none; }   /* 토글은 아이콘만 */
+  }
+  @media(max-width:420px){   /* 아주 좁은 폰 — 마지막 탭('SS14 관련')이 끝에 붙어 잘리던 것 (2026-10-15) */
+    .hubnav a.tab { padding:0 5px; font-size:12.5px; } .hubnav .caret { padding:0 4px 0 0; }
+    .hubnav .home { margin-right:3px; } .hubnav .spacer { flex:0 0 2px; }
   }`;
 
   const style = document.createElement('style');

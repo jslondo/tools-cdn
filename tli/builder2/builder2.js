@@ -334,6 +334,17 @@ function hrRenderModal() {
     `<div class="gbm-body"><div class="gbm-side">${side}</div><div class="gbm-main">${main}</div></div></div>`;
   if (!page) el.style.display = 'flex';
   heroClampMark(el);
+  hrScrollHint(el);
+}
+// 좁은 화면에서 트리가 넘치면 '옆으로 밀어서 보기' 표시 + 오른쪽 끝 흐림 (잘린 줄 알았다 — 2026-10-15)
+function hrScrollHint(root) {
+  (window.requestAnimationFrame || (f => setTimeout(f, 0)))(() => (root || document).querySelectorAll('.hrt-wrap').forEach(w => {
+    const over = w.scrollWidth > w.clientWidth + 4;
+    w.classList.toggle('scrollx', over);
+    const upd = () => w.classList.toggle('atend', w.scrollLeft + w.clientWidth >= w.scrollWidth - 4);
+    if (over && !w.dataset.hint) { w.dataset.hint = 1; w.addEventListener('scroll', upd, {passive: true}); w.insertAdjacentHTML('beforebegin', '<div class="hrt-hint">옆으로 밀어서 보기 ⇢</div>'); }
+    upd();
+  }));
 }
 // ── 갈래형 특성 = 인게임식 아이콘 트리 (2026-10-10, 사용자 결정 — 카드로 펼치면 유가3처럼 과하게 길어진다)
 // 열 = 깊이(기본 → 1·2·3번째), 잎 노드마다 한 줄, 앞 노드는 이어지는 노드들의 가운데. 연결선은 SVG 곡선(찍은 경로는 금색).

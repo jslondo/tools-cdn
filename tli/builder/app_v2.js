@@ -13215,14 +13215,17 @@ function renderShareHeroes() {
   shareHeroOrder().forEach(x => { let g = groups.find(g => g.hero === x.hero); if (!g) groups.push(g = {hero: x.hero, list: []}); g.list.push(x); });
   const open = shareHeroOpen !== null ? shareHeroOpen : curHero;
   const face = g => `<span class="shh-face n${g.list.length}">${g.list.map((x, i) => `<img src="${x.img}" alt="" loading="lazy" style="--i:${i}">`).join('')}</span>`;
+  // 펼친 히어로는 그 자리 바로 옆에 특성 단추(2~3개)를 끼워 넣어 나머지를 밀어낸다 (2026-10-15 사용자 — 아래 칸 대신)
   el.innerHTML = `<div class="shh-row"><button type="button" class="shh-all${cur ? '' : ' on'}" onclick="setShareHero('')">전체</button>` +
     groups.map(g => {
       const isNew = g.list.some(x => SHARE_HERO_FIRST.includes(x.tag)), on = curHero === g.hero, op = open === g.hero && g.list.length > 1;
       const click = g.list.length > 1 ? `shareHeroToggle('${escapeHtml(g.hero)}')` : `setShareHero('${g.list[0].tag}')`;
-      return `<button type="button" class="shh${on ? ' on' : ''}${op ? ' open' : ''}${isNew ? ' new' : ''}" onclick="${click}" title="${escapeHtml(g.hero + (g.list.length > 1 ? ' — 눌러서 특성 고르기' : ' · ' + g.list[0].full))}">${face(g)}<span>${escapeHtml(g.hero)}</span></button>`;
-    }).join('') + '</div>' +
-    (() => { const g = groups.find(g => g.hero === open && g.list.length > 1); if (!g) return '';
-      return `<div class="shh-sub">${g.list.map(x => `<button type="button" class="shh-t${curKey === traitInfo(x.tag).key ? ' on' : ''}${SHARE_HERO_FIRST.includes(x.tag) ? ' new' : ''}" onclick="setShareHero('${x.tag}')"><img src="${x.img}" alt="" loading="lazy"><span><b>${escapeHtml(x.tag)}</b><small>${escapeHtml(x.full)}</small></span></button>`).join('')}</div>`; })();
+      const btn = `<button type="button" class="shh${on ? ' on' : ''}${op ? ' open' : ''}${isNew ? ' new' : ''}" onclick="${click}" title="${escapeHtml(g.hero + (g.list.length > 1 ? (op ? ' — 접기' : ' — 눌러서 특성 고르기') : ' · ' + g.list[0].full))}">${face(g)}<span>${escapeHtml(g.hero)}</span></button>`;
+      if (!op) return btn;
+      return `<span class="shh-grp">${btn}${g.list.map(x => `<button type="button" class="shh-t${curKey === traitInfo(x.tag).key ? ' on' : ''}${SHARE_HERO_FIRST.includes(x.tag) ? ' new' : ''}" onclick="setShareHero('${x.tag}')" title="${escapeHtml(x.hero + ' · ' + x.full)}"><img src="${x.img}" alt="" loading="lazy"><span>${escapeHtml(x.tag)}</span></button>`).join('')}</span>`;
+    }).join('') + '</div>';
+  const og = el.querySelector('.shh-grp'); // 펼친 묶음이 화면 밖이면 보이게
+  if (og) { const row = og.parentNode, l = og.offsetLeft - row.offsetLeft, r = l + og.offsetWidth; if (l < row.scrollLeft || r > row.scrollLeft + row.clientWidth) row.scrollTo({left: Math.max(0, l - 40), behavior: 'smooth'}); }
 }
 function shareHeroToggle(hero) {
   const cur = shareFilterTags.find(t => traitInfo(t)), curHero = cur && traitInfo(cur).hero;

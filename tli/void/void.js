@@ -185,7 +185,7 @@
         <img src="${ICON + c.icon}" alt=""><b>${esc(c.name)}</b>
         <span class="vc-cnt">${k} / ${c.n}${c.main ? ' · 메인 스타 재능' : ''}</span>
         <button class="vc-btn" data-act="clear"${k ? '' : ' disabled'}>이 별무리 비우기</button>
-        <span class="vc-hint">노드를 누르면 시작 노드까지 길이 함께 찍히고, 찍힌 노드를 누르면 그 아래 가지까지 빠집니다</span>
+        <span class="vc-hint">노드를 누르면 시작 노드까지 길이 함께 찍히고, 찍힌 노드를 누르거나 우클릭하면 그 아래 가지까지 빠집니다</span>
       </div>
       <div class="vc-wrap vc-tree-wrap">
         <div class="vc-tree"><svg viewBox="${x0} ${y0} ${w} ${h}" preserveAspectRatio="xMidYMid meet"><g class="vc-l">${lines}</g>${nodes}</svg><div class="vc-tip" id="vcTip"></div></div>
@@ -221,6 +221,17 @@
       if (window.wtEv) window.wtEv('void_share');
     }
   });
+  // 우클릭 = 포인트 빼기(찍힌 노드와 그 아래 가지) — 노드 화면에선 브라우저 메뉴를 막는다 (2026-10-16)
+  app.addEventListener('contextmenu', e => {
+    if (view < 0 || !e.target.closest('.vc-tree')) return;
+    e.preventDefault();
+    const g = e.target.closest('.vc-n'); if (!g) return;
+    const c = CS[view], id = g.dataset.id;
+    if (S[c.ci].has(id)) { toggle(c, id); showInfo(c, c.by.get(id)); }
+  });
+  // 빠르게 여러 번 누를 때 글자·그림이 선택(드래그)되지 않게
+  app.addEventListener('mousedown', e => { if (e.detail > 1 && e.target.closest('.vc-tree, .vc-card')) e.preventDefault(); });
+  app.addEventListener('dragstart', e => { if (e.target.closest('.vc-tree')) e.preventDefault(); });
   function showInfo(c, n) { const el = document.getElementById('vcInfo'); if (el && n) el.innerHTML = info(c, n); }
   app.addEventListener('mouseover', e => {
     const g = e.target.closest('.vc-n'); if (!g || view < 0) return;

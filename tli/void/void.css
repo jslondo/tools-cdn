@@ -49,6 +49,8 @@
     .vc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     .vc-head img { width: 36px; height: 36px; border-radius: 50%; } .vc-head > b { color: #f3e3b5; font-size: 17px; }
     .vc-cnt { color: #e8c860; font-size: 14px; } .vc-hint { color: #7d8794; font-size: 12px; flex-basis: 100%; }
+    .vc-tree, .vc-card { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    .vc-tree image { -webkit-user-drag: none; }
     .vc-tree { position: relative; background: radial-gradient(ellipse at 50% 45%, #1a2030, #0b0f17 75%); border: 1px solid #222b3a; border-radius: 14px; overflow: hidden; }
     .vc-tree svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 240px); touch-action: manipulation; }
     .vc-l line { stroke: #3a4352; stroke-width: 10; stroke-linecap: round; } .vc-l line.on { stroke: #e8c860; }

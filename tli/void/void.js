@@ -34,7 +34,8 @@
   let view = -1;            // -1 = 목록, 아니면 별무리 번호
   let undo = [];
   const load = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.s) S = CS.map(c => new Set((o.s[c.key] || []).filter(id => c.by.has(id) && id !== c.start))); } catch (e) {} };
-  const save = () => { try { const s = {}; CS.forEach(c => { if (S[c.ci].size) s[c.key] = [...S[c.ci]]; }); localStorage.setItem(KEY, JSON.stringify({ v: 1, s })); } catch (e) {} };
+  let RO = null;   // 공유 글 보기 중(?s=) — {item, liked, admin, vwait} · 이때 S 는 공유 배치이고 저장하지 않는다
+  const save = () => { if (RO) return; try { const s = {}; CS.forEach(c => { if (S[c.ci].size) s[c.key] = [...S[c.ci]]; }); localStorage.setItem(KEY, JSON.stringify({ v: 1, s })); } catch (e) {} };
   const snap = () => { undo.push(S.map(x => new Set(x))); if (undo.length > 50) undo.shift(); };
 
   // ── 포인트 ──
@@ -70,6 +71,7 @@
   }
   function toggle(c, id) {
     if (id === c.start) return;
+    if (RO) return toast('공유 빌드를 보는 중입니다 — 「내 연습판으로 가져오기」 뒤에 고칠 수 있습니다');
     const set = S[c.ci], hadFree = freeOn();
     if (set.has(id)) {
       snap(); set.delete(id); prune(c);
@@ -158,11 +160,12 @@
     return `<div class="vc-top">
       <div class="vc-ttl"><b>허공의 성도</b><small>재능 별무리 시뮬레이터</small></div>
       <div class="vc-pts">${pointsBar()}</div>
-      <div class="vc-acts">
+      <div class="vc-acts">${RO ? '' : `
         <button class="vc-btn" data-act="undo"${undo.length ? '' : ' disabled'}>↶ 되돌리기</button>
         <button class="vc-btn" data-act="reset">↺ 처음부터</button>
-        <button class="vc-btn vc-share" data-act="share">🔗 링크 복사</button>
-      </div></div>`;
+        <button class="vc-btn" data-act="share">🔗 링크 복사</button>
+        <button class="vc-btn vc-share" data-act="upload">📤 파밍 빌드 공유</button>`}
+      </div></div>` + roBar();
   }
   function sumBox(only) {
     const rows = summary(only);
@@ -218,6 +221,129 @@
     app.innerHTML = view < 0 ? listView() : nodeView(CS[view]);
   }
 
+  // ── 파밍 빌드 공유 (/api/vshare*, 2026-10-16) — 올리기·보기(?s=)·추천·수정·삭제·영상 요청(관리자 허가 뒤 보임) ──
+  const MINE = 'tli_void_mine_v1';   // 이 브라우저가 올린 글 {id: 비밀번호} — 수정·삭제 때 미리 채운다
+  const mine = () => { try { return JSON.parse(localStorage.getItem(MINE) || '{}') || {}; } catch (e) { return {}; } };
+  const setMine = (id, pwd) => { try { const m = mine(); if (pwd) m[id] = pwd; else delete m[id]; localStorage.setItem(MINE, JSON.stringify(m)); } catch (e) {} };
+  const ME = 'tli_void_author_v1';
+  const api = (path, body) => fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {})
+    .then(r => r.json().catch(() => ({ ok: false, error: '서버 응답을 읽지 못했습니다.' })), () => ({ ok: false, error: '서버에 닿지 못했습니다.' }));
+  const kday = iso => iso ? new Date(Date.parse(iso) + 9 * 3600e3).toISOString().slice(0, 10) : '';
+  function roBar() {
+    if (!RO) return '';
+    const it = RO.item, vids = (() => { try { return JSON.parse(it.videos || '[]'); } catch (e) { return []; } })();
+    return `<div class="vc-ro">
+      <div class="vc-ro-l"><small>공유된 파밍 빌드</small><b data-noi18n>${esc(it.title)}</b>
+        <span class="vc-ro-m"><span data-noi18n>👤 ${esc(it.author)}</span> · ${kday(it.created_at)} · 👁 ${it.views || 0}</span></div>
+      <div class="vc-ro-a">
+        <button class="vc-btn vc-like${RO.liked ? ' on' : ''}" data-act="like">👍 추천 <b>${it.likes || 0}</b></button>
+        <button class="vc-btn vc-share" data-act="take">📥 내 연습판으로 가져오기</button>
+        <button class="vc-btn" data-act="copylink">🔗 링크 복사</button>
+        <button class="vc-btn" data-act="vreq">🎬 영상 추가</button>
+        <button class="vc-btn" data-act="edit">수정</button>
+        <button class="vc-btn" data-act="del">삭제</button>
+        <button class="vc-btn" data-act="exit">✕ 닫기</button>
+      </div>
+      ${vids.length ? `<div class="vc-vids">${vids.map(v => `<div class="vc-yt" data-id="${esc(v.id)}" data-start="${+v.start || 0}"><img src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg" alt="" loading="lazy"><span>▶</span><em data-noi18n>${esc(v.title || '')}</em></div>`).join('')}</div>` : ''}
+      ${RO.vwait ? `<div class="vc-ro-n">승인 대기 중인 영상 ${RO.vwait}개 — 관리자가 확인한 뒤 보입니다</div>` : ''}
+    </div>`;
+  }
+  // 입력 창 — fields: [{k, label, type, value, ph, opt}] · 확인 시 onOk(values) 가 오류 문구를 돌려주면 창을 닫지 않는다
+  function dialog(title, fields, okLabel, onOk, note) {
+    const d = document.createElement('div'); d.className = 'vc-dim';
+    d.innerHTML = `<form class="vc-dlg"><b>${title}</b>${fields.map(f => f.type === 'check'
+        ? `<label class="vc-chk"><input type="checkbox" name="${f.k}"${f.value ? ' checked' : ''}> ${f.label}</label>`
+        : `<label><span>${f.label}${f.opt ? ' <i>(선택)</i>' : ''}</span><input name="${f.k}" type="${f.type || 'text'}" value="${esc(f.value || '')}" placeholder="${esc(f.ph || '')}" autocomplete="off"></label>`).join('')}
+      ${note ? `<p class="vc-dn">${note}</p>` : ''}<p class="vc-err"></p>
+      <div class="vc-dact"><button type="button" class="vc-btn" data-x>취소</button><button class="vc-btn vc-share">${okLabel}</button></div></form>`;
+    document.body.appendChild(d);
+    const f = d.querySelector('form'), err = d.querySelector('.vc-err'), close = () => d.remove();
+    d.addEventListener('click', e => { if (e.target === d || e.target.hasAttribute('data-x')) close(); });
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      const v = {}; fields.forEach(x => { const el = f.elements[x.k]; v[x.k] = x.type === 'check' ? el.checked : el.value.trim(); });
+      const btn = f.querySelector('.vc-share'); btn.disabled = true;
+      const m = await onOk(v); btn.disabled = false;
+      if (m) err.textContent = m; else close();
+    });
+    const first = f.querySelector('input:not([type=checkbox])'); if (first) first.focus();
+  }
+  function upload() {
+    if (!S.some(x => x.size)) return toast('찍은 노드가 없습니다');
+    let me = {}; try { me = JSON.parse(localStorage.getItem(ME) || '{}') || {}; } catch (e) {}
+    dialog('📤 파밍 빌드 공유', [
+      { k: 'title', label: '제목', value: '', ph: '예: 화폐 위주 나침반 파밍 (2~40자)' },
+      { k: 'author', label: '작성자', value: me.author || '', ph: '한글·영문·숫자 2~10자' },
+      { k: 'pwd', label: '삭제·수정 비밀번호', type: 'password', value: me.pwd || '', ph: '4~20자' },
+      { k: 'video', label: '가이드 영상 (유튜브 주소)', opt: 1, ph: 'https://youtu.be/…' },
+    ], '올리기', async v => {
+      const r = await api('/api/vshare', { title: v.title, author: v.author, pwd: v.pwd, code: encode(), video: v.video || undefined });
+      if (!r.ok) {
+        if (r.dup) { location.href = location.pathname + '?s=' + r.dup; return ''; }
+        return r.error;
+      }
+      try { localStorage.setItem(ME, JSON.stringify({ author: v.author, pwd: v.pwd })); } catch (e) {}
+      setMine(r.id, v.pwd);
+      if (window.wtEv) window.wtEv('void_upload');
+      if (r.vmsg) alert('글은 올라갔지만 영상은 등록하지 못했습니다: ' + r.vmsg);
+      location.href = location.pathname + '?s=' + r.id;
+      return '';
+    }, '현재 찍은 배치가 그대로 올라갑니다. 영상은 관리자가 확인한 뒤 보입니다.');
+  }
+  async function openShared(id) {
+    const r = await api('/api/vshare?id=' + encodeURIComponent(id));
+    if (!r.ok) { toast(r.error || '파밍 빌드를 불러오지 못했습니다'); return false; }
+    try { S = decode(r.item.code); } catch (e) { toast('배치 코드를 읽지 못했습니다'); return false; }
+    RO = r; undo = [];
+    document.title = r.item.title + ' · 허공의 성도 파밍 빌드 · 미니토치DB';
+    return true;
+  }
+  async function roAct(a) {
+    const it = RO.item, id = it.id, pw = mine()[id] || '';
+    if (a === 'like') {
+      const r = await api('/api/vlike', { id });
+      if (!r.ok) return toast(r.error);
+      it.likes = r.likes; RO.liked = true; render(); toast(r.already ? '이미 추천했습니다' : '추천했습니다');
+    } else if (a === 'take') {
+      let my = null; try { my = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+      const has = my && my.s && Object.keys(my.s).length;
+      if (has && !confirm('이 파밍 빌드를 내 연습판으로 가져올까요?\n지금 찍어 둔 배치는 덮어씁니다.')) return;
+      RO = null; save(); toast('내 연습판으로 가져왔습니다');
+      history.replaceState(null, '', location.pathname + location.hash); render();
+    } else if (a === 'copylink') {
+      const u = location.origin + location.pathname + '?s=' + id;
+      (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('공유 링크를 복사했습니다'), () => prompt('공유 링크', u));
+    } else if (a === 'exit') {
+      RO = null; S = CS.map(() => new Set()); load(); undo = [];
+      history.replaceState(null, '', location.pathname); document.title = '허공의 성도 시뮬레이터 · 토치라이트 인피니트 · 미니토치DB'; render();
+    } else if (a === 'vreq') {
+      dialog('🎬 가이드 영상 추가', [{ k: 'video', label: '유튜브 주소', ph: 'https://youtu.be/…' }, { k: 'pwd', label: '글 비밀번호', type: 'password', value: pw }],
+        '요청', async v => { const r = await api('/api/vshare/video-req', { id, pwd: v.pwd, video: v.video }); if (!r.ok) return r.error; RO.vwait = (RO.vwait || 0) + 1; render(); toast('요청했습니다 — 관리자가 확인한 뒤 보입니다'); return ''; },
+        '작성자만 요청할 수 있고, 관리자가 확인한 뒤 글에 붙습니다.');
+    } else if (a === 'edit') {
+      dialog('글 수정', [{ k: 'title', label: '제목', value: it.title }, { k: 'author', label: '작성자', value: it.author },
+        { k: 'pwd', label: '글 비밀번호', type: 'password', value: pw }, { k: 'cur', label: '배치를 내 연습판의 지금 배치로 바꾸기', type: 'check' }],
+        '저장', async v => {
+          let code;
+          if (v.cur) {
+            let my = null; try { my = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+            const keep = S; S = CS.map(c => new Set(((my && my.s && my.s[c.key]) || []).filter(x => c.by.has(x))));
+            code = S.some(x => x.size) ? encode() : null; S = keep;
+            if (!code) return '내 연습판에 찍은 노드가 없습니다.';
+          }
+          const r = await api('/api/vshare/edit', { id, pwd: RO.admin ? undefined : v.pwd, title: v.title, author: v.author, code });
+          if (!r.ok) return r.error;
+          setMine(id, v.pwd); await openShared(id); render(); toast('수정했습니다'); return '';
+        });
+    } else if (a === 'del') {
+      dialog('글 삭제', RO.admin ? [] : [{ k: 'pwd', label: '글 비밀번호', type: 'password', value: pw }], '삭제', async v => {
+        const r = await api('/api/vshare/delete', { id, pwd: v.pwd });
+        if (!r.ok) return r.error;
+        setMine(id, null); location.href = '/tli/farm/'; return '';
+      }, RO.admin ? '관리자 권한으로 지웁니다.' : '지우면 되돌릴 수 없습니다.');
+    }
+  }
+
   // ── 이벤트 ──
   app.addEventListener('click', e => {
     const t = e.target.closest('[data-open],[data-act],.vc-n');
@@ -225,6 +351,8 @@
     if (t.dataset.open != null) { view = +t.dataset.open; history.replaceState(null, '', '#' + CS[view].page); render(); window.scrollTo(0, 0); return; }
     if (t.classList.contains('vc-n')) { const c = CS[view]; toggle(c, t.dataset.id); showInfo(c, c.by.get(t.dataset.id)); return; }
     const a = t.dataset.act;
+    if (RO && ['like', 'take', 'copylink', 'exit', 'vreq', 'edit', 'del'].includes(a)) return roAct(a);
+    if (a === 'upload') return upload();
     if (a === 'back') { view = -1; history.replaceState(null, '', location.pathname + location.search); render(); }
     else if (a === 'undo' && undo.length) { S = undo.pop(); save(); render(); }
     else if (a === 'reset') { if (!S.some(x => x.size) || confirm('찍은 노드를 모두 지울까요?')) { snap(); S = CS.map(() => new Set()); save(); render(); } }
@@ -264,15 +392,22 @@
     if (y + th > box.height) y = Math.max(0, box.height - th);
     tip.style.left = Math.max(0, x) + 'px'; tip.style.top = y + 'px';
   });
+  // 공유 글의 영상 — 누르면 그 자리에서 재생
+  app.addEventListener('click', e => {
+    const y = e.target.closest('.vc-yt'); if (!y || y.querySelector('iframe')) return;
+    y.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(y.dataset.id)}?autoplay=1&start=${+y.dataset.start || 0}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+    y.classList.add('play');
+  });
   app.addEventListener('mouseout', e => { if (e.target.closest('.vc-n')) { const tip = document.getElementById('vcTip'); if (tip) tip.classList.remove('on'); } });
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && undo.length) { e.preventDefault(); S = undo.pop(); save(); render(); }
     else if (e.key === 'Escape' && view >= 0) { view = -1; history.replaceState(null, '', location.pathname); render(); }
   });
 
-  // ── 시작: 저장본 → 공유 링크(?c=) → 주소의 #별무리 ──
+  // ── 시작: 저장본 → 공유 글(?s=) 또는 공유 링크(?c=) → 주소의 #별무리 ──
   load();
-  const q = new URLSearchParams(location.search).get('c');
+  const sid = new URLSearchParams(location.search).get('s');
+  const q = sid ? null : new URLSearchParams(location.search).get('c');
   if (q) {
     try {
       const got = decode(q);
@@ -283,5 +418,6 @@
   }
   const hp = decodeURIComponent(location.hash.slice(1));
   if (hp) { const c = CS.find(x => x.page === hp); if (c) view = c.ci; }
-  render();
+  if (sid) openShared(sid).then(ok => { if (!ok) history.replaceState(null, '', location.pathname + location.hash); render(); });
+  else render();
 })();

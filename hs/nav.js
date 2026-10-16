@@ -36,7 +36,7 @@
   } catch (e) {}
   if (tliI18n) document.documentElement.setAttribute('data-i18n', '');
   if (tliEn) {
-    const EN_I18N_V = '1f63e55835';
+    const EN_I18N_V = 'bdaf614e18';
     document.documentElement.classList.add('wt-i18n-wait');
     const st = document.createElement('style'); st.textContent = 'html.wt-i18n-wait body{visibility:hidden!important}'; document.head.appendChild(st);
     setTimeout(() => document.documentElement.classList.remove('wt-i18n-wait'), 4000);
@@ -57,14 +57,18 @@
       { href: '/tli/db/?tab=skill',    label: '스킬',        match: /^\/tli\/db/, tab: 'skill' },
       { href: '/tli/db/?tab=tartarus', label: '타르타로스 스킬', match: /^\/tli\/db/, tab: 'tartarus' },
     ] },
-    { label: '빌더', match: /^\/tli\/(builder|talent|hero|slate)/, kids: [
+    { label: '빌더', match: /^\/tli\/(builder|talent|hero|slate|void)/, kids: [
       { href: '/tli/builder/', label: '빌더',      match: /^\/tli\/builder/ },
       { href: '/tli/hero/',    label: '히어로',    match: /^\/tli\/hero/ },
       { href: '/tli/talent/',  label: '재능 보드', match: /^\/tli\/talent/ },
       { href: '/tli/slate/',   label: '석판',      match: /^\/tli\/slate/ },
+      { href: '/tli/void/',    label: '허공의 성도', match: /^\/tli\/void/ },   // 재능 별무리 시뮬레이터 (2026-10-16, 사용자: 빌더 아래로)
     ] },
-    { href: '/tli/share/',   label: '빌드 공유',   match: /^\/tli\/share/ },
-    { href: '/tli/void/',    label: '허공의 성도', match: /^\/tli\/void/ },   // 재능 별무리 시뮬레이터 (2026-10-16)
+    // 빌드 공유 — 히어로 빌드(/tli/share) · 파밍 빌드(허공의 성도 배치, /tli/farm) (2026-10-16 사용자)
+    { label: '빌드 공유', match: /^\/tli\/(share|farm)/, kids: [
+      { href: '/tli/share/', label: '히어로 빌드 공유', match: /^\/tli\/share/ },
+      { href: '/tli/farm/',  label: '파밍 빌드 공유',   match: /^\/tli\/farm/ },
+    ] },
     // 트래커 — 누르면 PC(TITrack-KR, 지인 Hoza), 하위로 모바일(mTTD, listil) (2026-10-14)
     { label: '트래커', match: /^\/tli\/tracker/, kids: [
       { href: '/tli/tracker/',        label: 'PC (TITrack-KR)', match: /^\/tli\/tracker\/(index\.html)?$/ },
@@ -441,7 +445,7 @@
     const post = (u, o) => { if (!LIVE) return; try { fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o), keepalive: true }).catch(() => {}); } catch (e) {} };
     const mode = () => document.documentElement.dataset.tliMode;
     const hsm = /^\/hs\/(db|augments|skills|crystals|tree|ether|journal|guides|tracker|market)(\/|$)/.exec(path);
-    const pg = hsm ? 'hs_' + hsm[1] : path.startsWith('/tli/slate') ? 'slate' : path.startsWith('/tli/void') ? 'void' : !isTli ? '' : /^\/tli\/ss\d+\/db/.test(path) ? 'ss_db' : /^\/tli\/ss\d+\/view/.test(path) ? 'ss_view'
+    const pg = hsm ? 'hs_' + hsm[1] : path.startsWith('/tli/slate') ? 'slate' : path.startsWith('/tli/void') ? 'void' : path.startsWith('/tli/farm') ? 'farm' : !isTli ? '' : /^\/tli\/ss\d+\/db/.test(path) ? 'ss_db' : /^\/tli\/ss\d+\/view/.test(path) ? 'ss_view'
       : path.startsWith('/tli/db') ? 'db' : path.startsWith('/tli/share') ? 'share' : path.startsWith('/tli/view') ? 'view'
       : path.startsWith('/tli/hero') ? 'hero' : path.startsWith('/tli/tracker/mobile') ? 'tracker_m' : path.startsWith('/tli/tracker/ttd') ? 'tracker_t' : path.startsWith('/tli/tracker') ? 'tracker' : path.startsWith('/tli/talent') ? 'talent'
       : path.startsWith('/tli/preview/changes') ? 'changes' : path.startsWith('/tli/preview') ? 'notes'

@@ -11,6 +11,7 @@
     .vc-acts { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
     .vc-btn { background: #1b2230; border: 1px solid #2f3a4d; color: #c9d1d9; border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; transition: .15s; white-space: nowrap; }
     .vc-btn:hover:not([disabled]) { border-color: #e8c860; color: #fff; } .vc-btn[disabled] { opacity: .4; cursor: default; }
+    a.vc-btn { text-decoration: none; display: inline-flex; align-items: center; }
     .vc-share { color: #f3e3b5; border-color: #6b5a2a; background: #1d1a12; font-weight: 600; }
     .vc-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; align-items: start; }
     /* 목록 */
@@ -81,3 +82,45 @@
       .vc-top { padding: 10px 12px; gap: 10px; }
       .vc-hint { display: none; }
     }
+    /* 공유 글 보기 줄 (?s=) · 입력 창 · 영상 (2026-10-16) */
+    .vc-ro { margin: -4px 0 12px; padding: 12px 16px; border-radius: 14px; background: linear-gradient(90deg, #1d1a12, #121826 70%); border: 1px solid #6b5a2a;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+    .vc-ro-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+    .vc-ro-l small { color: #c9b88a; font-size: 11.5px; letter-spacing: .06em; } .vc-ro-l b { color: #f3e3b5; font-size: 17px; overflow-wrap: anywhere; }
+    .vc-ro-m { color: #9aa4b2; font-size: 12.5px; }
+    .vc-ro-a { display: flex; flex-wrap: wrap; gap: 6px; }
+    .vc-like b { color: #e8c860; margin-left: 2px; } .vc-like.on { border-color: #e8c860; color: #f3e3b5; }
+    .vc-ro-n { flex-basis: 100%; color: #9aa4b2; font-size: 12px; }
+    .vc-vids { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+    .vc-yt { position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; cursor: pointer; background: #000; }
+    .vc-yt img { width: 100%; height: 100%; object-fit: cover; opacity: .85; } .vc-yt:hover img { opacity: 1; }
+    .vc-yt span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 26px; color: #fff; text-shadow: 0 2px 8px #000; }
+    .vc-yt em { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 8px; font-style: normal; font-size: 12px; color: #e6edf3; background: linear-gradient(transparent, rgba(0,0,0,.85)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vc-yt iframe { width: 100%; height: 100%; border: 0; }
+    .vc-dim { position: fixed; inset: 0; z-index: 9000; background: rgba(3,5,10,.75); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .vc-dlg { width: min(440px, 100%); background: #121826; border: 1px solid #2f3a4d; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; color: #e6edf3; }
+    .vc-dlg > b { color: #f3e3b5; font-size: 16px; }
+    .vc-dlg label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: #9aa4b2; } .vc-dlg label i { font-style: normal; color: #59636e; }
+    .vc-dlg input:not([type=checkbox]) { background: #0b0f17; border: 1px solid #2f3a4d; border-radius: 8px; color: #e6edf3; padding: 8px 10px; font: inherit; font-size: 14px; }
+    .vc-dlg input:focus { outline: none; border-color: #e8c860; }
+    .vc-dlg .vc-chk { flex-direction: row; align-items: center; gap: 8px; color: #c9d1d9; }
+    .vc-dn { margin: 0; color: #7d8794; font-size: 12px; } .vc-err { margin: 0; color: #ff7b72; font-size: 12.5px; min-height: 1em; }
+    .vc-dact { display: flex; justify-content: flex-end; gap: 8px; }
+    /* 파밍 빌드 공유 목록 (/tli/farm) */
+    .vc-body #farmApp { width: min(var(--page-w, 1320px), calc(100% - 32px)); margin: 16px auto 32px; color: #e6edf3; }
+    .fm-sorts { display: flex; gap: 6px; } .fm-sort.on { border-color: #e8c860; color: #f3e3b5; background: #1d1a12; }
+    .fm-q { background: #0b0f17; border: 1px solid #2f3a4d; border-radius: 8px; color: #e6edf3; padding: 6px 10px; font: inherit; font-size: 13px; width: 200px; }
+    .fm-q:focus { outline: none; border-color: #e8c860; }
+    .fm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; }
+    .fm-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 12px; background: #0f141f; border: 1px solid #222b3a; color: inherit; text-decoration: none; transition: .15s; min-width: 0; }
+    .fm-card:hover { border-color: #e8c860; background: #151b28; }
+    .fm-t { display: flex; align-items: center; gap: 8px; } .fm-t b { font-size: 15px; color: #f3e3b5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .fm-v { flex: none; font-size: 11.5px; color: #ff9b9b; background: #2a1414; border: 1px solid #5a2a2a; border-radius: 999px; padding: 1px 8px; }
+    .fm-m { display: flex; flex-wrap: wrap; gap: 4px 12px; color: #9aa4b2; font-size: 12.5px; }
+    .fm-cs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .fm-c { position: relative; width: 34px; height: 34px; } .fm-c img { width: 34px; height: 34px; border-radius: 50%; }
+    .fm-c i { position: absolute; right: -4px; bottom: -3px; font-style: normal; font-size: 10.5px; font-weight: 700; color: #0b0f17; background: #e8c860; border-radius: 999px; padding: 0 4px; line-height: 15px; }
+    .fm-more { color: #7d8794; font-size: 12px; } .fm-tot { margin-left: auto; color: #7d8794; font-size: 12px; }
+    .fm-empty { grid-column: 1 / -1; padding: 40px; text-align: center; }
+    .fm-morebar { display: flex; justify-content: center; margin-top: 12px; }
+    @media (max-width: 520px) { .vc-body #farmApp { width: calc(100% - 20px); margin-top: 10px; } .fm-grid { grid-template-columns: 1fr; } .fm-q { width: 100%; } .vc-acts { width: 100%; } }

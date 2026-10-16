@@ -12365,13 +12365,38 @@ function renderTartarus() {
     : (TARTARUS.length ? '<div class="lg-empty">검색 결과가 없습니다.</div>' : '<div class="lg-empty">이 시즌 데이터에는 타르타로스 스킬이 없습니다.</div>');
 }
 
+// 통합 검색 첫 화면 (검색어 없을 때, 2026-10-16 가독성 4) — 자주 찾는 검색어 칩 + 탭 바로가기 카드
+const TOTAL_PICKS = ['이동 속도', '시전 속도', '공격 속도', '투사체', '최대 생명력', '크리티컬', '화염 스킬', '소환', '침식', '실드', '보초병', '쿨타임'];
+function totalPick(q) {
+  const el = document.getElementById('totalSearch');
+  el.value = q; syncFromTotal(); el.focus();
+}
+function totalStartHtml() {
+  const n = c => ALL_DATA.filter(r => r.category === c).length;
+  const fmt = x => x.toLocaleString('ko-KR');
+  const cards = [
+    ['all', '⚔', '장비 옵션', fmt(n('장비')) + '줄', '부위·티어별 제작 옵션·블러드·조향'],
+    ['legend', '🏆', '레전드 장비', fmt(ITEMS.length) + '종', '부위별로 훑어보기, 카드로 옵션 확인'],
+    ['talent', '✨', '재능·석판', fmt(n('재능') + n('석판')) + '줄', '신 보드·직업 보드 재능, 신격 석판 옵션'],
+    ['destiny', '🌠', '운명', fmt(n('운명')) + '줄', '운명(숙명) 옵션'],
+    ['pact', '🐾', '정령', fmt(pactDbList().length) + '종', '전투 정령 노드·외환·승급 보상'],
+    ['skill', '🔮', '스킬', fmt(SKILLS.length) + '종', '액티브·보조·패시브, 레벨·티어별 수치'],
+    ['tartarus', '⛓', '타르타로스', fmt(TARTARUS.length) + '종', 'SS14 타르타로스·오리진 스킬'],
+  ].filter(c => c[0] !== 'tartarus' || TARTARUS.length);
+  return `<div class="tst">
+    <div class="tst-cap">자주 찾는 검색어</div>
+    <div class="tst-picks">${TOTAL_PICKS.map(q => `<button type="button" class="tst-pick" onclick="totalPick('${q}')">${q}</button>`).join('')}</div>
+    <div class="tst-cap">바로 가기</div>
+    <div class="tst-cards">${cards.map(([t, ic, nm, cnt, d]) => `<button type="button" class="tst-card" onclick="switchTab('${t}')"><span class="tst-ic">${ic}</span><span class="tst-tx"><b>${nm}<i>${cnt}</i></b><small>${d}</small></span></button>`).join('')}</div>
+  </div>`;
+}
 function renderTotal() {
   const box = document.getElementById('totalResults');
   const q = document.getElementById('totalSearch').value.trim();
   if (q !== totalPrevQ) { totalPrevQ = q; totalExpanded.clear(); }
   const tokens = parseTokens(q);
   document.getElementById('totalHint').style.display = tokens.length ? 'none' : 'block';
-  if (!tokens.length) { box.innerHTML = ''; return; }
+  if (!tokens.length) { box.innerHTML = totalStartHtml(); return; }
   const kws = tokens.filter(g => !g.neg).flatMap(g => g.kws);
   // 효과만 검색: 장비·재능·석판·운명 그룹에서 출처·유형 필드를 검색 대상에서 제외
   const st = (...f) => effOnlyOn() ? [] : f;
@@ -13072,6 +13097,16 @@ document.getElementById('logFile').addEventListener('change', e => {
 updateFavCount();
 updatePresetCount();
 initSkillTagBar();
+
+// 모바일 탭 줄 — 옆으로 더 있으면 오른쪽 끝을 흐리고 › 표시 (2026-10-16 가독성 4). 끝까지 밀면 사라진다
+(function tabsMoreHint() {
+  const tabs = document.querySelector('.tabs-bar .tabs'), bar = tabs && tabs.parentElement;
+  if (!tabs || !bar || typeof window === 'undefined') return;
+  const upd = () => bar.classList.toggle('tabs-more', tabs.scrollWidth - tabs.clientWidth - tabs.scrollLeft > 8);
+  tabs.addEventListener('scroll', upd, { passive: true });
+  window.addEventListener('resize', upd);
+  setTimeout(upd, 0);
+})();
 // ── 빌드 온라인 공유 (Cloudflare Workers + D1) ──
 // 로컬 파일(file://)로 열면 API를 쓸 수 없어 공유 탭·버튼을 숨긴다
 const SHARE_ONLINE = location.protocol === 'http:' || location.protocol === 'https:';

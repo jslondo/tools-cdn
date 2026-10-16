@@ -440,7 +440,7 @@
   //  · 페이지 방문: 열 때 1회 /api/pg (서버가 조회·하루 순방문을 센다, IP 는 해시만)
   //  · 기능 사용: window.wtEv(이름, {q, tab}) → /api/ev — 같은 화면에서 같은 이벤트는 1번(검색 실패어는 검색어마다, 최대 8개)
   //  · 화면 오류: 스크립트 오류를 /api/err 로 (화면당 최대 3건, 확장 프로그램·다른 도메인 스크립트의 'Script error.' 는 뺀다)
-  const LIVE = location.hostname === 'tools.winterer.workers.dev';
+  const LIVE = ['tools.winterer.workers.dev', 'tools.winterer.dev'].includes(location.hostname);   // 두 주소 다 운영 (tools.winterer.dev 2026-10-16~)
   if (!path.startsWith('/admin')) {  // 두 게임 모두 (tools 전체 대시보드 /admin/dash)
     const post = (u, o) => { if (!LIVE) return; try { fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o), keepalive: true }).catch(() => {}); } catch (e) {} };
     const mode = () => document.documentElement.dataset.tliMode;
@@ -472,7 +472,7 @@
   // 우리 D1 집계는 '얼마나 쓰는지', 이쪽은 '어디서 오는지' 를 본다. 토큰은 공개 값이라 그대로 둬도 된다.
   // 관리자 화면(/admin)과 로컬 개발은 제외. 값이 비어 있으면 아예 안 붙는다.
   const CF_BEACON = '10a8aee2bcfd4de9abdc2d3f6a3d51ad';
-  if (CF_BEACON && !location.pathname.startsWith('/admin') && location.hostname.endsWith('workers.dev')) {
+  if (CF_BEACON && !location.pathname.startsWith('/admin') && (location.hostname.endsWith('workers.dev') || location.hostname === 'tools.winterer.dev')) {
     addEventListener('load', () => {
       const sc = document.createElement('script');
       sc.type = 'module';   // Cloudflare 가 주는 스니펫 그대로 — 모듈 스크립트라 알아서 지연 실행된다

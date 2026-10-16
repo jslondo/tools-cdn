@@ -37,14 +37,15 @@
     .vc-sum li { padding-left: 10px; position: relative; } .vc-sum li::before { content: '·'; position: absolute; left: 0; color: #59636e; }
     .vc-sum li.vc-empty::before { content: none; } .vc-empty { color: #59636e; font-size: 13px; padding-left: 0; }
     .vc-sum li em { display: block; font-style: normal; color: #ffb37a; font-size: 11.5px; }
-    .vc-sum li.nopre { color: #9aa4b2; }
     .vc-x { color: #9aa4b2; font-size: 12px; }
     .vc-num { color: #7ee0c3; font-weight: 600; }
     .vc-ik { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
     .vc-ik b { color: #f3e3b5; font-size: 14px; } .vc-ik small { color: #9aa4b2; font-size: 12px; white-space: nowrap; }
     .vc-info > div, .vc-tip > div { font-size: 13px; line-height: 1.5; }
     .vc-fn { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #2a3344; color: #c9b88a; }
-    .vc-warn { margin-top: 8px; color: #ffb37a; font-size: 12px !important; }
+    .vc-warn { margin-top: 8px; color: #c89bff; font-size: 12px !important; }
+    .vc-free { color: #c89bff; font-size: 12.5px; background: #1e1630; border: 1px solid #4a3a6e; border-radius: 999px; padding: 3px 10px; }
+    .vc-cu em.free { color: #c89bff; }
     /* 노드 화면 */
     .vc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     .vc-head img { width: 36px; height: 36px; border-radius: 50%; } .vc-head > b { color: #f3e3b5; font-size: 17px; }
@@ -59,8 +60,8 @@
     .vc-n.off image { opacity: .38; filter: grayscale(.7); } .vc-n.next image { opacity: .75; }
     .vc-n.next .ring { stroke: #6b7a8f; }
     .vc-n.on .ring, .vc-n.start .ring { stroke: #e8c860; stroke-width: 9; fill: #2a2210; }
-    .vc-n.extra .ring { stroke-dasharray: 14 8; } .vc-n.nopre .ring { stroke: #b8433a; }
-    .vc-n.nopre.on .ring { stroke: #ff7b72; }
+    .vc-n.extra .ring { stroke-dasharray: 14 8; } .vc-n.free .ring { stroke: #8f6bd8; }
+    .vc-n.free.on .ring { stroke: #c89bff; }
     .vc-n:hover .ring { stroke: #fff; }
     .vc-tip { position: absolute; z-index: 5; width: 280px; pointer-events: none; opacity: 0; transition: opacity .1s;
       background: #151b28; border: 1px solid #3a4558; border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }

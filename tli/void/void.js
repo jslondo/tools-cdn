@@ -3,11 +3,13 @@
 // 데이터 VOID = {star, main, list:[{page, name, icon, unlock, n, main?, vb, start, nodes:[{id,x,y,r,icon,kind,map?,fn?,extra?}], links:[[자식,부모]]}]}
 // 규칙(사용자 확인 2026-10-16): 노드 = 1포인트(시작 노드는 공짜) · 그윽한(메인) 별무리는 '메인 스타 재능' 전용 포인트 ·
 //   '스타 재능 N개를 추가 소모' 노드는 +N 스타 재능 · 찍으려면 부모(이전 노드) 하나가 찍혀 있어야 함 ·
-//   '이전 노드를 우선 활성화하지 않음' 노드는 효과 미적용(경고만)
+//   그윽한 별무리의 '이전 노드를 우선 활성화하지 않음' 노드를 찍으면 비 콘텐츠 별무리(ng — 장비·레전드 장비·나침반·화폐·비콘)는
+//   이전 노드 없이 아무 노드나 찍을 수 있다 · 그 노드를 빼면 비 콘텐츠 별무리가 모두 초기화된다 (사용자 확인 2026-10-16)
 (function () {
   'use strict';
   const ICON = 'https://cdn.tlidb.com/UI/Textures/Common/Icon/TalentPoint/128/';
   const KEY = 'tli_solo_void_v1';
+  const nodeText = n => (n.map || []).concat(n.fn || []).join('\n');
   const NOPRE = /이전 노드를 우선 활성화하지 않음/;
   const app = document.getElementById('voidApp');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -43,6 +45,11 @@
     return { m, s };
   }
   const on = (c, id) => id === c.start || S[c.ci].has(id);
+  // 자유 찍기 노드(그윽한 별무리)가 켜져 있나 — 켜져 있으면 비 콘텐츠 별무리는 길 없이 찍는다
+  const MAINC = CS.find(c => c.main);
+  const FREE_ID = MAINC ? (MAINC.nodes.find(n => NOPRE.test(nodeText(n))) || {}).id : null;
+  const freeOn = () => !!(FREE_ID && S[MAINC.ci].has(FREE_ID));
+  const freeHere = c => !!c.ng && freeOn();
 
   // 아직 안 찍힌 노드까지 가는 가장 짧은 길(부모 쪽으로 거슬러 찍힌 노드를 만날 때까지) — 찍을 노드 목록
   function pathTo(c, id) {
@@ -56,16 +63,23 @@
   }
   // 끊긴 가지 정리 — 찍힌 부모가 하나도 없는 노드를 시작 노드에서 닿을 때까지 거듭 뺀다
   function prune(c) {
+    if (freeHere(c)) return;   // 자유 찍기 중인 비 콘텐츠 별무리는 이어짐을 따지지 않는다
     const set = S[c.ci], ok = new Set([c.start]), q = [c.start];
     while (q.length) { const v = q.shift(); for (const k of c.kids.get(v) || []) if (set.has(k) && !ok.has(k)) { ok.add(k); q.push(k); } }
     [...set].forEach(id => { if (!ok.has(id)) set.delete(id); });
   }
   function toggle(c, id) {
     if (id === c.start) return;
-    const set = S[c.ci];
-    if (set.has(id)) { snap(); set.delete(id); prune(c); }
-    else {
-      const p = pathTo(c, id);
+    const set = S[c.ci], hadFree = freeOn();
+    if (set.has(id)) {
+      snap(); set.delete(id); prune(c);
+      if (c.main && hadFree && !freeOn()) {   // 자유 찍기 노드가 빠짐 → 비 콘텐츠 별무리 전부 초기화 (게임 규칙)
+        const n = CS.filter(x => x.ng && S[x.ci].size).length;
+        CS.forEach(x => { if (x.ng) S[x.ci] = new Set(); });
+        if (n) toast('비 콘텐츠 재능 별무리 ' + n + '개가 함께 초기화되었습니다');
+      }
+    } else {
+      const p = freeHere(c) ? [] : pathTo(c, id);
       if (!p) return;
       const add = [...new Set([id, ...p])].filter(x => x !== c.start);   // p 는 목표 노드까지 포함
       const u = used(); let m = 0, s = 0;
@@ -73,11 +87,10 @@
       if (u.m + m > VOID.main) return toast(`메인 스타 재능이 부족합니다 (필요 ${m} · 남음 ${VOID.main - u.m})`);
       if (u.s + s > VOID.star) return toast(`스타 재능이 부족합니다 (필요 ${s} · 남음 ${VOID.star - u.s})`);
       snap(); add.forEach(x => set.add(x));
-      if (add.some(x => NOPRE.test(nodeText(c.by.get(x))))) toast('⚠ 「이전 노드를 우선 활성화하지 않음」 효과는 시뮬레이터에 적용하지 않습니다');
+      if (add.includes(FREE_ID) && c.main) toast('비 콘텐츠 재능 별무리(장비·레전드 장비·나침반·화폐·비콘)는 이제 이전 노드 없이 찍을 수 있습니다');
     }
     save(); render();
   }
-  const nodeText = n => (n.map || []).concat(n.fn || []).join('\n');
 
   // ── 효과 합계 — 같은 문구는 숫자를 더하고(숫자 1개·'추가/별도' 아닐 때), 아니면 같은 줄끼리 ×n ──
   function summary(only) {
@@ -93,14 +106,14 @@
           const tpl = add ? line.replace(/[+\-]?\d+(?:\.\d+)?/, '\u0000') : line;
           const e = g.get(tpl) || { tpl, v: 0, k: 0, sign: /^[+\-]/.test(nums[0] || '') };
           if (add) e.v += parseFloat(nums[0]);
-          e.k++; e.nopre = NOPRE.test(line); g.set(tpl, e);
+          e.k++; g.set(tpl, e);
         });
       });
     });
     return [...g.values()].map(e => {
-      if (!e.tpl.includes('\u0000')) return { t: e.tpl, k: e.k, nopre: e.nopre, x: e.k > 1 };
+      if (!e.tpl.includes('\u0000')) return { t: e.tpl, k: e.k, x: e.k > 1 };
       const v = Math.round(e.v * 100) / 100;
-      return { t: e.tpl.replace('\u0000', (e.sign && v >= 0 ? '+' : '') + v), k: e.k, nopre: e.nopre };
+      return { t: e.tpl.replace('\u0000', (e.sign && v >= 0 ? '+' : '') + v), k: e.k };
     });
   }
 
@@ -123,7 +136,9 @@
       const c = BYKEY.get(vi()), k = vi(); let p = 0;
       for (let j = 0; j < k; j++) { p += vi(); if (c) { const id = String(+c.start + p); if (c.by.has(id) && id !== c.start) out[c.ci].add(id); } }
     }
-    out.forEach((set, ci) => { const keep = S[ci]; S[ci] = set; prune(CS[ci]); S[ci] = keep; });
+    const keep = S; S = out;   // 그윽한(자유 찍기 노드) 먼저 정리해야 비 콘텐츠 별무리 판정이 맞다
+    CS.filter(c => c.main).concat(CS.filter(c => !c.main)).forEach(prune);
+    S = keep;
     return out;
   }
 
@@ -151,7 +166,7 @@
   }
   function sumBox(only) {
     const rows = summary(only);
-    const body = rows.length ? rows.map(r => `<li${r.nopre ? ' class="nopre"' : ''}>${hl(r.t).replace(/\n/g, '<br>')}${r.x ? ` <span class="vc-x">×${r.k}</span>` : ''}${r.nopre ? '<em>⚠ 시뮬레이터 미적용</em>' : ''}</li>`).join('')
+    const body = rows.length ? rows.map(r => `<li>${hl(r.t).replace(/\n/g, '<br>')}${r.x ? ` <span class="vc-x">×${r.k}</span>` : ''}</li>`).join('')
       : '<li class="vc-empty">찍은 노드가 없습니다</li>';
     return `<div class="vc-sum"><div class="vc-cap">${only != null ? '이 별무리 효과' : '전체 효과 합계'}</div><ul>${body}</ul></div>`;
   }
@@ -161,7 +176,7 @@
       return `<button class="vc-card${k ? ' used' : ''}${c.main ? ' main' : ''}" data-open="${c.ci}">
         <img src="${ICON + c.icon}" alt="" loading="lazy">
         <span class="vc-cn"><b>${esc(c.name)}</b>${c.unlock ? `<small>${esc(c.unlock)}</small>` : ''}</span>
-        <span class="vc-cu"><b>${k}</b>/${c.n}${c.main ? '<em>메인</em>' : ''}<i style="--p:${Math.round(100 * k / Math.max(1, c.n))}%"></i></span>
+        <span class="vc-cu"><b>${k}</b>/${c.n}${c.main ? '<em>메인</em>' : ''}${freeHere(c) ? '<em class="free">자유</em>' : ''}<i style="--p:${Math.round(100 * k / Math.max(1, c.n))}%"></i></span>
       </button>`;
     }).join('');
     return top() + `<div class="vc-wrap"><div class="vc-grid">${cards}</div>${sumBox(null)}</div>
@@ -174,16 +189,16 @@
       return `<line class="${lit ? 'on' : ''}" x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>`;
     }).join('');
     const nodes = c.nodes.map(n => {
-      const st = n.id === c.start ? 'start' : set.has(n.id) ? 'on' : (c.par.get(n.id) || []).some(p => on(c, p)) ? 'next' : 'off';
+      const st = n.id === c.start ? 'start' : set.has(n.id) ? 'on' : (freeHere(c) || (c.par.get(n.id) || []).some(p => on(c, p))) ? 'next' : 'off';
       const r = n.r;
-      return `<g class="vc-n ${st}${n.extra ? ' extra' : ''}${NOPRE.test(nodeText(n)) ? ' nopre' : ''}" data-id="${n.id}" transform="translate(${n.x} ${n.y})">
+      return `<g class="vc-n ${st}${n.extra ? ' extra' : ''}${n.id === FREE_ID && c.main ? ' free' : ''}" data-id="${n.id}" transform="translate(${n.x} ${n.y})">
         <circle class="ring" r="${r + 7}"/><image href="${ICON + n.icon}" x="${-r}" y="${-r}" width="${2 * r}" height="${2 * r}"/></g>`;
     }).join('');
     const k = set.size;
     return top() + `<div class="vc-head">
         <button class="vc-btn" data-act="back">← 목록</button>
         <img src="${ICON + c.icon}" alt=""><b>${esc(c.name)}</b>
-        <span class="vc-cnt">${k} / ${c.n}${c.main ? ' · 메인 스타 재능' : ''}</span>
+        <span class="vc-cnt">${k} / ${c.n}${c.main ? ' · 메인 스타 재능' : ''}</span>${freeHere(c) ? '<span class="vc-free">자유 찍기 — 이전 노드 없이 찍을 수 있습니다</span>' : ''}
         <button class="vc-btn" data-act="clear"${k ? '' : ' disabled'}>이 별무리 비우기</button>
         <span class="vc-hint">노드를 누르면 시작 노드까지 길이 함께 찍히고, 찍힌 노드를 누르거나 우클릭하면 그 아래 가지까지 빠집니다</span>
       </div>
@@ -195,9 +210,9 @@
   function info(c, n) {
     const k = nodeCost(c, n);
     const cost = n.id === c.start ? '시작 노드 · 무료' : (c.main ? `메인 스타 재능 ${k.m}` + (k.s ? ` + 스타 재능 ${k.s}` : '') : `스타 재능 ${k.s}`);
-    const L = a => (a || []).map(l => `<div${NOPRE.test(l) ? ' class="nopre"' : ''}>${hl(l).replace(/\n/g, '<br>')}</div>`).join('');
+    const L = a => (a || []).map(l => `<div>${hl(l).replace(/\n/g, '<br>')}</div>`).join('');
     return `<div class="vc-ik"><b>${esc(n.kind)}</b><small>${cost}</small></div>${L(n.map)}${n.fn ? `<div class="vc-fn">${L(n.fn)}</div>` : ''}` +
-      (NOPRE.test(nodeText(n)) ? '<div class="vc-warn">⚠ 이 노드의 「이전 노드를 우선 활성화하지 않음」 효과는 시뮬레이터에 적용하지 않습니다 (찍기 규칙은 그대로)</div>' : '');
+      (c.main && n.id === FREE_ID ? '<div class="vc-warn">찍으면 비 콘텐츠 재능 별무리(장비·레전드 장비·나침반·화폐·비콘)를 이전 노드 없이 찍을 수 있고, 빼면 그 별무리들이 모두 초기화됩니다</div>' : '');
   }
   function render() {
     app.innerHTML = view < 0 ? listView() : nodeView(CS[view]);
@@ -213,7 +228,11 @@
     if (a === 'back') { view = -1; history.replaceState(null, '', location.pathname + location.search); render(); }
     else if (a === 'undo' && undo.length) { S = undo.pop(); save(); render(); }
     else if (a === 'reset') { if (!S.some(x => x.size) || confirm('찍은 노드를 모두 지울까요?')) { snap(); S = CS.map(() => new Set()); save(); render(); } }
-    else if (a === 'clear') { snap(); S[view] = new Set(); save(); render(); }
+    else if (a === 'clear') {
+      const hadFree = freeOn(); snap(); S[view] = new Set();
+      if (hadFree && !freeOn()) CS.forEach(x => { if (x.ng) S[x.ci] = new Set(); });   // 자유 찍기 노드가 빠짐 → 비 콘텐츠 별무리 초기화
+      save(); render();
+    }
     else if (a === 'share') {
       if (!S.some(x => x.size)) return toast('찍은 노드가 없습니다');
       const u = location.origin + location.pathname + '?c=' + encode();
